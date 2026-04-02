@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OCR — Bulut Projects</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;flex-direction:column;}
+.topbar{background:#1a2a4a;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar h1{font-size:15px;font-weight:700;}
+.topbar button{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:12px;padding:6px 12px;border-radius:6px;cursor:pointer;}
+.tabs{background:#0d1b35;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.tab{padding:6px 14px;border:1.5px solid rgba(255,255,255,.3);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#fff;}
+.tab.on{background:#27ae60;border-color:#27ae60;}
+.hint{color:rgba(255,255,255,.5);font-size:10px;margin-left:6px;}
+.imgwrap{flex:1;overflow:auto;background:#111;display:flex;align-items:flex-start;justify-content:center;padding:10px;position:relative;}
+#ocrImg{max-width:100%;height:auto;display:block;user-select:text;-webkit-user-select:text;}
+#selCanvas{position:absolute;top:0;left:0;display:none;touch-action:none;}
+.textwrap{display:none;flex-direction:column;flex:1;min-height:0;}
+.textwrap .label{padding:6px 10px;background:#0d1b35;font-size:11px;color:rgba(255,255,255,.6);flex-shrink:0;}
+#ocrText{flex:1;background:#1a1a1a;color:#fff;border:none;padding:12px;font-size:13px;font-family:'Segoe UI',sans-serif;resize:none;outline:none;line-height:1.7;}
+.textftr{padding:6px 10px;background:#0d1b35;display:flex;gap:8px;flex-shrink:0;}
+.textftr button{flex:1;padding:9px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;}
+.btn-copy{background:#27ae60;color:#fff;}
+.btn-back{background:rgba(255,255,255,.15);color:#fff;}
+.btn-scan{background:#3498db;color:#fff;}
+#status{display:none;padding:10px;text-align:center;font-size:12px;color:rgba(255,255,255,.7);background:#0d1b35;flex-shrink:0;}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px;opacity:.5;}
+.empty p{font-size:13px;}
+.scan-btn-container{display:flex;justify-content:center;padding:12px;background:#0d1b35;margin:0 10px 10px 10px;border-radius:8px;flex-shrink:0;}
+.btn-scan-full{background:#27ae60;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;width:100%;}
+.btn-scan-full:hover{background:#2ecc71;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📋 OCR — Metin Tanıma</h1>
+  <button onclick="window.close()">✕ Kapat</button>
+</div>
+
+<div class="tabs" id="tabs" style="display:none;">
+  <button class="tab on" id="tabFull" onclick="setMode('full')">🗒 Tam Sayfa</button>
+  <button class="tab"    id="tabArea" onclick="setMode('area')">✂️ Alan Seç</button>
+  <span class="hint" id="hint"></span>
+</div>
+
+<div class="imgwrap" id="imgwrap">
+  <div class="empty" id="emptyMsg">
+    <p>Görüntü bulunamadı.</p>
+    <p style="font-size:11px;">Scanner'dan Edit → OCR butonunu kullan.</p>
+  </div>
+  <img id="ocrImg" style="display:none;" alt="OCR">
+  <canvas id="selCanvas"></canvas>
+</div>
+
+<div class="scan-btn-container" id="scanBtnContainer" style="display:none;">
+  <button class="btn-scan-full" id="scanFullBtn" onclick="scanFullPage()">🔍 TAM SAYFAYI TARA</button>
+</div>
+
+<div class="textwrap" id="textwrap">
+  <div class="label">Tanınan metin — seçip kopyalayabilirsin</div>
+  <textarea id="ocrText" readonly></textarea>
+  <div class="textftr">
+    <button class="btn-back" onclick="showImage()">← Görüntüye Dön</button>
+    <button class="btn-copy" onclick="copyText()">📋 Tümünü Kopyala</button>
+  </div>
+</div>
+
+<div id="status"></div>
+
+<script>
+const isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+let imageDataUrl=null;
+let mode='full';
+let selecting=false, sx=0,sy=0,ex=0,ey=0;
+let isScanning=false;
+
+// Load image from sessionStorage
+window.addEventListener('load',()=>{
+  const data=sessionStorage.getItem('ocr_image');
+  if(!data){return;}
+  imageDataUrl=data;
+  document.getElementById('emptyMsg').style.display='none';
+  document.getElementById('tabs').style.display='flex';
+  const img=document.getElementById('ocrImg');
+  img.style.display='block';
+  img.src=data;
+  setMode('full');
+});
+
+function setMode(m){
+  mode=m;
+  document.getElementById('tabFull').classList.toggle('on',m==='full');
+  document.getElementById('tabArea').classList.toggle('on',m==='area');
+  const hint=document.getElementById('hint');
+  const scanContainer=document.getElementById('scanBtnContainer');
+  
+  if(m==='full'){
+    hint.textContent=isSafari?'"Tam Sayfayı Tara" butonuna tıkla → metni seç':'Butona tıklayarak taramayı başlat';
+    document.getElementById('selCanvas').style.display='none';
+    scanContainer.style.display='flex';
+  } else {
+    hint.textContent='Metin alanını parmağınla/mouse ile çiz, bırakınca otomatik taranır';
+    scanContainer.style.display='none';
+    initSelCanvas();
+  }
+  
+  // Görüntüyü göster, metin alanını gizle
+  showImage();
+}
+
+function showImage(){
+  document.getElementById('imgwrap').style.display='flex';
+  document.getElementById('textwrap').style.display='none';
+  document.getElementById('scanBtnContainer').style.display=mode==='full'?'flex':'none';
+  const img=document.getElementById('ocrImg');
+  if(img && imageDataUrl) {
+    img.src=imageDataUrl;
+    img.style.display='block';
+  }
+}
+
+// Tam sayfa tarama butonu
+async function scanFullPage() {
+  if(isScanning) return;
+  if(!imageDataUrl) {
+    setStatus('❌ Görüntü bulunamadı!');
+    return;
+  }
+  
+  if(isSafari) {
+    // Safari için iOS Live Text yöntemi
+    const img=document.getElementById('ocrImg');
+    img.src=imageDataUrl;
+    document.getElementById('hint').textContent='Görsele uzun bas → metni seç';
+    setStatus('📱 Görsele uzun basın ve "Metni Seç" seçeneğini kullanın');
+    setTimeout(()=>setStatus(''),3000);
+  } else {
+    // Diğer platformlar için Tesseract
+    await runTesseract(imageDataUrl);
+  }
+}
+
+async function scanArea(croppedDataUrl) {
+  if(isScanning) return;
+  if(isSafari) {
+    const img=document.getElementById('ocrImg');
+    img.src=croppedDataUrl;
+    document.getElementById('hint').textContent='Görsele uzun bas → metni seç';
+    setStatus('📱 Seçili alana uzun basın ve "Metni Seç" seçeneğini kullanın');
+    setTimeout(()=>setStatus(''),3000);
+  } else {
+    await runTesseract(croppedDataUrl);
+  }
+}
+
+/* ── Area selection ── */
+function initSelCanvas(){
+  const img=document.getElementById('ocrImg');
+  const sc=document.getElementById('selCanvas');
+  function resize(){
+    sc.width=img.offsetWidth; sc.height=img.offsetHeight;
+    sc.style.width=img.offsetWidth+'px'; sc.style.height=img.offsetHeight+'px';
+    sc.style.left=img.offsetLeft+'px'; sc.style.top=img.offsetTop+'px';
+    sc.style.display='block';
+  }
+  if(img.complete&&img.naturalWidth) resize();
+  else img.onload=resize;
+
+  function pos(e){
+    const r=sc.getBoundingClientRect();
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    return{x:cx-r.left,y:cy-r.top};
+  }
+  function draw(){
+    const ctx=sc.getContext('2d');
+    ctx.clearRect(0,0,sc.width,sc.height);
+    ctx.fillStyle='rgba(0,0,0,0.4)';
+    ctx.fillRect(0,0,sc.width,sc.height);
+    const x=Math.min(sx,ex),y=Math.min(sy,ey),w=Math.abs(ex-sx),h=Math.abs(ey-sy);
+    ctx.clearRect(x,y,w,h);
+    ctx.strokeStyle='#27ae60';ctx.lineWidth=2;ctx.setLineDash([6,3]);
+    ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
+  }
+  // Clone to remove old listeners
+  const sc2=sc.cloneNode(false);
+  sc.parentNode.replaceChild(sc2,sc);
+  const sc3=document.getElementById('selCanvas');
+  sc3.style.cssText=sc.style.cssText;
+  sc3.width=sc.width; sc3.height=sc.height;
+  sc3.addEventListener('mousedown',e=>{const p=pos(e);sx=p.x;sy=p.y;ex=p.x;ey=p.y;selecting=true;});
+  sc3.addEventListener('mousemove',e=>{if(!selecting)return;const p=pos(e);ex=p.x;ey=p.y;draw();});
+  sc3.addEventListener('mouseup',e=>{if(!selecting)return;selecting=false;cropAndOcr();});
+  sc3.addEventListener('touchstart',e=>{e.preventDefault();const p=pos(e);sx=p.x;sy=p.y;ex=p.x;ey=p.y;selecting=true;},{passive:false});
+  sc3.addEventListener('touchmove',e=>{if(!selecting)return;e.preventDefault();const p=pos(e);ex=p.x;ey=p.y;draw();},{passive:false});
+  sc3.addEventListener('touchend',e=>{if(!selecting)return;selecting=false;cropAndOcr();});
+}
+
+function cropAndOcr(){
+  const img=document.getElementById('ocrImg');
+  const sc=document.getElementById('selCanvas');
+  const w=Math.abs(ex-sx),h=Math.abs(ey-sy);
+  if(w<10||h<10)return;
+  const scaleX=img.naturalWidth/img.offsetWidth;
+  const scaleY=img.naturalHeight/img.offsetHeight;
+  const cx=Math.round(Math.min(sx,ex)*scaleX), cy=Math.round(Math.min(sy,ey)*scaleY);
+  const cw=Math.round(w*scaleX), ch=Math.round(h*scaleY);
+  const src=new Image(); src.src=imageDataUrl;
+  src.onload=()=>{
+    const c=document.createElement('canvas');
+    c.width=cw; c.height=ch;
+    c.getContext('2d').drawImage(src,cx,cy,cw,ch,0,0,cw,ch);
+    const cropped=c.toDataURL('image/jpeg',0.95);
+    scanArea(cropped);
+  };
+}
+
+/* ── Tesseract (non-Safari fallback) ── */
+function setStatus(msg){
+  const el=document.getElementById('status');
+  el.textContent=msg; 
+  el.style.display=msg?'block':'none';
+  if(msg) {
+    setTimeout(()=>{
+      if(document.getElementById('status').textContent===msg) 
+        setStatus('');
+    },3000);
+  }
+}
+
+async function runTesseract(dataUrl){
+  if(isScanning) return;
+  isScanning=true;
+  setStatus('⏳ Yükleniyor…');
+  try{
+    if(!window.Tesseract){
+      setStatus('⏳ OCR motoru yükleniyor (ilk kez)…');
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload=res; s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+    setStatus('⏳ Metin tanınıyor (bu 3-5 saniye sürebilir)…');
+    const result=await Tesseract.recognize(dataUrl,'tur+eng',{logger:()=>{}});
+    const text=result.data.text.trim();
+    document.getElementById('ocrText').value=text||'(Metin bulunamadı)';
+    document.getElementById('imgwrap').style.display='none';
+    document.getElementById('textwrap').style.display='flex';
+    document.getElementById('scanBtnContainer').style.display='none';
+    setStatus('✅ Tarama tamamlandı!');
+    setTimeout(()=>setStatus(''),2000);
+  }catch(err){
+    setStatus('❌ Hata: '+err.message);
+    console.error(err);
+  } finally {
+    isScanning=false;
+  }
+}
+
+function copyText(){
+  const t=document.getElementById('ocrText');
+  t.select();
+  navigator.clipboard.writeText(t.value).catch(()=>document.execCommand('copy'));
+  setStatus('✓ Kopyalandı!');
+  setTimeout(()=>setStatus(''),2000);
+}
+</script>
+</body>
+</html>
