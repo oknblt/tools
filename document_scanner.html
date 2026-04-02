@@ -285,6 +285,7 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
     <button class="etbtn" id="tRedact"     onclick="setTool('redact')"     style="white-space:nowrap">🖌 Brush</button>
     <button class="etbtn" id="tRedactRect" onclick="setTool('redactRect')" style="white-space:nowrap">🔲 Redact</button>
     <button class="etbtn"                  onclick="undoEd()"               style="padding:7px 10px;font-size:15px;" title="Undo">↩</button>
+    <button class="etbtn" id="tOcrRect" onclick="openOcrPage()" style="white-space:nowrap">📋 OCR</button>
     <button class="etbtn"                  onclick="rotImg(90)"             style="padding:7px 10px;font-size:16px;" title="Rotate">↻</button>
   </div>
   <div id="redactBar" style="display:none;background:#0d1b35;padding:6px 14px;align-items:center;gap:10px;flex-shrink:0;">
@@ -1582,6 +1583,17 @@ function exportPDF(){
     }
     next();
   }catch(e){console.error(e);showPdfSt('Error: '+e.message,'err');}
+}
+
+/* ═══ OCR — opens ocr.html ═══ */
+function openOcrPage(){
+  if(edIdx===null||!pages[edIdx])return;
+  try{
+    sessionStorage.setItem('ocr_image', pages[edIdx].cur);
+    window.open('ocr.html','_blank');
+  }catch(e){
+    alert('Görüntü çok büyük, önce Crop ile boyutunu küçült.');
+  }
 }
 
 /* ═══ ANA EKRAN SCROLL ZOOM ═══ */
