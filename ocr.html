@@ -25,13 +25,9 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 .textftr button{flex:1;padding:9px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;}
 .btn-copy{background:#27ae60;color:#fff;}
 .btn-back{background:rgba(255,255,255,.15);color:#fff;}
-.btn-scan{background:#3498db;color:#fff;}
 #status{display:none;padding:10px;text-align:center;font-size:12px;color:rgba(255,255,255,.7);background:#0d1b35;flex-shrink:0;}
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px;opacity:.5;}
 .empty p{font-size:13px;}
-.scan-btn-container{display:flex;justify-content:center;padding:12px;background:#0d1b35;margin:0 10px 10px 10px;border-radius:8px;flex-shrink:0;}
-.btn-scan-full{background:#27ae60;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;width:100%;}
-.btn-scan-full:hover{background:#2ecc71;}
 </style>
 </head>
 <body>
@@ -56,10 +52,6 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
   <canvas id="selCanvas"></canvas>
 </div>
 
-<div class="scan-btn-container" id="scanBtnContainer" style="display:none;">
-  <button class="btn-scan-full" id="scanFullBtn" onclick="scanFullPage()">🔍 TAM SAYFAYI TARA</button>
-</div>
-
 <div class="textwrap" id="textwrap">
   <div class="label">Tanınan metin — seçip kopyalayabilirsin</div>
   <textarea id="ocrText" readonly></textarea>
@@ -76,7 +68,6 @@ const isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 let imageDataUrl=null;
 let mode='full';
 let selecting=false, sx=0,sy=0,ex=0,ey=0;
-let isScanning=false;
 
 // Load image from sessionStorage
 window.addEventListener('load',()=>{
@@ -96,65 +87,23 @@ function setMode(m){
   document.getElementById('tabFull').classList.toggle('on',m==='full');
   document.getElementById('tabArea').classList.toggle('on',m==='area');
   const hint=document.getElementById('hint');
-  const scanContainer=document.getElementById('scanBtnContainer');
-  
+  showImage();
   if(m==='full'){
-    hint.textContent=isSafari?'"Tam Sayfayı Tara" butonuna tıkla → metni seç':'Butona tıklayarak taramayı başlat';
+    hint.textContent=isSafari?'Görsele uzun bas → metni seç':'Otomatik tanınıyor…';
     document.getElementById('selCanvas').style.display='none';
-    scanContainer.style.display='flex';
+    if(!isSafari) runTesseract(imageDataUrl);
   } else {
-    hint.textContent='Metin alanını parmağınla/mouse ile çiz, bırakınca otomatik taranır';
-    scanContainer.style.display='none';
+    hint.textContent='Metin alanını parmağınla/mouse ile çiz';
     initSelCanvas();
   }
-  
-  // Görüntüyü göster, metin alanını gizle
-  showImage();
 }
 
 function showImage(){
   document.getElementById('imgwrap').style.display='flex';
   document.getElementById('textwrap').style.display='none';
-  document.getElementById('scanBtnContainer').style.display=mode==='full'?'flex':'none';
   const img=document.getElementById('ocrImg');
-  if(img && imageDataUrl) {
-    img.src=imageDataUrl;
-    img.style.display='block';
-  }
-}
-
-// Tam sayfa tarama butonu
-async function scanFullPage() {
-  if(isScanning) return;
-  if(!imageDataUrl) {
-    setStatus('❌ Görüntü bulunamadı!');
-    return;
-  }
-  
-  if(isSafari) {
-    // Safari için iOS Live Text yöntemi
-    const img=document.getElementById('ocrImg');
-    img.src=imageDataUrl;
-    document.getElementById('hint').textContent='Görsele uzun bas → metni seç';
-    setStatus('📱 Görsele uzun basın ve "Metni Seç" seçeneğini kullanın');
-    setTimeout(()=>setStatus(''),3000);
-  } else {
-    // Diğer platformlar için Tesseract
-    await runTesseract(imageDataUrl);
-  }
-}
-
-async function scanArea(croppedDataUrl) {
-  if(isScanning) return;
-  if(isSafari) {
-    const img=document.getElementById('ocrImg');
-    img.src=croppedDataUrl;
-    document.getElementById('hint').textContent='Görsele uzun bas → metni seç';
-    setStatus('📱 Seçili alana uzun basın ve "Metni Seç" seçeneğini kullanın');
-    setTimeout(()=>setStatus(''),3000);
-  } else {
-    await runTesseract(croppedDataUrl);
-  }
+  img.src=imageDataUrl;
+  img.style.display='block';
 }
 
 /* ── Area selection ── */
@@ -215,30 +164,26 @@ function cropAndOcr(){
     c.width=cw; c.height=ch;
     c.getContext('2d').drawImage(src,cx,cy,cw,ch,0,0,cw,ch);
     const cropped=c.toDataURL('image/jpeg',0.95);
-    scanArea(cropped);
+    if(isSafari){
+      // Show cropped img for Live Text
+      img.src=cropped;
+      sc.style.display='none';
+      document.getElementById('hint').textContent='Görsele uzun bas → metni seç';
+    } else {
+      runTesseract(cropped);
+    }
   };
 }
 
 /* ── Tesseract (non-Safari fallback) ── */
 function setStatus(msg){
   const el=document.getElementById('status');
-  el.textContent=msg; 
-  el.style.display=msg?'block':'none';
-  if(msg) {
-    setTimeout(()=>{
-      if(document.getElementById('status').textContent===msg) 
-        setStatus('');
-    },3000);
-  }
+  el.textContent=msg; el.style.display=msg?'block':'none';
 }
-
 async function runTesseract(dataUrl){
-  if(isScanning) return;
-  isScanning=true;
   setStatus('⏳ Yükleniyor…');
   try{
     if(!window.Tesseract){
-      setStatus('⏳ OCR motoru yükleniyor (ilk kez)…');
       await new Promise((res,rej)=>{
         const s=document.createElement('script');
         s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
@@ -246,23 +191,17 @@ async function runTesseract(dataUrl){
         document.head.appendChild(s);
       });
     }
-    setStatus('⏳ Metin tanınıyor (bu 3-5 saniye sürebilir)…');
+    setStatus('⏳ Metin tanınıyor…');
     const result=await Tesseract.recognize(dataUrl,'tur+eng',{logger:()=>{}});
     const text=result.data.text.trim();
     document.getElementById('ocrText').value=text||'(Metin bulunamadı)';
     document.getElementById('imgwrap').style.display='none';
     document.getElementById('textwrap').style.display='flex';
-    document.getElementById('scanBtnContainer').style.display='none';
-    setStatus('✅ Tarama tamamlandı!');
-    setTimeout(()=>setStatus(''),2000);
+    setStatus('');
   }catch(err){
-    setStatus('❌ Hata: '+err.message);
-    console.error(err);
-  } finally {
-    isScanning=false;
+    setStatus('Hata: '+err.message);
   }
 }
-
 function copyText(){
   const t=document.getElementById('ocrText');
   t.select();
