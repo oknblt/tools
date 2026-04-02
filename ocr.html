@@ -11,14 +11,13 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 .topbar{background:#1a2a4a;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .topbar h1{font-size:15px;font-weight:700;}
 .topbar button{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:12px;padding:6px 12px;border-radius:6px;cursor:pointer;}
-.tabs{background:#0d1b35;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.tabs{background:#0d1b35;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;}
 .tab{padding:6px 14px;border:1.5px solid rgba(255,255,255,.3);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#fff;}
 .tab.on{background:#27ae60;border-color:#27ae60;}
-.tab:disabled{opacity:0.5;cursor:not-allowed;}
-.hint{color:rgba(255,255,255,.5);font-size:10px;margin-left:6px;}
+.hint{color:rgba(255,255,255,.5);font-size:10px;margin-left:6px;flex:1;}
 .imgwrap{flex:1;overflow:auto;background:#111;display:flex;align-items:flex-start;justify-content:center;padding:10px;position:relative;}
 #ocrImg{max-width:100%;height:auto;display:block;user-select:text;-webkit-user-select:text;}
-#selCanvas{position:absolute;top:0;left:0;display:none;touch-action:none;}
+#selCanvas{position:absolute;top:0;left:0;display:none;touch-action:none;cursor:crosshair;}
 .textwrap{display:none;flex-direction:column;flex:1;min-height:0;}
 .textwrap .label{padding:6px 10px;background:#0d1b35;font-size:11px;color:rgba(255,255,255,.6);flex-shrink:0;}
 #ocrText{flex:1;background:#1a1a1a;color:#fff;border:none;padding:12px;font-size:13px;font-family:'Segoe UI',sans-serif;resize:none;outline:none;line-height:1.7;}
@@ -26,9 +25,13 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 .textftr button{flex:1;padding:9px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;}
 .btn-copy{background:#27ae60;color:#fff;}
 .btn-back{background:rgba(255,255,255,.15);color:#fff;}
-#status{display:none;padding:10px;text-align:center;font-size:12px;color:rgba(255,255,255,.7);background:#0d1b35;flex-shrink:0;}
+#status{display:none;padding:10px;text-align:center;font-size:12px;color:rgba(255,255,255,.7);background:#0d1b35;flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:100;}
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px;opacity:.5;}
 .empty p{font-size:13px;}
+.loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a2a4a;padding:20px;border-radius:12px;text-align:center;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.5);display:none;}
+.loading p{margin-top:10px;font-size:13px;}
+.spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.3);border-top-color:#27ae60;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto;}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -41,7 +44,7 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 <div class="tabs" id="tabs" style="display:none;">
   <button class="tab" id="tabFull" onclick="scanFullPage()">🗒 Tam Sayfa</button>
   <button class="tab" id="tabArea" onclick="enableAreaSelection()">✂️ Alan Seç</button>
-  <span class="hint" id="hint">⬅️ Tarama başlatmak için butona tıkla</span>
+  <span class="hint" id="hint">📱 Butona tıklayarak tarama başlat</span>
 </div>
 
 <div class="imgwrap" id="imgwrap">
@@ -57,296 +60,326 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
   <div class="label">Tanınan metin — seçip kopyalayabilirsin</div>
   <textarea id="ocrText" readonly></textarea>
   <div class="textftr">
-    <button class="btn-back" onclick="showImage()">← Görüntüye Dön</button>
+    <button class="btn-back" onclick="showImageView()">← Görüntüye Dön</button>
     <button class="btn-copy" onclick="copyText()">📋 Tümünü Kopyala</button>
   </div>
 </div>
 
 <div id="status"></div>
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <p id="loadingText">İşleniyor...</p>
+</div>
 
 <script>
-const isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-let imageDataUrl=null;
-let areaSelectionActive=false;
-let selecting=false, sx=0,sy=0,ex=0,ey=0;
+// Global değişkenler
+let imageDataUrl = null;
+let areaSelectionActive = false;
+let isScanning = false;
 
-// Load image from sessionStorage
-window.addEventListener('load',()=>{
-  const data=sessionStorage.getItem('ocr_image');
-  if(!data){return;}
-  imageDataUrl=data;
-  document.getElementById('emptyMsg').style.display='none';
-  document.getElementById('tabs').style.display='flex';
-  const img=document.getElementById('ocrImg');
-  img.style.display='block';
-  img.src=data;
-  showImage();
+// DOM elementleri
+const imgElement = document.getElementById('ocrImg');
+const canvas = document.getElementById('selCanvas');
+const imgwrap = document.getElementById('imgwrap');
+const textwrap = document.getElementById('textwrap');
+const statusDiv = document.getElementById('status');
+const loadingDiv = document.getElementById('loading');
+const loadingText = document.getElementById('loadingText');
+const hintSpan = document.getElementById('hint');
+
+// Sayfa yüklendiğinde
+window.addEventListener('load', () => {
+  const data = sessionStorage.getItem('ocr_image');
+  if (!data) return;
+  
+  imageDataUrl = data;
+  document.getElementById('emptyMsg').style.display = 'none';
+  document.getElementById('tabs').style.display = 'flex';
+  imgElement.style.display = 'block';
+  imgElement.src = data;
+  showImageView();
 });
 
-function showImage(){
-  document.getElementById('imgwrap').style.display='flex';
-  document.getElementById('textwrap').style.display='none';
-  const img=document.getElementById('ocrImg');
-  if(img && imageDataUrl) {
-    img.src=imageDataUrl;
-    img.style.display='block';
+function showImageView() {
+  imgwrap.style.display = 'flex';
+  textwrap.style.display = 'none';
+  canvas.style.display = 'none';
+  areaSelectionActive = false;
+  document.getElementById('tabFull').classList.remove('on');
+  document.getElementById('tabArea').classList.remove('on');
+  hintSpan.innerHTML = '📱 Butona tıklayarak tarama başlat';
+}
+
+function setStatus(msg, isError = false) {
+  statusDiv.textContent = msg;
+  statusDiv.style.display = msg ? 'block' : 'none';
+  statusDiv.style.background = isError ? '#c0392b' : '#0d1b35';
+  if (msg) {
+    setTimeout(() => {
+      if (statusDiv.textContent === msg) setStatus('');
+    }, 3000);
   }
-  // Alan seçimini devre dışı bırak
-  disableAreaSelection();
+}
+
+function showLoading(msg) {
+  loadingText.textContent = msg;
+  loadingDiv.style.display = 'block';
+}
+
+function hideLoading() {
+  loadingDiv.style.display = 'none';
 }
 
 // Tam sayfa tarama
 async function scanFullPage() {
-  if(!imageDataUrl) {
-    setStatus('❌ Görüntü bulunamadı!');
+  if (!imageDataUrl) {
+    setStatus('❌ Görüntü bulunamadı!', true);
     return;
   }
+  if (isScanning) return;
   
-  // Buton görünümünü güncelle
   document.getElementById('tabFull').classList.add('on');
   document.getElementById('tabArea').classList.remove('on');
-  disableAreaSelection();
+  canvas.style.display = 'none';
+  areaSelectionActive = false;
   
-  if(isSafari) {
-    document.getElementById('hint').textContent='Görsele uzun bas → metni seç';
-    setStatus('📱 Görsele uzun basın ve "Metni Seç" seçeneğini kullanın');
-    setTimeout(()=>setStatus(''),3000);
+  // iOS kontrolü
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  
+  if (isIOS) {
+    // iOS için farklı yöntem
+    hintSpan.innerHTML = '📱 Görsele uzun bas → "Metni Seç" veya "Kopyala"';
+    setStatus('📱 Görsele basılı tutun ve metni seçin/kopyalayın');
   } else {
-    await runTesseract(imageDataUrl);
+    await performOCR(imageDataUrl);
   }
 }
 
-// Alan seçim modunu aktifleştir
+// Alan seçim modu
 function enableAreaSelection() {
-  if(!imageDataUrl) return;
+  if (!imageDataUrl) return;
+  if (isScanning) return;
   
   areaSelectionActive = true;
   document.getElementById('tabArea').classList.add('on');
   document.getElementById('tabFull').classList.remove('on');
-  document.getElementById('hint').textContent='✂️ Metin alanını mouse/parmak ile çiz, bırakınca otomatik taranır';
+  hintSpan.innerHTML = '✂️ Metin alanını fare/parmak ile çiz';
   
-  // Önce görüntüyü göster
-  showImage();
-  
-  // Canvas'ı başlat
-  initSelCanvas();
+  showImageView();
+  setupCanvasSelection();
 }
 
-// Alan seçim modunu devre dışı bırak
-function disableAreaSelection() {
-  areaSelectionActive = false;
-  const canvas = document.getElementById('selCanvas');
-  if(canvas) canvas.style.display = 'none';
+function setupCanvasSelection() {
+  if (!imgElement.complete || !imgElement.naturalWidth) {
+    imgElement.onload = () => initCanvasDrawing();
+    return;
+  }
+  initCanvasDrawing();
 }
 
-/* ── Area selection ── */
-function initSelCanvas(){
-  const img = document.getElementById('ocrImg');
-  const sc = document.getElementById('selCanvas');
+function initCanvasDrawing() {
+  const wrapRect = imgwrap.getBoundingClientRect();
+  const imgRect = imgElement.getBoundingClientRect();
   
-  function resize(){
-    const rect = img.getBoundingClientRect();
-    const wrapRect = document.getElementById('imgwrap').getBoundingClientRect();
-    sc.width = img.offsetWidth;
-    sc.height = img.offsetHeight;
-    sc.style.width = img.offsetWidth + 'px';
-    sc.style.height = img.offsetHeight + 'px';
-    sc.style.left = (rect.left - wrapRect.left) + 'px';
-    sc.style.top = (rect.top - wrapRect.top) + 'px';
-    sc.style.display = 'block';
-  }
+  canvas.width = imgElement.offsetWidth;
+  canvas.height = imgElement.offsetHeight;
+  canvas.style.width = imgElement.offsetWidth + 'px';
+  canvas.style.height = imgElement.offsetHeight + 'px';
+  canvas.style.left = (imgRect.left - wrapRect.left) + 'px';
+  canvas.style.top = (imgRect.top - wrapRect.top) + 'px';
+  canvas.style.display = 'block';
   
-  if(img.complete && img.naturalWidth) resize();
-  else img.onload = resize;
+  let startX = 0, startY = 0, endX = 0, endY = 0;
+  let isDrawing = false;
   
-  window.addEventListener('resize', resize);
+  const ctx = canvas.getContext('2d');
   
-  function getPos(e){
-    const rect = sc.getBoundingClientRect();
-    let cx, cy;
-    if(e.touches) {
-      cx = e.touches[0].clientX;
-      cy = e.touches[0].clientY;
-    } else {
-      cx = e.clientX;
-      cy = e.clientY;
-    }
-    return { x: cx - rect.left, y: cy - rect.top };
-  }
-  
-  function drawSelection(){
-    const ctx = sc.getContext('2d');
-    ctx.clearRect(0, 0, sc.width, sc.height);
-    // Yarı saydam koyu overlay
+  function drawSelection() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, 0, sc.width, sc.height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    const x = Math.min(sx, ex);
-    const y = Math.min(sy, ey);
-    const w = Math.abs(ex - sx);
-    const h = Math.abs(ey - sy);
+    const x = Math.min(startX, endX);
+    const y = Math.min(startY, endY);
+    const w = Math.abs(endX - startX);
+    const h = Math.abs(endY - startY);
     
-    // Seçili alanı temizle (saydam yap)
-    ctx.clearRect(x, y, w, h);
+    if (w > 2 && h > 2) {
+      ctx.clearRect(x, y, w, h);
+      ctx.strokeStyle = '#27ae60';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 6]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.setLineDash([]);
+      
+      // Köşe noktaları
+      ctx.fillStyle = '#27ae60';
+      ctx.fillRect(x-3, y-3, 6, 6);
+      ctx.fillRect(x+w-3, y-3, 6, 6);
+      ctx.fillRect(x-3, y+h-3, 6, 6);
+      ctx.fillRect(x+w-3, y+h-3, 6, 6);
+    }
+  }
+  
+  function getCoordinates(e) {
+    const rect = canvas.getBoundingClientRect();
+    let clientX, clientY;
     
-    // Kesikli çizgi ile çevrele
-    ctx.strokeStyle = '#27ae60';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([8, 6]);
-    ctx.strokeRect(x, y, w, h);
-    ctx.setLineDash([]);
+    if (e.touches) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
     
-    // Küçük tutma noktaları
-    ctx.fillStyle = '#27ae60';
-    ctx.fillRect(x-3, y-3, 6, 6);
-    ctx.fillRect(x+w-3, y-3, 6, 6);
-    ctx.fillRect(x-3, y+h-3, 6, 6);
-    ctx.fillRect(x+w-3, y+h-3, 6, 6);
+    let x = clientX - rect.left;
+    let y = clientY - rect.top;
+    x = Math.min(Math.max(x, 0), canvas.width);
+    y = Math.min(Math.max(y, 0), canvas.height);
+    return { x, y };
+  }
+  
+  function onStart(e) {
+    if (!areaSelectionActive) return;
+    e.preventDefault();
+    const coords = getCoordinates(e);
+    startX = coords.x;
+    startY = coords.y;
+    endX = coords.x;
+    endY = coords.y;
+    isDrawing = true;
+  }
+  
+  function onMove(e) {
+    if (!isDrawing || !areaSelectionActive) return;
+    e.preventDefault();
+    const coords = getCoordinates(e);
+    endX = coords.x;
+    endY = coords.y;
+    drawSelection();
+  }
+  
+  function onEnd(e) {
+    if (!isDrawing || !areaSelectionActive) return;
+    e.preventDefault();
+    isDrawing = false;
+    
+    const w = Math.abs(endX - startX);
+    const h = Math.abs(endY - startY);
+    
+    if (w > 10 && h > 10) {
+      cropSelectedArea();
+    } else {
+      setStatus('❌ Daha büyük bir alan seçin', true);
+    }
+  }
+  
+  function cropSelectedArea() {
+    const x1 = Math.min(startX, endX);
+    const y1 = Math.min(startY, endY);
+    const w = Math.abs(endX - startX);
+    const h = Math.abs(endY - startY);
+    
+    const scaleX = imgElement.naturalWidth / imgElement.offsetWidth;
+    const scaleY = imgElement.naturalHeight / imgElement.offsetHeight;
+    
+    const cropX = Math.round(x1 * scaleX);
+    const cropY = Math.round(y1 * scaleY);
+    const cropW = Math.round(w * scaleX);
+    const cropH = Math.round(h * scaleY);
+    
+    const tempImg = new Image();
+    tempImg.src = imageDataUrl;
+    tempImg.onload = () => {
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = cropW;
+      cropCanvas.height = cropH;
+      const cropCtx = cropCanvas.getContext('2d');
+      cropCtx.drawImage(tempImg, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+      const croppedDataUrl = cropCanvas.toDataURL('image/jpeg', 0.9);
+      
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        imgElement.src = croppedDataUrl;
+        canvas.style.display = 'none';
+        hintSpan.innerHTML = '📱 Görsele uzun bas → metni seç/kopyala';
+        setStatus('📱 Seçili alana basılı tutun');
+      } else {
+        performOCR(croppedDataUrl);
+      }
+    };
   }
   
   // Event listeners
-  const newCanvas = sc.cloneNode(false);
-  sc.parentNode.replaceChild(newCanvas, sc);
-  const canvas = document.getElementById('selCanvas');
-  canvas.style.cssText = sc.style.cssText;
-  canvas.width = sc.width;
-  canvas.height = sc.height;
+  canvas.removeEventListener('mousedown', onStart);
+  canvas.removeEventListener('mousemove', onMove);
+  canvas.removeEventListener('mouseup', onEnd);
+  canvas.removeEventListener('touchstart', onStart);
+  canvas.removeEventListener('touchmove', onMove);
+  canvas.removeEventListener('touchend', onEnd);
   
-  canvas.addEventListener('mousedown', (e) => {
-    if(!areaSelectionActive) return;
-    e.preventDefault();
-    const pos = getPos(e);
-    sx = pos.x;
-    sy = pos.y;
-    ex = pos.x;
-    ey = pos.y;
-    selecting = true;
-  });
-  
-  canvas.addEventListener('mousemove', (e) => {
-    if(!selecting || !areaSelectionActive) return;
-    e.preventDefault();
-    const pos = getPos(e);
-    ex = Math.min(Math.max(pos.x, 0), canvas.width);
-    ey = Math.min(Math.max(pos.y, 0), canvas.height);
-    drawSelection();
-  });
-  
-  canvas.addEventListener('mouseup', () => {
-    if(!selecting || !areaSelectionActive) return;
-    selecting = false;
-    cropAndOcr();
-  });
-  
-  // Mobil touch events
-  canvas.addEventListener('touchstart', (e) => {
-    if(!areaSelectionActive) return;
-    e.preventDefault();
-    const pos = getPos(e);
-    sx = pos.x;
-    sy = pos.y;
-    ex = pos.x;
-    ey = pos.y;
-    selecting = true;
-  }, {passive: false});
-  
-  canvas.addEventListener('touchmove', (e) => {
-    if(!selecting || !areaSelectionActive) return;
-    e.preventDefault();
-    const pos = getPos(e);
-    ex = Math.min(Math.max(pos.x, 0), canvas.width);
-    ey = Math.min(Math.max(pos.y, 0), canvas.height);
-    drawSelection();
-  }, {passive: false});
-  
-  canvas.addEventListener('touchend', (e) => {
-    if(!selecting || !areaSelectionActive) return;
-    e.preventDefault();
-    selecting = false;
-    cropAndOcr();
-  });
+  canvas.addEventListener('mousedown', onStart);
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseup', onEnd);
+  canvas.addEventListener('touchstart', onStart, { passive: false });
+  canvas.addEventListener('touchmove', onMove, { passive: false });
+  canvas.addEventListener('touchend', onEnd);
 }
 
-function cropAndOcr(){
-  const img = document.getElementById('ocrImg');
-  const canvas = document.getElementById('selCanvas');
-  const w = Math.abs(ex - sx);
-  const h = Math.abs(ey - sy);
+// OCR işlemi (Desktop için)
+async function performOCR(dataUrl) {
+  if (isScanning) return;
+  isScanning = true;
   
-  if(w < 10 || h < 10) {
-    setStatus('❌ Lütfen daha büyük bir alan seçin');
-    setTimeout(()=>setStatus(''),2000);
-    return;
-  }
+  showLoading('OCR motoru başlatılıyor...');
   
-  const scaleX = img.naturalWidth / img.offsetWidth;
-  const scaleY = img.naturalHeight / img.offsetHeight;
-  const cropX = Math.round(Math.min(sx, ex) * scaleX);
-  const cropY = Math.round(Math.min(sy, ey) * scaleY);
-  const cropW = Math.round(w * scaleX);
-  const cropH = Math.round(h * scaleY);
-  
-  const src = new Image();
-  src.src = imageDataUrl;
-  src.onload = () => {
-    const c = document.createElement('canvas');
-    c.width = cropW;
-    c.height = cropH;
-    c.getContext('2d').drawImage(src, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-    const cropped = c.toDataURL('image/jpeg', 0.95);
-    
-    if(isSafari){
-      const imgEl = document.getElementById('ocrImg');
-      imgEl.src = cropped;
-      disableAreaSelection();
-      document.getElementById('hint').textContent = 'Görsele uzun bas → metni seç';
-      setStatus('📱 Seçili alana uzun basın ve "Metni Seç" seçeneğini kullanın');
-      setTimeout(()=>setStatus(''),3000);
-    } else {
-      runTesseract(cropped);
-    }
-  };
-}
-
-/* ── Tesseract OCR ── */
-function setStatus(msg){
-  const el = document.getElementById('status');
-  el.textContent = msg;
-  el.style.display = msg ? 'block' : 'none';
-}
-
-async function runTesseract(dataUrl){
-  setStatus('⏳ OCR motoru hazırlanıyor...');
-  try{
-    if(!window.Tesseract){
-      setStatus('⏳ İlk kez yükleniyor (15MB), lütfen bekleyin...');
-      await new Promise((res,rej)=>{
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-        s.onload = res;
-        s.onerror = rej;
-        document.head.appendChild(s);
+  try {
+    if (!window.Tesseract) {
+      showLoading('İlk kez yükleniyor (15MB)...');
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
       });
     }
-    setStatus('⏳ Metin tanınıyor...');
-    const result = await Tesseract.recognize(dataUrl, 'tur+eng', { logger: () => {} });
+    
+    showLoading('Metin tanınıyor, lütfen bekleyin...');
+    
+    const result = await Tesseract.recognize(dataUrl, 'tur+eng', {
+      logger: (m) => {
+        if (m.status === 'recognizing text') {
+          loadingText.textContent = `Tanınıyor: ${Math.round(m.progress * 100)}%`;
+        }
+      }
+    });
+    
     const text = result.data.text.trim();
     document.getElementById('ocrText').value = text || '(Metin bulunamadı)';
-    document.getElementById('imgwrap').style.display = 'none';
-    document.getElementById('textwrap').style.display = 'flex';
+    
+    hideLoading();
+    imgwrap.style.display = 'none';
+    textwrap.style.display = 'flex';
     setStatus('✅ Tarama tamamlandı!');
-    setTimeout(()=>setStatus(''),2000);
-  } catch(err){
-    setStatus('❌ Hata: ' + err.message);
+    
+  } catch (err) {
+    hideLoading();
+    setStatus('❌ Hata: ' + err.message, true);
+    console.error(err);
+  } finally {
+    isScanning = false;
   }
 }
 
-function copyText(){
-  const t = document.getElementById('ocrText');
-  t.select();
-  navigator.clipboard.writeText(t.value).catch(() => document.execCommand('copy'));
-  setStatus('✓ Kopyalandı!');
-  setTimeout(()=>setStatus(''),2000);
+function copyText() {
+  const textarea = document.getElementById('ocrText');
+  textarea.select();
+  navigator.clipboard.writeText(textarea.value).catch(() => {
+    document.execCommand('copy');
+  });
+  setStatus('✓ Metin kopyalandı!');
 }
 </script>
 </body>
