@@ -1146,8 +1146,11 @@ function showLoupe(touchClientX, touchClientY, imgX, imgY){
     0, 0, LOUPE_SIZE, LOUPE_SIZE
   );
 
-  // Parmak ekranın sol yarısındaysa sağa, sağ yarısındaysa sola
-  const isLeft = touchClientX < window.innerWidth / 2;
+  // Köşenin canvas içindeki X'ini ekran koordinatına çevir
+  const ecRect = ec.getBoundingClientRect();
+  const cornerScreenX = ecRect.left + (imgX / ec.width) * ecRect.width;
+  // Köşe ekranın sağ yarısındaysa loupe sola, sol yarısındaysa sağa
+  const isLeft = cornerScreenX < window.innerWidth / 2;
   let lx = isLeft
     ? touchClientX + LOUPE_GAP + 24
     : touchClientX - LOUPE_GAP - 24 - LOUPE_SIZE;
