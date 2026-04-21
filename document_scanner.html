@@ -216,6 +216,37 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 .gbtn-light{background:rgba(255,255,255,.15);color:#fff;}
 #redactBar{display:none;}
 #redactBar.show{display:flex;}
+
+/* ── LOUPE (büyüteç) ── */
+#loupe{
+  display:none;
+  position:fixed;
+  width:160px;height:160px;
+  border-radius:50%;
+  border:3px solid #27ae60;
+  box-shadow:0 4px 24px rgba(0,0,0,.7),0 0 0 1.5px rgba(255,255,255,.25);
+  overflow:hidden;
+  pointer-events:none;
+  z-index:10000;
+  background:#111;
+}
+#loupeCanvas{
+  position:absolute;
+  top:0;left:0;
+  width:160px;height:160px;
+}
+/* Artı işareti (crosshair) */
+#loupe::after{
+  content:'';
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:18px;height:18px;
+  border-radius:50%;
+  border:2px solid #27ae60;
+  box-shadow:0 0 0 1px rgba(0,0,0,.5);
+  pointer-events:none;
+}
 </style>
 </head>
 <body>
@@ -306,6 +337,8 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
   <div class="ed-canvas-area" id="edCanvasArea">
     <canvas id="ec"></canvas>
   </div>
+  <!-- Loupe (büyüteç) — fixed pozisyon, modal üzerinde yüzer -->
+  <div id="loupe"><canvas id="loupeCanvas"></canvas></div>
   <div class="ed-ftr">
     <div style="display:flex;gap:6px">
       <button class="gbtn gbtn-light" onclick="resetEd()">Reset</button>
@@ -829,6 +862,7 @@ function closeEd(){
   document.querySelectorAll('.etbtn').forEach(b=>b.classList.remove('on'));
   document.getElementById('redactBar').style.display='none';
   document.getElementById('redactColorBar').style.display='none';
+  hideLoupe();
 }
 
 function setRedactColor(c){
@@ -1077,6 +1111,61 @@ function applyEd(){
   img.src=src;
 }
 
+/* ═══ LOUPE (büyüteç) ═══ */
+const loupeEl     = document.getElementById('loupe');
+const loupeCanvas = document.getElementById('loupeCanvas');
+const lctx        = loupeCanvas.getContext('2d');
+const LOUPE_SIZE  = 160;   // px — loupe çapı (CSS ile eşleşmeli)
+const LOUPE_ZOOM  = 3.5;   // büyütme katsayısı
+const LOUPE_GAP   = 20;    // parmaktan uzaklık (px)
+loupeCanvas.width  = LOUPE_SIZE;
+loupeCanvas.height = LOUPE_SIZE;
+
+/**
+ * Loupe'u göster.
+ * @param {number} touchClientX  — parmağın ekran X koordinatı
+ * @param {number} touchClientY  — parmağın ekran Y koordinatı
+ * @param {number} imgX          — canvas görüntü koordinatı (odak noktası)
+ * @param {number} imgY          — canvas görüntü koordinatı (odak noktası)
+ */
+function showLoupe(touchClientX, touchClientY, imgX, imgY){
+  // Kaynak canvas'tan büyütülmüş bölgeyi çiz
+  const half = (LOUPE_SIZE / LOUPE_ZOOM) / 2;
+  lctx.clearRect(0, 0, LOUPE_SIZE, LOUPE_SIZE);
+  lctx.drawImage(
+    ec,
+    imgX - half, imgY - half, LOUPE_SIZE / LOUPE_ZOOM, LOUPE_SIZE / LOUPE_ZOOM,
+    0, 0, LOUPE_SIZE, LOUPE_SIZE
+  );
+
+  // Ekranın sol yarısındaysa sağına, sağ yarısındaysa soluna koy
+  const screenW = window.innerWidth;
+  const screenH = window.innerHeight;
+  const isLeft  = touchClientX < screenW / 2;
+
+  let lx, ly;
+  if(isLeft){
+    // Parmak solda → loupe sağda
+    lx = touchClientX + LOUPE_GAP + 30;
+  } else {
+    // Parmak sağda → loupe solda
+    lx = touchClientX - LOUPE_GAP - 30 - LOUPE_SIZE;
+  }
+  ly = touchClientY - LOUPE_SIZE / 2;
+
+  // Ekran sınırları dışına taşmasın
+  lx = Math.max(6, Math.min(screenW - LOUPE_SIZE - 6, lx));
+  ly = Math.max(6, Math.min(screenH - LOUPE_SIZE - 6, ly));
+
+  loupeEl.style.left    = lx + 'px';
+  loupeEl.style.top     = ly + 'px';
+  loupeEl.style.display = 'block';
+}
+
+function hideLoupe(){
+  loupeEl.style.display = 'none';
+}
+
 /* ═══ CANVAS COORDS ═══ */
 function canvasPt(clientX,clientY){
   const r=ec.getBoundingClientRect();
@@ -1291,9 +1380,16 @@ ec.addEventListener('touchstart',e=>{
     return;
   }
   dragCorner=nearQuadCorner(p.x,p.y);
-  if(dragCorner){ dragEdge=null; return; }
+  if(dragCorner){
+    dragEdge=null;
+    showLoupe(e.touches[0].clientX, e.touches[0].clientY, p.x, p.y);
+    return;
+  }
   dragEdge=nearEdgeMid(p.x,p.y);
-  if(dragEdge){ return; }
+  if(dragEdge){
+    showLoupe(e.touches[0].clientX, e.touches[0].clientY, p.x, p.y);
+    return;
+  }
   if(quad && tool==='crop' && isInsideQuad(p.x,p.y)){
     panStart={x:p.x,y:p.y};
     quadAtPanStart={tl:{...quad.tl},tr:{...quad.tr},bl:{...quad.bl},br:{...quad.br}};
@@ -1339,11 +1435,15 @@ ec.addEventListener('touchmove',e=>{
   }
   if(dragCorner){
     const p=canvasPt(e.touches[0].clientX,e.touches[0].clientY);
-    moveQuadCorner(dragCorner,p.x,p.y);redrawEc();return;
+    moveQuadCorner(dragCorner,p.x,p.y);redrawEc();
+    showLoupe(e.touches[0].clientX, e.touches[0].clientY, p.x, p.y);
+    return;
   }
   if(dragEdge){
     const p=canvasPt(e.touches[0].clientX,e.touches[0].clientY);
-    moveEdgeMid(dragEdge,p.x,p.y);redrawEc();return;
+    moveEdgeMid(dragEdge,p.x,p.y);redrawEc();
+    showLoupe(e.touches[0].clientX, e.touches[0].clientY, p.x, p.y);
+    return;
   }
   if(panStart&&quadAtPanStart){
     const p=canvasPt(e.touches[0].clientX,e.touches[0].clientY);
@@ -1373,6 +1473,7 @@ ec.addEventListener('touchend',e=>{
   dragCorner=null; dragEdge=null;
   panStart=null; quadAtPanStart=null;
   rRectDragCorner=null; rRectPanStart=null;
+  hideLoupe();
   if(!drawing)return; drawing=false;
   const rw=Math.abs(px1-px0),rh=Math.abs(py1-py0);
   if(rw<5||rh<5)return;
