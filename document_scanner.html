@@ -1784,8 +1784,18 @@ document.addEventListener('mousemove',e=>{
     rRect={x:rRectAtPan.x+dx,y:rRectAtPan.y+dy,w:rRectAtPan.w,h:rRectAtPan.h};
     redrawEc();return;
   }
-  if(dragCorner){moveQuadCorner(dragCorner,p.x,p.y);redrawEc();return;}
-  if(dragEdge){moveEdgeMid(dragEdge,p.x,p.y);redrawEc();return;}
+  if(dragCorner){
+    moveQuadCorner(dragCorner,p.x,p.y);
+    if(!_dragRaf){ _dragRaf=requestAnimationFrame(()=>{ redrawOverlayOnly(); _dragRaf=null; }); }
+    showLoupe(e.clientX, e.clientY, p.x, p.y);
+    return;
+  }
+  if(dragEdge){
+    moveEdgeMid(dragEdge,p.x,p.y);
+    if(!_dragRaf){ _dragRaf=requestAnimationFrame(()=>{ redrawOverlayOnly(); _dragRaf=null; }); }
+    showLoupe(e.clientX, e.clientY, p.x, p.y);
+    return;
+  }
   if(panStart&&quadAtPanStart){
     const dx=p.x-panStart.x,dy=p.y-panStart.y;
     quad={
@@ -1805,6 +1815,7 @@ document.addEventListener('mousemove',e=>{
   else{ redrawEc();drawLive(px0,py0,px1,py1); }
 });
 document.addEventListener('mouseup',e=>{
+  hideLoupe();
   dragCorner=null; dragEdge=null;
   panStart=null; quadAtPanStart=null;
   vpanStart=null;
