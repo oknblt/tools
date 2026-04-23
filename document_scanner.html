@@ -273,7 +273,6 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
   <span style="font-size:11px;color:rgba(255,255,255,.7)" id="batchLabel">0 selected</span>
   <button onclick="batchSelectAll()">All</button>
   <button onclick="batchClearSel()">✕ Deselect</button>
-  <button class="green" onclick="batchDelete()">🗑 Delete</button>
     <div style="flex:1"></div>
 </div>
 <!-- BOTTOM TOOLBAR -->
@@ -307,11 +306,11 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
   </div>
   <div class="ed-tools" style="flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding-left:8px;">
     <button class="etbtn" id="tCrop"       onclick="setTool('crop')"       style="white-space:nowrap">✂️ Crop</button>
+    <button class="etbtn"                  onclick="autoCrop()"             style="white-space:nowrap">Auto</button>
     <button class="etbtn" id="tRedact"     onclick="setTool('redact')"     style="white-space:nowrap">Brush</button>
     <button class="etbtn" id="tRedactRect" onclick="setTool('redactRect')" style="white-space:nowrap">Redact</button>
     <button class="etbtn"                  onclick="undoEd()"               style="white-space:nowrap">Undo</button>
     <button class="etbtn"                  onclick="rotImg(90)"             style="white-space:nowrap">↻ Rotate</button>
-    <button class="etbtn"                  onclick="autoCrop()"             style="white-space:nowrap">Auto</button>
     <button class="etbtn" id="tOcrRect"    onclick="openOcrPage()"         style="white-space:nowrap">OCR</button>
   </div>
   <div id="redactBar" style="display:none;background:#0d1b35;padding:6px 14px;align-items:center;gap:10px;flex-shrink:0;">
@@ -363,8 +362,7 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
     <div class="pdf-btns" style="flex-direction:column;gap:8px;">
       <div style="display:flex;gap:8px;">
         <button class="pdf-cancel" onclick="closePDFModal()">Cancel</button>
-        <button class="pdf-go" onclick="exportPDF('preview')">👁 Generate</button>
-        <button class="pdf-go" style="background:#1a6aaa;" onclick="exportPDF('download')">⬇ Download</button>
+        <button class="pdf-go" onclick="exportPDF('download')">Generate</button>
       </div>
       <button id="btnShare" class="pdf-go" style="background:#075e54;display:none;width:100%;" onclick="sharePDF()">↗ Share</button>
     </div>
@@ -1404,7 +1402,7 @@ function showLoupe(touchClientX, _unused, imgX, imgY){
     );
     // Overlay çizgilerini de üstüne koy (köşe konumunu görmek için)
     lctx.save();
-    lctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    lctx.strokeStyle = 'rgb(0,0,0)';
     lctx.lineWidth = 1.5;
     lctx.beginPath();
     lctx.moveTo(LOUPE_SIZE/2, 0); lctx.lineTo(LOUPE_SIZE/2, LOUPE_SIZE);
