@@ -7,7 +7,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;overflow:hidden;}
-body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;flex-direction:column;height:100%;overflow:hidden;}
+body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;flex-direction:column;}
 
 .topbar{background:#1a2a4a;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .topbar h1{font-size:15px;font-weight:700;}
@@ -18,33 +18,51 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 .tab.on{background:#27ae60;border-color:#27ae60;}
 .hint{color:rgba(255,255,255,.5);font-size:11px;margin-left:4px;}
 
-/* scroll container — görüntü alanı */
-.scrollwrap{
-  flex:1;overflow:auto;background:#1a1a1a;
-  display:flex;justify-content:center;align-items:flex-start;
-  min-height:0;
-  -webkit-overflow-scrolling:touch;
+/* Pan+zoom viewport */
+#viewport{
+  flex:1;overflow:hidden;background:#1a1a1a;
+  position:relative;min-height:0;cursor:grab;
+}
+#viewport.grabbing{cursor:grabbing;}
+
+/* imgBox — transform ile pan/zoom */
+#imgBox{
+  position:absolute;transform-origin:0 0;
+  display:none;line-height:0;
+  user-select:none;-webkit-user-select:none;
+}
+#ocrImg{display:block;}
+#selCanvas{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  display:none;touch-action:none;cursor:crosshair;
 }
 
-/* wrapper that hugs the image exactly */
-#imgBox{position:relative;display:inline-block;line-height:0;}
-#ocrImg{display:block;max-width:100%;height:auto;user-select:text;-webkit-user-select:text;}
-#selCanvas{position:absolute;top:0;left:0;width:100%;height:100%;display:none;touch-action:none;cursor:crosshair;}
+/* resize handle — bottomPanel ile viewport arasında */
+#resizeHandle{
+  height:6px;background:#1a2a4a;flex-shrink:0;
+  cursor:ns-resize;display:none;
+  border-top:1px solid rgba(255,255,255,.15);
+  border-bottom:1px solid rgba(255,255,255,.15);
+  position:relative;
+}
+#resizeHandle::after{
+  content:'';position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:32px;height:2px;border-radius:2px;
+  background:rgba(255,255,255,.3);
+}
 
-/* Alt panel — görüntünün altında kalıcı, başta gizli */
+/* Alt panel */
 #bottomPanel{
   display:none;flex-direction:column;flex-shrink:0;
-  height:38vh;border-top:2px solid #27ae60;
-  background:#0d1b35;
-  /* iOS Safari: -webkit- prefix gerekli */
-  -webkit-flex-shrink:0;
+  border-top:2px solid #27ae60;background:#0d1b35;
+  height:220px;min-height:80px;max-height:70vh;
 }
-#bottomPanel .lbl{
-  padding:5px 10px;font-size:11px;
-  color:rgba(255,255,255,.6);flex-shrink:0;
-  display:flex;align-items:center;justify-content:space-between;
+.bp-bar{
+  padding:5px 10px;font-size:11px;color:rgba(255,255,255,.6);
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
 }
-#bottomPanel .lbl button{
+.bp-bar button{
   background:#27ae60;border:none;color:#fff;
   font-size:11px;font-weight:700;padding:3px 10px;
   border-radius:5px;cursor:pointer;
@@ -52,14 +70,11 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 #ocrText{
   flex:1;background:#111;color:#fff;border:none;
   padding:10px 12px;font-size:13px;
-  font-family:'Segoe UI',sans-serif;resize:none;outline:none;line-height:1.7;
-  min-height:60px;
-  -webkit-user-select:text;user-select:text;
-  /* iOS readonly textarea scroll */
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  font-family:'Segoe UI',sans-serif;
+  resize:none;outline:none;line-height:1.7;
+  overflow-y:auto;
 }
 
-/* eski textwrap — artık kullanılmıyor ama var olsun */
 .textwrap{display:none;}
 
 #status{
@@ -68,8 +83,10 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
   flex-shrink:0;display:none;
   border-top:1px solid rgba(255,255,255,.1);
 }
-
-.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;opacity:.5;}
+.empty{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;gap:12px;opacity:.5;
+}
 .empty p{font-size:13px;}
 </style>
 </head>
@@ -86,24 +103,25 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
   <span class="hint" id="hint">Metni seçmek istediğin alanı çiz</span>
 </div>
 
-<div class="scrollwrap" id="scrollwrap">
+<div id="viewport">
   <div class="empty" id="emptyMsg">
     <p>Görüntü yüklenmedi.</p>
     <p style="font-size:11px;">Scanner → Edit → 📋 OCR butonunu kullan.</p>
   </div>
-  <div id="imgBox" style="display:none;">
+  <div id="imgBox">
     <img id="ocrImg" alt="">
     <canvas id="selCanvas"></canvas>
   </div>
 </div>
 
-<!-- Alt panel: aynı ekranda kalıcı textarea -->
+<div id="resizeHandle"></div>
+
 <div id="bottomPanel">
-  <div class="lbl">
-    <span>📋 Tanınan Metin</span>
+  <div class="bp-bar">
+    <span>📋 Tanınan Metin <span style="font-size:10px;opacity:.5;">(düzenlenebilir)</span></span>
     <button onclick="copyText()">Kopyala</button>
   </div>
-  <textarea id="ocrText" readonly placeholder="Alan seçince metin burada görünecek…"></textarea>
+  <textarea id="ocrText" placeholder="Alan seçince metin burada görünecek…"></textarea>
 </div>
 
 <div id="status"></div>
@@ -114,6 +132,110 @@ let imageDataUrl=null;
 let mode='area';
 let sel={x0:0,y0:0,x1:0,y1:0,active:false};
 
+/* ── Pan/Zoom state ── */
+let pz={sc:1, tx:0, ty:0};
+let _panning=false, _panStart=null;
+const viewport=document.getElementById('viewport');
+const imgBox=document.getElementById('imgBox');
+let _natW=0, _natH=0;
+
+function applyTransform(){
+  imgBox.style.transform=`translate(${pz.tx}px,${pz.ty}px) scale(${pz.sc})`;
+}
+
+function clampPan(){
+  const vw=viewport.clientWidth, vh=viewport.clientHeight;
+  const iw=_natW*pz.sc, ih=_natH*pz.sc;
+  // allow dragging image fully across viewport with small margin
+  const margin=40;
+  pz.tx=Math.min(vw-margin, Math.max(-(iw-margin), pz.tx));
+  pz.ty=Math.min(vh-margin, Math.max(-(ih-margin), pz.ty));
+}
+
+function minScale(){
+  const vw=viewport.clientWidth, vh=viewport.clientHeight;
+  if(!_natW||!_natH) return 0.1;
+  return Math.min(vw/_natW, vh/_natH) * 0.85; // %85: etrafında küçük boşluk
+}
+function zoomAt(cx,cy,factor){
+  const newSc=Math.min(8, Math.max(minScale(), pz.sc*factor));
+  const ratio=newSc/pz.sc;
+  pz.tx=cx-(cx-pz.tx)*ratio;
+  pz.ty=cy-(cy-pz.ty)*ratio;
+  pz.sc=newSc;
+  clampPan();
+  applyTransform();
+  syncCanvasSize();
+}
+
+/* ── Mouse wheel zoom ── */
+viewport.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=viewport.getBoundingClientRect();
+  const cx=e.clientX-r.left, cy=e.clientY-r.top;
+  const factor=e.deltaY<0?1.12:1/1.12;
+  zoomAt(cx,cy,factor);
+},{passive:false});
+
+/* ── Mouse pan (only when not drawing selection) ── */
+viewport.addEventListener('mousedown',e=>{
+  if(mode==='area'&&e.target===document.getElementById('selCanvas')) return;
+  _panning=true; _panStart={x:e.clientX-pz.tx, y:e.clientY-pz.ty};
+  viewport.classList.add('grabbing');
+});
+document.addEventListener('mousemove',e=>{
+  if(!_panning)return;
+  pz.tx=e.clientX-_panStart.x;
+  pz.ty=e.clientY-_panStart.y;
+  clampPan(); applyTransform();
+});
+document.addEventListener('mouseup',()=>{
+  _panning=false; viewport.classList.remove('grabbing');
+});
+
+/* ── Touch pinch zoom + pan ── */
+let _touches=[], _pinch0=null;
+viewport.addEventListener('touchstart',e=>{
+  if(mode==='area'&&e.target===document.getElementById('selCanvas')) return;
+  _touches=[...e.touches];
+  if(_touches.length===2){
+    const dx=_touches[0].clientX-_touches[1].clientX;
+    const dy=_touches[0].clientY-_touches[1].clientY;
+    _pinch0={dist:Math.hypot(dx,dy), sc:pz.sc,
+      mx:(_touches[0].clientX+_touches[1].clientX)/2,
+      my:(_touches[0].clientY+_touches[1].clientY)/2,
+      tx:pz.tx, ty:pz.ty};
+  } else if(_touches.length===1){
+    _panStart={x:_touches[0].clientX-pz.tx, y:_touches[0].clientY-pz.ty};
+  }
+},{passive:true});
+
+viewport.addEventListener('touchmove',e=>{
+  if(mode==='area'&&e.target===document.getElementById('selCanvas')) return;
+  e.preventDefault();
+  _touches=[...e.touches];
+  if(_touches.length===2&&_pinch0){
+    const dx=_touches[0].clientX-_touches[1].clientX;
+    const dy=_touches[0].clientY-_touches[1].clientY;
+    const dist=Math.hypot(dx,dy);
+    const factor=dist/_pinch0.dist;
+    const newSc=Math.min(8,Math.max(0.2,_pinch0.sc*factor));
+    const r=viewport.getBoundingClientRect();
+    const cx=_pinch0.mx-r.left, cy=_pinch0.my-r.top;
+    const ratio=newSc/_pinch0.sc;
+    pz.tx=cx-(cx-_pinch0.tx)*ratio;
+    pz.ty=cy-(cy-_pinch0.ty)*ratio;
+    pz.sc=newSc;
+    clampPan(); applyTransform(); syncCanvasSize();
+  } else if(_touches.length===1&&_panStart){
+    pz.tx=_touches[0].clientX-_panStart.x;
+    pz.ty=_touches[0].clientY-_panStart.y;
+    clampPan(); applyTransform();
+  }
+},{passive:false});
+
+viewport.addEventListener('touchend',()=>{ _pinch0=null; });
+
 /* ── Load image ── */
 window.addEventListener('load',()=>{
   const data=sessionStorage.getItem('ocr_image');
@@ -121,78 +243,116 @@ window.addEventListener('load',()=>{
   imageDataUrl=data;
   const img=document.getElementById('ocrImg');
   img.onload=()=>{
+    _natW=img.naturalWidth; _natH=img.naturalHeight;
     document.getElementById('emptyMsg').style.display='none';
-    document.getElementById('imgBox').style.display='inline-block';
+    imgBox.style.display='block';
     document.getElementById('tabs').style.display='flex';
-    syncCanvas();
+    // fit image to viewport
+    const vw=viewport.clientWidth, vh=viewport.clientHeight;
+    pz.sc=Math.min(vw/_natW, vh/_natH); // tamamı görünsün (1'den büyük olmasın istemiyorsan Math.min(...,1) yap)
+    pz.tx=(vw-_natW*pz.sc)/2;
+    pz.ty=(vh-_natH*pz.sc)/2;
+    img.style.width=_natW+'px'; img.style.height=_natH+'px';
+    applyTransform();
+    syncCanvasSize();
     initAreaMode();
   };
   img.src=data;
 });
 
-/* ── Keep canvas same size as image ── */
-function syncCanvas(){
-  const img=document.getElementById('ocrImg');
+function syncCanvasSize(){
   const sc=document.getElementById('selCanvas');
-  sc.width=img.offsetWidth;
-  sc.height=img.offsetHeight;
+  const img=document.getElementById('ocrImg');
+  sc.width=_natW; sc.height=_natH;
+  sc.style.width=_natW+'px'; sc.style.height=_natH+'px';
 }
-window.addEventListener('resize',()=>{ syncCanvas(); redraw(); });
+
+window.addEventListener('resize',()=>{ redraw(); });
 
 /* ── Mode switch ── */
 function setMode(m){
   mode=m;
-  document.getElementById('tabArea').classList.toggle('on',m==='area');
-  document.getElementById('tabFull').classList.toggle('on',m==='full');
   const hint=document.getElementById('hint');
   sel={x0:0,y0:0,x1:0,y1:0,active:false};
-
   if(m==='area'){
-    hint.textContent='Metni seçmek istediğin alanı çiz';
-    document.getElementById('selCanvas').style.display='block';
-    syncCanvas(); redraw();
+    document.getElementById('tabFull').classList.remove('on');
+    setSelMode(true); // Alan Seç butonuna basınca seçim aktif olur
   } else {
+    document.getElementById('tabArea').classList.remove('on');
+    document.getElementById('tabFull').classList.add('on');
+    setSelMode(false);
     hint.textContent=isSafari?'Görsele uzun bas → Live Text ile seç':'Taranıyor…';
-    document.getElementById('selCanvas').style.display='none';
     if(!isSafari) runTesseract(imageDataUrl, true);
   }
 }
 
-/* ── Area selection drawing ── */
+/* ── Area selection ── */
+let selMode=false; // true = seçim bekleniyor, false = pan modu
+
+function setSelMode(on){
+  selMode=on;
+  const btn=document.getElementById('tabArea');
+  const sc=document.getElementById('selCanvas');
+  if(on){
+    btn.classList.add('on');
+    sc.style.display='block';
+    sc.style.cursor='crosshair';
+    document.getElementById('hint').textContent='Alanı çiz — bittikten sonra pan moduna geçer';
+    redraw();
+  } else {
+    btn.classList.remove('on');
+    sc.style.display='none'; // canvas kaldırılınca pan çalışır
+    document.getElementById('hint').textContent='Alan Seç butonuna bas';
+  }
+}
+
 function initAreaMode(){
   const sc=document.getElementById('selCanvas');
-  sc.style.display='block';
-  syncCanvas();
+  sc.style.display='none'; // başta inaktif
+  selMode=false;
   redraw();
 
-  function pos(e){
+  // canvas koordinatı = imgBox içi koordinat (scale=1, naturalSize)
+  function pos(clientX,clientY){
     const r=sc.getBoundingClientRect();
-    const src=e.touches?e.touches[0]:e;
     return{
-      x:(src.clientX-r.left)*(sc.width/r.width),
-      y:(src.clientY-r.top)*(sc.height/r.height)
+      x:Math.max(0,Math.min(_natW,(clientX-r.left)*(_natW/r.width))),
+      y:Math.max(0,Math.min(_natH,(clientY-r.top)*(_natH/r.height)))
     };
   }
 
   sc.addEventListener('mousedown',e=>{
-    const p=pos(e); sel={x0:p.x,y0:p.y,x1:p.x,y1:p.y,active:true}; redraw();
+    e.stopPropagation();
+    const p=pos(e.clientX,e.clientY);
+    sel={x0:p.x,y0:p.y,x1:p.x,y1:p.y,active:true}; redraw();
   });
   sc.addEventListener('mousemove',e=>{
-    if(!sel.active)return; const p=pos(e); sel.x1=p.x; sel.y1=p.y; redraw();
+    if(!sel.active)return;
+    const p=pos(e.clientX,e.clientY); sel.x1=p.x; sel.y1=p.y; redraw();
   });
   sc.addEventListener('mouseup',e=>{
     if(!sel.active)return; sel.active=false; redraw();
-    if(Math.abs(sel.x1-sel.x0)>10&&Math.abs(sel.y1-sel.y0)>10) cropAndOcr();
+    if(Math.abs(sel.x1-sel.x0)>10&&Math.abs(sel.y1-sel.y0)>10){
+      cropAndOcr();
+      setSelMode(false); // seçim bitti → pan moduna geç
+    }
   });
   sc.addEventListener('touchstart',e=>{
-    e.preventDefault(); const p=pos(e); sel={x0:p.x,y0:p.y,x1:p.x,y1:p.y,active:true}; redraw();
+    e.preventDefault(); e.stopPropagation();
+    const t=e.touches[0]; const p=pos(t.clientX,t.clientY);
+    sel={x0:p.x,y0:p.y,x1:p.x,y1:p.y,active:true}; redraw();
   },{passive:false});
   sc.addEventListener('touchmove',e=>{
-    e.preventDefault(); if(!sel.active)return; const p=pos(e); sel.x1=p.x; sel.y1=p.y; redraw();
+    e.preventDefault(); if(!sel.active)return;
+    const t=e.touches[0]; const p=pos(t.clientX,t.clientY);
+    sel.x1=p.x; sel.y1=p.y; redraw();
   },{passive:false});
   sc.addEventListener('touchend',e=>{
     if(!sel.active)return; sel.active=false; redraw();
-    if(Math.abs(sel.x1-sel.x0)>10&&Math.abs(sel.y1-sel.y0)>10) cropAndOcr();
+    if(Math.abs(sel.x1-sel.x0)>10&&Math.abs(sel.y1-sel.y0)>10){
+      cropAndOcr();
+      setSelMode(false);
+    }
   });
 }
 
@@ -200,35 +360,26 @@ function redraw(){
   const sc=document.getElementById('selCanvas');
   if(sc.style.display==='none')return;
   const sctx=sc.getContext('2d');
-  sctx.clearRect(0,0,sc.width,sc.height);
-
+  sctx.clearRect(0,0,_natW,_natH);
   const w=Math.abs(sel.x1-sel.x0), h=Math.abs(sel.y1-sel.y0);
   const hasBox=w>5&&h>5;
-
-  // dim
   sctx.fillStyle='rgba(0,0,0,0.42)';
-  sctx.fillRect(0,0,sc.width,sc.height);
-
+  sctx.fillRect(0,0,_natW,_natH);
   if(!hasBox){
-    // guide text
     sctx.fillStyle='rgba(255,255,255,0.7)';
-    sctx.font=`${Math.round(sc.width*0.035)}px Segoe UI`;
+    sctx.font=`${Math.round(_natW*0.025)}px Segoe UI`;
     sctx.textAlign='center';
-    sctx.fillText('Alanı çizmek için tıkla / dokun',sc.width/2,sc.height/2);
+    sctx.fillText('Alanı çizmek için tıkla / dokun',_natW/2,_natH/2);
     return;
   }
-
   const x=Math.min(sel.x0,sel.x1), y=Math.min(sel.y0,sel.y1);
-  // clear inside = show image
   sctx.clearRect(x,y,w,h);
-  // dashed green border
   sctx.strokeStyle='#27ae60';
-  sctx.lineWidth=Math.max(1.5,sc.width*0.003);
-  sctx.setLineDash([6,3]);
+  sctx.lineWidth=Math.max(2,_natW*0.003);
+  sctx.setLineDash([8,4]);
   sctx.strokeRect(x,y,w,h);
   sctx.setLineDash([]);
-  // corner squares
-  const cs=Math.max(6,sc.width*0.012);
+  const cs=Math.max(8,_natW*0.012);
   sctx.fillStyle='#27ae60';
   [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([cx,cy])=>{
     sctx.fillRect(cx-cs/2,cy-cs/2,cs,cs);
@@ -237,38 +388,27 @@ function redraw(){
 
 /* ── Crop & OCR ── */
 function cropAndOcr(){
-  const img=document.getElementById('ocrImg');
-  const sc=document.getElementById('selCanvas');
-  // canvas coords → natural image coords
-  const scaleX=img.naturalWidth/sc.width;
-  const scaleY=img.naturalHeight/sc.height;
-  const x=Math.round(Math.min(sel.x0,sel.x1)*scaleX);
-  const y=Math.round(Math.min(sel.y0,sel.y1)*scaleY);
-  const w=Math.round(Math.abs(sel.x1-sel.x0)*scaleX);
-  const h=Math.round(Math.abs(sel.y1-sel.y0)*scaleY);
-
+  const x=Math.round(Math.min(sel.x0,sel.x1));
+  const y=Math.round(Math.min(sel.y0,sel.y1));
+  const w=Math.round(Math.abs(sel.x1-sel.x0));
+  const h=Math.round(Math.abs(sel.y1-sel.y0));
   const src=new Image(); src.src=imageDataUrl;
   src.onload=()=>{
-    const c=document.createElement('canvas');
-    c.width=w; c.height=h;
-    c.getContext('2d').drawImage(src,x,y,w,h,0,0,w,h);
-
     if(isSafari){
-      // iPhone: show crop, Live Text works on it directly
-      const cropped=c.toDataURL('image/jpeg',0.95);
-      img.src=cropped;
-      sc.style.display='none';
+      const c=document.createElement('canvas');
+      c.width=w; c.height=h;
+      c.getContext('2d').drawImage(src,x,y,w,h,0,0,w,h);
+      document.getElementById('ocrImg').src=c.toDataURL('image/jpeg',0.95);
+      document.getElementById('selCanvas').style.display='none';
       document.getElementById('hint').textContent='Görsele uzun bas → metni seç';
     } else {
-      // Desktop: upscale crop 2x before Tesseract for better small-text accuracy
-      const scale=2;
-      const c2=document.createElement('canvas');
-      c2.width=w*scale; c2.height=h*scale;
-      const ctx2=c2.getContext('2d');
-      ctx2.imageSmoothingEnabled=true;
-      ctx2.imageSmoothingQuality='high';
-      ctx2.drawImage(c,0,0,w,h,0,0,c2.width,c2.height);
-      runTesseract(c2.toDataURL('image/jpeg',0.95));
+      // 2× upscale for better accuracy
+      const c=document.createElement('canvas');
+      c.width=w*2; c.height=h*2;
+      const ctx=c.getContext('2d');
+      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+      ctx.drawImage(src,x,y,w,h,0,0,w*2,h*2);
+      runTesseract(c.toDataURL('image/jpeg',0.95));
     }
   };
 }
@@ -281,7 +421,6 @@ function setStatus(msg){
 
 async function runTesseract(dataUrl, isFullPage=false){
   setStatus('⏳ Yükleniyor…');
-  // scrollwrap gizlenmez — görüntü ve textarea aynı anda görünür
   try{
     if(!window.Tesseract){
       await new Promise((res,rej)=>{
@@ -293,67 +432,60 @@ async function runTesseract(dataUrl, isFullPage=false){
     }
     setStatus('⏳ Tanınıyor…');
     const result=await Tesseract.recognize(dataUrl,'tur+eng',{
-      // PSM 1 = automatic page segmentation (full page)
-      // PSM 6 = assume uniform block of text (cropped area)
-      tessedit_pageseg_mode: isFullPage ? '1' : '6',
+      tessedit_pageseg_mode: isFullPage?'1':'6',
       logger:m=>{
         if(m.status==='recognizing text')
           setStatus('⏳ %'+Math.round(m.progress*100));
       }
     });
-    const resultText = result.data.text.trim()||'(Metin bulunamadı)';
-    // iOS Safari: DOM güncellemesini bir sonraki frame'e bırak
-    requestAnimationFrame(()=>{
-      document.getElementById('ocrText').value = resultText;
-      const bp = document.getElementById('bottomPanel');
-      bp.style.display = 'flex';
-      // iOS'ta display:flex bazen render edilmiyor — force reflow
-      bp.offsetHeight;
-      document.getElementById('scrollwrap').style.display='flex';
-      setStatus('');
-    });
+    const txt=result.data.text.trim()||'(Metin bulunamadı)';
+    document.getElementById('ocrText').value=txt;
+    document.getElementById('bottomPanel').style.display='flex';
+    document.getElementById('resizeHandle').style.display='block';
+    setStatus('');
   }catch(err){
-    document.getElementById('scrollwrap').style.display='flex';
     setStatus('Hata: '+err.message);
   }
 }
 
-/* ── Helpers ── */
-function backToImage(){
-  // Eski uyumluluk — artık kullanılmıyor
-  document.getElementById('bottomPanel').style.display='none';
-  document.getElementById('ocrText').value='';
-  sel={x0:0,y0:0,x1:0,y1:0,active:false};
-  setStatus('');
-  syncCanvas(); redraw();
-}
+/* ── Resize handle ── */
+(()=>{
+  const handle=document.getElementById('resizeHandle');
+  const panel=document.getElementById('bottomPanel');
+  let _rz=false, _startY=0, _startH=0;
+  function start(y){
+    _rz=true; _startY=y; _startH=panel.offsetHeight;
+    document.body.style.userSelect='none';
+  }
+  function move(y){
+    if(!_rz)return;
+    const delta=_startY-y; // yukarı sürükleyince büyür
+    const newH=Math.min(window.innerHeight*0.7, Math.max(80, _startH+delta));
+    panel.style.height=newH+'px';
+  }
+  function end(){ _rz=false; document.body.style.userSelect=''; }
+  handle.addEventListener('mousedown',e=>start(e.clientY));
+  document.addEventListener('mousemove',e=>move(e.clientY));
+  document.addEventListener('mouseup',end);
+  handle.addEventListener('touchstart',e=>{ e.preventDefault(); start(e.touches[0].clientY); },{passive:false});
+  document.addEventListener('touchmove',e=>{ if(_rz){ e.preventDefault(); move(e.touches[0].clientY); } },{passive:false});
+  document.addEventListener('touchend',end);
+})();
 
+/* ── Copy ── */
 function copyText(){
   const t=document.getElementById('ocrText');
-  const txt=t.value;
-  if(!txt)return;
-  // Modern clipboard API
+  const txt=t.value; if(!txt)return;
   if(navigator.clipboard&&window.isSecureContext){
     navigator.clipboard.writeText(txt).then(()=>{
-      setStatus('✓ Kopyalandı!');
-      setTimeout(()=>setStatus(''),2000);
+      setStatus('✓ Kopyalandı!'); setTimeout(()=>setStatus(''),2000);
     }).catch(()=>fallbackCopy(t));
-  } else {
-    fallbackCopy(t);
-  }
+  } else { fallbackCopy(t); }
 }
 function fallbackCopy(t){
-  // iOS eski yöntem: readonly kaldır, seç, kopyala
-  t.readOnly=false;
-  t.select();
-  t.setSelectionRange(0,99999);
-  try{
-    document.execCommand('copy');
-    setStatus('✓ Kopyalandı!');
-  }catch(e){
-    setStatus('Metni elle seç ve kopyala');
-  }
-  t.readOnly=true;
+  t.select(); t.setSelectionRange(0,99999);
+  try{ document.execCommand('copy'); setStatus('✓ Kopyalandı!'); }
+  catch(e){ setStatus('Metni elle seç ve kopyala'); }
   setTimeout(()=>setStatus(''),2500);
 }
 </script>
