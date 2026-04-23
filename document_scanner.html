@@ -271,9 +271,9 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 <!-- BATCH ACTION BAR -->
 <div id="batchBar">
   <span style="font-size:11px;color:rgba(255,255,255,.7)" id="batchLabel">0 selected</span>
-  <button class="green" onclick="batchRotate()">↻ Rotate</button>
   <button onclick="batchSelectAll()">All</button>
   <button onclick="batchClearSel()">✕ Deselect</button>
+  <button class="green" onclick="batchDelete()">🗑 Delete</button>
     <div style="flex:1"></div>
 </div>
 <!-- BOTTOM TOOLBAR -->
@@ -305,14 +305,14 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
     <span id="edTitle">Edit</span>
     <button onclick="closeEd()">×</button>
   </div>
-  <div class="ed-tools" style="flex-wrap:nowrap;overflow-x:auto;justify-content:center;">
+  <div class="ed-tools" style="flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding-left:8px;">
     <button class="etbtn" id="tCrop"       onclick="setTool('crop')"       style="white-space:nowrap">✂️ Crop</button>
-    <button class="etbtn"                  onclick="autoCrop()"             style="white-space:nowrap">🖼 Frame</button>
-    <button class="etbtn" id="tRedact"     onclick="setTool('redact')"     style="white-space:nowrap">🖌 Brush</button>
-    <button class="etbtn" id="tRedactRect" onclick="setTool('redactRect')" style="white-space:nowrap">🔲 Redact</button>
-    <button class="etbtn"                  onclick="undoEd()"               style="padding:7px 10px;font-size:15px;" title="Undo">↩</button>
-    <button class="etbtn" id="tOcrRect" onclick="openOcrPage()" style="white-space:nowrap">📋 OCR</button>
-    <button class="etbtn"                  onclick="rotImg(90)"             style="padding:7px 10px;font-size:16px;" title="Rotate">↻</button>
+    <button class="etbtn" id="tRedact"     onclick="setTool('redact')"     style="white-space:nowrap">Brush</button>
+    <button class="etbtn" id="tRedactRect" onclick="setTool('redactRect')" style="white-space:nowrap">Redact</button>
+    <button class="etbtn"                  onclick="undoEd()"               style="white-space:nowrap">Undo</button>
+    <button class="etbtn"                  onclick="rotImg(90)"             style="white-space:nowrap">↻ Rotate</button>
+    <button class="etbtn"                  onclick="autoCrop()"             style="white-space:nowrap">Auto</button>
+    <button class="etbtn" id="tOcrRect"    onclick="openOcrPage()"         style="white-space:nowrap">OCR</button>
   </div>
   <div id="redactBar" style="display:none;background:#0d1b35;padding:6px 14px;align-items:center;gap:10px;flex-shrink:0;">
     <span style="color:#fff;font-size:11px;white-space:nowrap;">🖌</span>
@@ -360,9 +360,13 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
       <div class="q-btn active" id="pdfColorBtn" onclick="setPdfColor(this,'color')">Original</div>
       <div class="q-btn" id="pdfBWBtn" onclick="setPdfColor(this,'bw')">Black-White</div>
     </div>
-    <div class="pdf-btns">
-      <button class="pdf-cancel" onclick="closePDFModal()">Cancel</button>
-      <button class="pdf-go" onclick="exportPDF()">Generate & Download</button>
+    <div class="pdf-btns" style="flex-direction:column;gap:8px;">
+      <div style="display:flex;gap:8px;">
+        <button class="pdf-cancel" onclick="closePDFModal()">Cancel</button>
+        <button class="pdf-go" onclick="exportPDF('preview')">👁 Generate</button>
+        <button class="pdf-go" style="background:#1a6aaa;" onclick="exportPDF('download')">⬇ Download</button>
+      </div>
+      <button id="btnShare" class="pdf-go" style="background:#075e54;display:none;width:100%;" onclick="sharePDF()">↗ Share</button>
     </div>
     <div class="st" id="pdfSt"></div>
   </div>
@@ -443,11 +447,26 @@ function triggerAdd(){
   f.value=''; f.click();
 }
 function delCurrent(){
+  if(selectedPages.size>0){
+    batchDelete();
+    return;
+  }
   if(curIdx===null||!pages.length) return;
   pages.splice(curIdx,1);
   if(pages.length===0){ curIdx=null; showEmpty(); }
   else{ curIdx=Math.min(curIdx,pages.length-1); selectPage(curIdx); }
   renderStrip();
+  updateUI();
+}
+function batchDelete(){
+  if(!selectedPages.size) return;
+  const idxs=[...selectedPages].sort((a,b)=>b-a); // büyükten küçüğe sil
+  idxs.forEach(idx=>pages.splice(idx,1));
+  selectedPages.clear();
+  if(pages.length===0){ curIdx=null; showEmpty(); }
+  else{ curIdx=Math.min(curIdx??0, pages.length-1); selectPage(curIdx); }
+  renderStrip();
+  updateBatchBar();
   updateUI();
 }
 function showEmpty(){
@@ -805,7 +824,7 @@ function drawCropOverlay(){
   ectx.closePath();ectx.stroke();
   ectx.restore();
 
-  const cr=Math.max(10,14/edSc);
+  const cr=Math.max(6,8/edSc);
   [tl,tr,bl,br].forEach(p=>{
     ectx.save();
     ectx.strokeStyle='rgba(255,255,255,0.8)';
@@ -820,7 +839,7 @@ function drawCropOverlay(){
   const edges=[
     {a:tl,b:tr},{a:tr,b:br},{a:bl,b:br},{a:tl,b:bl},
   ];
-  const rw=Math.max(20,28/edSc), rh=Math.max(10,14/edSc);
+  const rw=Math.max(12,17/edSc), rh=Math.max(6,8/edSc);
   edges.forEach(({a,b})=>{
     const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
     const angle=Math.atan2(b.y-a.y,b.x-a.x);
@@ -841,7 +860,7 @@ function drawCropOverlay(){
 
   const ccx=(tl.x+tr.x+bl.x+br.x)/4;
   const ccy=(tl.y+tr.y+bl.y+br.y)/4;
-  const ccr=Math.max(18,24/edSc);
+  const ccr=Math.max(11,14/edSc);
   ectx.save();
   ectx.strokeStyle='rgba(255,255,255,0.8)';
   ectx.lineWidth=Math.max(2,4/edSc)+2;
@@ -1385,7 +1404,7 @@ function showLoupe(touchClientX, _unused, imgX, imgY){
     );
     // Overlay çizgilerini de üstüne koy (köşe konumunu görmek için)
     lctx.save();
-    lctx.strokeStyle = 'rgba(39,174,96,0.9)';
+    lctx.strokeStyle = 'rgba(0,0,0,0.85)';
     lctx.lineWidth = 1.5;
     lctx.beginPath();
     lctx.moveTo(LOUPE_SIZE/2, 0); lctx.lineTo(LOUPE_SIZE/2, LOUPE_SIZE);
@@ -1864,10 +1883,21 @@ function showPdfSt(msg,type){
   el.textContent=msg;el.className='st show '+type;
   setTimeout(()=>el.className='st',4000);
 }
-function exportPDF(){
+let _lastPdfBlob=null, _lastPdfName='';
+function sharePDF(){
+  if(!_lastPdfBlob) return;
+  const file=new File([_lastPdfBlob],_lastPdfName,{type:'application/pdf'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    navigator.share({files:[file],title:_lastPdfName}).catch(()=>{});
+  } else {
+    showPdfSt('Share bu cihazda desteklenmiyor','err');
+  }
+}
+function exportPDF(mode='download'){
   if(!pages.length)return;
   const name=(document.getElementById('pdfName').value.trim()||'scan_'+Date.now())+'.pdf';
   showPdfSt('Generating…','info');
+  document.getElementById('btnShare').style.display='none';
   try{
     const{jsPDF}=window.jspdf;
     const a4w=595.28,a4h=841.89;
@@ -1875,9 +1905,24 @@ function exportPDF(){
     let i=0;
     function next(){
       if(i>=pages.length){
-        doc.save(name);
-        showPdfSt('✓ Saved: '+name,'ok');
-        setTimeout(closePDFModal,1500);
+        const blob=doc.output('blob');
+        _lastPdfBlob=blob;
+        _lastPdfName=name;
+        if(mode==='preview'){
+          const url=URL.createObjectURL(blob);
+          window.open(url,'_blank');
+          showPdfSt('✓ PDF açıldı','ok');
+        } else {
+          const a=document.createElement('a');
+          a.href=URL.createObjectURL(blob);
+          a.download=name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showPdfSt('✓ İndiriliyor: '+name,'ok');
+        }
+        if(navigator.canShare) document.getElementById('btnShare').style.display='block';
+        setTimeout(()=>{if(mode==='download')closePDFModal();},2000);
         return;
       }
       const pg=pages[i++];
