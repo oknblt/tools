@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Masraf Listesi — AC_TP_037</title>
+<title>Expenses List — AC_TP_037</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
@@ -361,7 +361,7 @@
 
   <header class="top">
     <div>
-      <h1>Masraf Listesi</h1>
+      <h1>Expenses List</h1>
       <div class="subtitle">AC_TP_037 · Expenses List · TRY / EUR</div>
     </div>
     <div class="totals">
@@ -994,6 +994,7 @@ async function exportExcel() {
   // Column widths (from original)
   const widths = [17.5, 14.8, 9.5, 13.5, 22.2, 14, 11.4, 16.7, 36, 20.2, 7.8, 9.8, 4.8, 14, 12];
   widths.forEach((w,i)=> sh.getColumn(i+1).width = w);
+  sh.getColumn(9).hidden = true; // I kolonu (Account) gizli
 
   // Top info block rows 1-3
   const headerColor = 'FF3567AD';
