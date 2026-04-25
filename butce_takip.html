@@ -215,6 +215,54 @@
     gap: 12px;
     flex-wrap: wrap;
   }
+  /* Tablo altı toplam çubuğu */
+  .totals-bar {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--primary-light);
+    font-size: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    align-items: center;
+  }
+  .totals-bar:empty { display: none; }
+  .totals-bar .tot-label {
+    font-weight: 700;
+    color: var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-size: 11px;
+  }
+  .totals-bar .tot-val {
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .totals-bar .tot-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .totals-bar .tot-divider {
+    width: 1px;
+    height: 16px;
+    background: #c8d4e6;
+  }
+  .totals-bar .tot-multi {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+  .totals-bar .tot-chip {
+    background: #fff;
+    border: 1px solid #c8d4e6;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+  }
   .pagination .info {
     color: var(--text-muted);
     font-size: 12px;
@@ -766,7 +814,7 @@
   <div class="card">
     <div class="card-head" style="padding: 0 20px;">
       <div class="tabs">
-        <div class="tab active" onclick="switchTab('accounts')" id="tabAccounts">💰 Hesap Hareketi</div>
+        <div class="tab active" onclick="switchTab('accounts')" id="tabAccounts">💰 Hesap Durumu</div>
         <div class="tab" onclick="switchTab('bills')" id="tabBills">🧾 Fatura</div>
       </div>
       <span id="entryBadge" style="display:none;font-size:11px;color:var(--accent);font-weight:600;">✎ Düzenleniyor</span>
@@ -870,7 +918,7 @@
   <!-- Account table -->
   <div class="card">
     <div class="card-head">
-      <h2>Hesap Hareketleri (<span id="accCount">0</span>)</h2>
+      <h2>Hesap Durumu (<span id="accCount">0</span>)</h2>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button onclick="clearAllAccFilters()" class="ghost">✕ Filtreleri Temizle</button>
         <button onclick="syncLatestRates()" class="primary" title="Her döviz/maden hesabının en son kaydını güncel kura göre yeniler">🔄 Güncelle</button>
@@ -886,6 +934,7 @@
         <tbody id="accTbody"></tbody>
       </table>
     </div>
+    <div id="accTotals" class="totals-bar"></div>
     <div id="accPagination"></div>
   </div>
 
@@ -907,6 +956,7 @@
         <tbody id="billTbody"></tbody>
       </table>
     </div>
+    <div id="billTotals" class="totals-bar"></div>
     <div id="billPagination"></div>
   </div>
 </div>
@@ -1367,6 +1417,70 @@ function setBillPageSize(s) {
   state.billPageSize = s;
   state.billPage = 1;
   renderBillTable();
+}
+
+/* ===================== Tablo altı toplamları ===================== */
+// Hesap durumu için: birim bazlı toplam + TRY karşılığı toplamı (filtrelenmiş veri üzerinden)
+function computeAccountTotals(arr) {
+  // Birim bazlı toplam: TL, USD, EUR, AU (gram), AG (gram)
+  const byUnit = { tl: 0, usd: 0, eur: 0, au: 0, ag: 0 };
+  let tryTotal = 0;
+  arr.forEach(e => {
+    const amt = Number(e.amount) || 0;
+    if (isTlType(e.type)) byUnit.tl += amt;
+    else if (e.type === 'Dolar' || e.type === 'Vadeli Dolar') byUnit.usd += amt;
+    else if (e.type === 'Euro') byUnit.eur += amt;
+    else if (e.type === 'Altın') byUnit.au += amt;
+    else if (e.type === 'Gümüş') byUnit.ag += amt;
+    tryTotal += entryToTry(e);
+  });
+  return { byUnit, tryTotal };
+}
+
+// Toplam çubuğu için HTML üret (birim chip'leri)
+function buildAmountChipsHTML(byUnit) {
+  const chips = [];
+  if (byUnit.tl)  chips.push(`<span class="tot-chip">${fmt(byUnit.tl, 2)} ₺</span>`);
+  if (byUnit.usd) chips.push(`<span class="tot-chip">${fmt(byUnit.usd, 2)} $</span>`);
+  if (byUnit.eur) chips.push(`<span class="tot-chip">${fmt(byUnit.eur, 2)} €</span>`);
+  if (byUnit.au)  chips.push(`<span class="tot-chip">${fmt(byUnit.au, 2)} g AU</span>`);
+  if (byUnit.ag)  chips.push(`<span class="tot-chip">${fmt(byUnit.ag, 2)} g AG</span>`);
+  return chips.length ? chips.join('') : '<span class="tot-chip">—</span>';
+}
+
+function renderAccTotals(arr) {
+  const c = document.getElementById('accTotals');
+  if (!arr || arr.length === 0) { c.innerHTML = ''; return; }
+  const { byUnit, tryTotal } = computeAccountTotals(arr);
+  c.innerHTML = `
+    <div class="tot-group">
+      <span class="tot-label">Toplam Tutar:</span>
+      <span class="tot-multi sensitive">${buildAmountChipsHTML(byUnit)}</span>
+    </div>
+    <span class="tot-divider"></span>
+    <div class="tot-group">
+      <span class="tot-label">Toplam TRY Karşılığı:</span>
+      <span class="tot-val sensitive">${fmtTry(tryTotal)}</span>
+    </div>
+  `;
+}
+
+function renderBillTotals(arr) {
+  const c = document.getElementById('billTotals');
+  if (!arr || arr.length === 0) { c.innerHTML = ''; return; }
+  const total = arr.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const unpaidTotal = arr.filter(b => b.paid !== 'Ödendi').reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  c.innerHTML = `
+    <div class="tot-group">
+      <span class="tot-label">Toplam Tutar:</span>
+      <span class="tot-val">${fmtTry(total)}</span>
+    </div>
+    <span class="tot-divider"></span>
+    <div class="tot-group">
+      <span class="tot-label">Ödenmemiş:</span>
+      <span class="tot-val">${fmtTry(unpaidTotal)}</span>
+    </div>
+  `;
 }
 
 /* ===================== Hide mode ===================== */
@@ -1900,6 +2014,7 @@ function renderAccountTable() {
   const tbody = document.getElementById('accTbody');
   if (arr.length === 0) {
     tbody.innerHTML = `<tr><td colspan="${ACC_COLS.length}" class="empty-row">Kayıt yok. Başlıklardaki ▾ ikonuyla filtreleyebilirsiniz.</td></tr>`;
+    renderAccTotals([]);
     renderAccPagination(totalPages, 0);
     return;
   }
@@ -1932,6 +2047,7 @@ function renderAccountTable() {
       </td>
     </tr>`;
   }).join('');
+  renderAccTotals(arr);
   renderAccPagination(totalPages, arr.length);
   applyHideMode();
 }
@@ -1971,6 +2087,7 @@ function renderBillTable() {
   const tbody = document.getElementById('billTbody');
   if (arr.length === 0) {
     tbody.innerHTML = `<tr><td colspan="${BILL_COLS.length}" class="empty-row">Fatura kaydı yok.</td></tr>`;
+    renderBillTotals([]);
     renderBillPagination(totalPages, 0);
     return;
   }
@@ -1999,6 +2116,7 @@ function renderBillTable() {
       </td>
     </tr>`;
   }).join('');
+  renderBillTotals(arr);
   renderBillPagination(totalPages, arr.length);
   applyHideMode();
 }
@@ -2162,7 +2280,7 @@ async function exportExcel() {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Bütçe Takip';
   wb.created = new Date();
-  const sh = wb.addWorksheet('Hesap Hareketleri', { views:[{state:'frozen', ySplit:1}] });
+  const sh = wb.addWorksheet('Hesap Durumu', { views:[{state:'frozen', ySplit:1}] });
   sh.columns = [
     { header:'Tarih', key:'date', width:12 },
     { header:'Banka', key:'bank', width:18 },
@@ -2203,6 +2321,24 @@ async function exportExcel() {
   sh.getColumn('try').numFmt = '#,##0.00';
   sh.getColumn('delta').numFmt = '+#,##0.00;-#,##0.00;0.00';
   sh.getColumn('matval').numFmt = '#,##0.00';
+
+  // Toplam satırları (filtrelenmiş veriden)
+  const accTotals = computeAccountTotals(sortedAccounts);
+  const totalParts = [];
+  if (accTotals.byUnit.tl) totalParts.push(`${fmt(accTotals.byUnit.tl, 2)} ₺`);
+  if (accTotals.byUnit.usd) totalParts.push(`${fmt(accTotals.byUnit.usd, 2)} $`);
+  if (accTotals.byUnit.eur) totalParts.push(`${fmt(accTotals.byUnit.eur, 2)} €`);
+  if (accTotals.byUnit.au) totalParts.push(`${fmt(accTotals.byUnit.au, 2)} g AU`);
+  if (accTotals.byUnit.ag) totalParts.push(`${fmt(accTotals.byUnit.ag, 2)} g AG`);
+  sh.addRow([]);
+  const r1 = sh.addRow(['', '', 'TOPLAM TUTAR:', totalParts.join('   '), '', '']);
+  r1.eachCell(c => { c.font = { bold: true }; c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE8EEF7'} }; });
+  r1.getCell(3).alignment = { horizontal: 'right' };
+  r1.getCell(4).alignment = { horizontal: 'left' };
+  const r2 = sh.addRow(['', '', 'TOPLAM TRY KARŞILIĞI:', '', '', accTotals.tryTotal]);
+  r2.eachCell(c => { c.font = { bold: true }; c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE8EEF7'} }; });
+  r2.getCell(3).alignment = { horizontal: 'right' };
+  r2.getCell(6).numFmt = '#,##0.00 "₺"';
 
   const sh2 = wb.addWorksheet('Banka Özeti');
   sh2.columns = [
@@ -2270,6 +2406,20 @@ async function exportBillsExcel() {
   });
   sh.getColumn('amount').numFmt = '#,##0.00';
   sh.getColumn('due').numFmt = 'dd.mm.yyyy';
+
+  // Toplam satırları (filtrelenmiş)
+  const billTotal = sortedBills.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const billUnpaid = sortedBills.filter(b => b.paid !== 'Ödendi').reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  sh.addRow([]);
+  const totRow = sh.addRow(['', 'TOPLAM TUTAR:', billTotal, '', '', '']);
+  totRow.eachCell(c => { c.font = { bold: true }; c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE8EEF7'} }; });
+  totRow.getCell(2).alignment = { horizontal: 'right' };
+  totRow.getCell(3).numFmt = '#,##0.00 "₺"';
+  const unpaidRow = sh.addRow(['', 'ÖDENMEMİŞ:', billUnpaid, '', '', '']);
+  unpaidRow.eachCell(c => { c.font = { bold: true }; c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE8EEF7'} }; });
+  unpaidRow.getCell(2).alignment = { horizontal: 'right' };
+  unpaidRow.getCell(3).numFmt = '#,##0.00 "₺"';
+
   const buf = await wb.xlsx.writeBuffer();
   saveAs(new Blob([buf], { type:'application/octet-stream' }), `faturalar_${new Date().toISOString().slice(0,10)}.xlsx`);
   toast('Fatura Excel indirildi','success');
@@ -2335,7 +2485,7 @@ async function exportPDF() {
     } catch(e) { console.warn('Font yüklenemedi, fallback:', e); }
     doc.setFont(fontName);
     doc.setFontSize(14);
-    doc.text('Bütçe Takip — Hesap Hareketleri', 14, 14);
+    doc.text('Bütçe Takip — Hesap Durumu', 14, 14);
     doc.setFontSize(9);
     doc.setTextColor(90);
     doc.text(`Oluşturma: ${new Date().toLocaleString('tr-TR')}  |  USD/TRY: ${fmt(state.rates.usd,4)}  EUR/TRY: ${fmt(state.rates.eur,4)}  Gr.Altın: ${fmt(state.rates.gold,2)}  Gr.Gümüş: ${fmt(state.rates.silver,2)}`, 14, 20);
@@ -2365,6 +2515,21 @@ async function exportPDF() {
       alternateRowStyles: { fillColor: [245, 246, 248] },
       columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 7: { halign: 'right' } }
     });
+    // Toplam satırı (filtrelenmiş)
+    const accTotals = computeAccountTotals(sortedAccounts);
+    const partsArr = [];
+    if (accTotals.byUnit.tl) partsArr.push(`${fmt(accTotals.byUnit.tl, 2)} ₺`);
+    if (accTotals.byUnit.usd) partsArr.push(`${fmt(accTotals.byUnit.usd, 2)} $`);
+    if (accTotals.byUnit.eur) partsArr.push(`${fmt(accTotals.byUnit.eur, 2)} €`);
+    if (accTotals.byUnit.au) partsArr.push(`${fmt(accTotals.byUnit.au, 2)} g AU`);
+    if (accTotals.byUnit.ag) partsArr.push(`${fmt(accTotals.byUnit.ag, 2)} g AG`);
+    const yAfter = doc.lastAutoTable.finalY + 8;
+    doc.setFont(fontName);
+    doc.setFontSize(10);
+    doc.setTextColor(40, 77, 130);
+    doc.text(`Toplam Tutar: ${partsArr.join('   |   ') || '—'}`, 14, yAfter);
+    doc.text(`Toplam TRY Karşılığı: ${fmt(accTotals.tryTotal, 2)} ₺`, 14, yAfter + 6);
+    doc.setTextColor(0);
     doc.addPage();
     doc.setFont(fontName);
     doc.setFontSize(14);
@@ -2423,7 +2588,8 @@ async function exportBillsPDF() {
     const rows = sortedBills.map(b => [
       b.type, b.month, fmt(b.amount, 2) + ' ₺', fmtDate(b.due), b.paid || 'Ödenmedi', b.desc || ''
     ]);
-    // Borç toplamı: filtrelenmiş listedeki ödenmemişler
+    // Toplam ve borç toplamı: filtrelenmiş veri üzerinden
+    const billTotal = sortedBills.reduce((s,b) => s + (Number(b.amount)||0), 0);
     const debt = sortedBills.filter(b => b.paid !== 'Ödendi').reduce((s,b) => s + (Number(b.amount)||0), 0);
     doc.autoTable({
       startY: 25,
@@ -2434,9 +2600,13 @@ async function exportBillsPDF() {
       bodyStyles: { font: fontName },
       alternateRowStyles: { fillColor: [245, 246, 248] }
     });
+    const yAfter = doc.lastAutoTable.finalY + 8;
     doc.setFont(fontName);
-    doc.setFontSize(11);
-    doc.text(`Ödenmemiş Borç: ${fmt(debt, 2)} ₺`, 14, doc.lastAutoTable.finalY + 10);
+    doc.setFontSize(10);
+    doc.setTextColor(40, 77, 130);
+    doc.text(`Toplam Tutar: ${fmt(billTotal, 2)} ₺`, 14, yAfter);
+    doc.text(`Ödenmemiş: ${fmt(debt, 2)} ₺`, 14, yAfter + 6);
+    doc.setTextColor(0);
     doc.save(`faturalar_${new Date().toISOString().slice(0,10)}.pdf`);
     toast('Fatura PDF indirildi','success');
   } catch(err) {
