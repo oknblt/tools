@@ -13,7 +13,7 @@
     --primary: #3567AD;
     --primary-dark: #284d82;
     --primary-light: #e8eef7;
-    --accent: #d4a24c;
+    --accent: #4a90d9;
     --bg: #f5f6f8;
     --surface: #ffffff;
     --border: #d9dde3;
@@ -22,7 +22,7 @@
     --text-muted: #5a6472;
     --danger: #c74444;
     --success: #3a8a5a;
-    --warning: #b97a1f;
+    --warning: #5a8ec9;
     --shadow-sm: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.04);
     --shadow: 0 4px 12px rgba(16,24,40,.08);
     --shadow-lg: 0 12px 32px rgba(16,24,40,.14);
@@ -190,7 +190,7 @@
   button.accent { background: var(--success); border-color: var(--success); color: #fff; }
   button.accent:hover { background: #2d7048; border-color: #2d7048; }
   button.warning { background: var(--warning); border-color: var(--warning); color: #fff; }
-  button.warning:hover { background: #9c671a; border-color: #9c671a; }
+  button.warning:hover { background: #4577ad; border-color: #4577ad; }
   button.ghost { border-color: transparent; background: transparent; }
   button.ghost:hover { background: #edf0f4; }
 
@@ -295,7 +295,7 @@
     background: var(--primary-light);
     color: var(--primary-dark);
   }
-  .badge.bill { background: #fcefdc; color: #86541a; }
+  .badge.bill { background: #d8e6f5; color: #2c5a8a; }
   .row-act { display: flex; gap: 4px; }
   .icon-btn {
     padding: 4px 7px;
@@ -363,6 +363,27 @@
   .filter-popover .fp-opt:last-child { border-bottom: none; }
   .filter-popover .fp-opt:hover { background: var(--primary-light); }
   .filter-popover .fp-opt input[type="checkbox"] { width: auto; margin: 0; }
+  /* Yıl gruplama başlığı */
+  .filter-popover .fp-year-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    border-bottom: 1px solid #cfdcee;
+    cursor: pointer;
+    user-select: none;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .filter-popover .fp-year-head:hover { background: #d8e6f5; }
+  .filter-popover .fp-year-head input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
+  .filter-popover .fp-year-label { flex: 1; }
+  .filter-popover .fp-year-count { font-size: 10px; opacity: .7; font-weight: 500; }
+  .filter-popover .fp-month-opt { padding-left: 22px; }
   .filter-popover .fp-range {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1531,21 +1552,62 @@ function openFilterPopover(key, tableId, anchorEl) {
         return v === undefined || v === null ? '' : v;
       }))];
     }
-    values.sort((a,b) => (a+'').localeCompare(b+'', 'tr'));
+    // Fatura "Dönem" kolonu için kronolojik sırala (yıl + ay), diğerleri alfabetik
+    if (key === 'month' && !isAcc) {
+      values.sort((a, b) => periodToNumber(b) - periodToNumber(a)); // en yeni → en eski
+    } else {
+      values.sort((a,b) => (a+'').localeCompare(b+'', 'tr'));
+    }
     const excluded = (filters[key] && filters[key].excluded) ? filters[key].excluded : [];
     html += `<input class="fp-search" type="text" placeholder="Ara..." id="fpSearch" oninput="filterFpList()">`;
     html += `<div class="fp-list" id="fpList">`;
     if (values.length === 0) {
       html += `<div style="padding:12px;font-size:12px;color:var(--text-muted);font-style:italic;">Henüz veri yok</div>`;
+    } else if (key === 'month' && !isAcc) {
+      // Fatura dönem filtresi: yıllara göre gruplandır (en yeni yıl en üstte)
+      const byYear = {};
+      values.forEach(v => {
+        const m = (v+'').match(/(\d{4})$/);
+        const year = m ? m[1] : 'Yılsız';
+        if (!byYear[year]) byYear[year] = [];
+        byYear[year].push(v);
+      });
+      const yearKeys = Object.keys(byYear).sort((a,b) => {
+        if (a === 'Yılsız') return 1;
+        if (b === 'Yılsız') return -1;
+        return parseInt(b) - parseInt(a);
+      });
+      yearKeys.forEach(year => {
+        const items = byYear[year];
+        // Yıl içindeki aylar kronolojik
+        items.sort((a, b) => periodToNumber(a) - periodToNumber(b));
+        const allChecked = items.every(v => !excluded.includes(String(v)));
+        const someChecked = items.some(v => !excluded.includes(String(v)));
+        html += `<div class="fp-year-head" data-year="${escapeHtml(year)}">
+          <input type="checkbox" class="fp-year-cb" ${allChecked ? 'checked' : ''} ${(!allChecked && someChecked) ? 'data-indeterminate="1"' : ''} data-year="${escapeHtml(year)}">
+          <span class="fp-year-label">${year === 'Yılsız' ? 'Yılsız' : 'Yıl ' + year}</span>
+          <span class="fp-year-count">(${items.length})</span>
+        </div>`;
+        items.forEach(v => {
+          const checked = !excluded.includes(String(v));
+          const label = v === '' ? '(Boş)' : v;
+          html += `<label class="fp-opt fp-month-opt" data-year="${escapeHtml(year)}">
+            <input type="checkbox" ${checked?'checked':''} data-val="${escapeHtml(String(v))}" data-year-item="${escapeHtml(year)}">
+            <span>${escapeHtml(String(label))}</span>
+          </label>`;
+        });
+      });
+    } else {
+      // Standart düz liste
+      values.forEach(v => {
+        const checked = !excluded.includes(String(v));
+        const label = v === '' ? '(Boş)' : v;
+        html += `<label class="fp-opt">
+          <input type="checkbox" ${checked?'checked':''} data-val="${escapeHtml(String(v))}">
+          <span>${escapeHtml(String(label))}</span>
+        </label>`;
+      });
     }
-    values.forEach(v => {
-      const checked = !excluded.includes(String(v));
-      const label = v === '' ? '(Boş)' : v;
-      html += `<label class="fp-opt">
-        <input type="checkbox" ${checked?'checked':''} data-val="${escapeHtml(String(v))}">
-        <span>${escapeHtml(String(label))}</span>
-      </label>`;
-    });
     html += `</div>`;
     html += `<div class="fp-actions">
       <button onclick="fpSelectAll(true)">Tümü</button>
@@ -1576,6 +1638,48 @@ function openFilterPopover(key, tableId, anchorEl) {
 
   pop.innerHTML = html;
   pop.classList.add('show');
+
+  // Yıl başlığı checkbox'ları için: tıklanınca o yılın tüm aylarını toggle et
+  pop.querySelectorAll('.fp-year-cb').forEach(cb => {
+    if (cb.dataset.indeterminate === '1') cb.indeterminate = true;
+    cb.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const year = cb.dataset.year;
+      const checked = cb.checked;
+      pop.querySelectorAll(`input[data-year-item="${CSS.escape(year)}"]`).forEach(monthCb => {
+        monthCb.checked = checked;
+      });
+      cb.indeterminate = false;
+    });
+  });
+  // Yıl başlığının kendisine (label kısmına) tıklayınca da checkbox toggle olsun
+  pop.querySelectorAll('.fp-year-head').forEach(head => {
+    head.addEventListener('click', (ev) => {
+      if (ev.target.tagName === 'INPUT') return;
+      const cb = head.querySelector('.fp-year-cb');
+      cb.checked = !cb.checked;
+      cb.indeterminate = false;
+      const year = cb.dataset.year;
+      pop.querySelectorAll(`input[data-year-item="${CSS.escape(year)}"]`).forEach(monthCb => {
+        monthCb.checked = cb.checked;
+      });
+    });
+  });
+  // Ay checkbox'ı değişince yıl checkbox state'ini güncelle (parent state)
+  pop.querySelectorAll('input[data-year-item]').forEach(monthCb => {
+    monthCb.addEventListener('change', () => {
+      const year = monthCb.dataset.yearItem;
+      const all = pop.querySelectorAll(`input[data-year-item="${CSS.escape(year)}"]`);
+      const checkedCount = [...all].filter(c => c.checked).length;
+      const yearCb = pop.querySelector(`.fp-year-cb[data-year="${CSS.escape(year)}"]`);
+      if (yearCb) {
+        if (checkedCount === all.length) { yearCb.checked = true; yearCb.indeterminate = false; }
+        else if (checkedCount === 0) { yearCb.checked = false; yearCb.indeterminate = false; }
+        else { yearCb.checked = false; yearCb.indeterminate = true; }
+      }
+    });
+  });
+
   const rect = anchorEl.getBoundingClientRect();
   const popRect = pop.getBoundingClientRect();
   let left = rect.left;
@@ -1592,9 +1696,27 @@ function closePopover() {
 }
 function filterFpList() {
   const q = document.getElementById('fpSearch').value.toLowerCase();
+  // Önce tüm ay opsiyonlarını filtrele
   document.querySelectorAll('#fpList .fp-opt').forEach(op => {
     const txt = op.querySelector('span').textContent.toLowerCase();
     op.style.display = txt.includes(q) ? '' : 'none';
+  });
+  // Yıl başlıkları: o yıla ait görünür ay var mı diye kontrol et
+  document.querySelectorAll('#fpList .fp-year-head').forEach(head => {
+    const year = head.dataset.year;
+    if (!year) return;
+    // Yıl ismi sorguyla eşleşiyorsa → başlık ve tüm ayları göster
+    const headerMatches = (year + '').toLowerCase().includes(q) || ('yıl ' + year).toLowerCase().includes(q);
+    if (headerMatches) {
+      head.style.display = '';
+      document.querySelectorAll(`.fp-month-opt[data-year="${CSS.escape(year)}"]`).forEach(op => op.style.display = '');
+      return;
+    }
+    // Sorguya uyan ay var mı kontrol et
+    const visibleMonths = document.querySelectorAll(`.fp-month-opt[data-year="${CSS.escape(year)}"]`);
+    let anyVisible = false;
+    visibleMonths.forEach(op => { if (op.style.display !== 'none') anyVisible = true; });
+    head.style.display = anyVisible ? '' : 'none';
   });
 }
 function fpSelectAll(check) {
@@ -1602,6 +1724,11 @@ function fpSelectAll(check) {
     if (op.style.display === 'none') return;
     const cb = op.querySelector('input[type="checkbox"]');
     if (cb) cb.checked = check;
+  });
+  // Yıl başlıklarını da güncelle (varsa)
+  document.querySelectorAll('#fpList .fp-year-cb').forEach(cb => {
+    cb.checked = check;
+    cb.indeterminate = false;
   });
 }
 function applyFpSet(key, tableId) {
@@ -1710,6 +1837,40 @@ function computeDelta(entry) {
   if (!prev) return null;
   return entry.amount - prev.amount;
 }
+
+// Filtrelenmiş ve aktif sıralamayla sıralanmış hesap kayıtlarını döndürür (export için)
+function getFilteredSortedAccounts() {
+  let arr = state.accounts.filter(e => passesFilter(e, state.filters));
+  const dir = state.sort.dir === 'asc' ? 1 : -1;
+  arr.sort((a, b) => {
+    let va, vb;
+    if (state.sort.key === 'try') { va = entryToTry(a); vb = entryToTry(b); return (va - vb) * dir; }
+    va = a[state.sort.key]; vb = b[state.sort.key];
+    if (state.sort.key === 'amount' || state.sort.key === 'maturityValue') {
+      return ((+va || 0) - (+vb || 0)) * dir;
+    }
+    va = (va || '') + ''; vb = (vb || '') + '';
+    return va.localeCompare(vb, 'tr') * dir;
+  });
+  return arr;
+}
+
+// Filtrelenmiş ve aktif sıralamayla sıralanmış fatura kayıtlarını döndürür (export için)
+function getFilteredSortedBills() {
+  let arr = state.bills.filter(e => passesFilter(e, state.billFilters));
+  const dir = state.billSort.dir === 'asc' ? 1 : -1;
+  arr.sort((a, b) => {
+    let va = a[state.billSort.key], vb = b[state.billSort.key];
+    if (state.billSort.key === 'amount') return ((+va||0) - (+vb||0)) * dir;
+    if (state.billSort.key === 'month') {
+      return (periodToNumber(va) - periodToNumber(vb)) * dir;
+    }
+    va = (va || '') + ''; vb = (vb || '') + '';
+    return va.localeCompare(vb, 'tr') * dir;
+  });
+  return arr;
+}
+
 function renderAccountTable() {
   buildHeader('accHeadRow', ACC_COLS, state.filters, state.sort, sortAcc);
   let arr = state.accounts.filter(e => passesFilter(e, state.filters));
@@ -1996,7 +2157,8 @@ function newSession() {
 
 /* ===================== Excel Export ===================== */
 async function exportExcel() {
-  if (state.accounts.length === 0) return toast('Dışa aktarılacak hesap kaydı yok','error');
+  const sortedAccounts = getFilteredSortedAccounts();
+  if (sortedAccounts.length === 0) return toast('Dışa aktarılacak hesap kaydı yok','error');
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Bütçe Takip';
   wb.created = new Date();
@@ -2020,8 +2182,6 @@ async function exportExcel() {
     c.alignment = { vertical:'center', horizontal:'center' };
   });
   sh.autoFilter = { from: 'A1', to: 'J1' };
-  // Date azalan sıraya göre yaz
-  const sortedAccounts = state.accounts.slice().sort((a,b) => b.date.localeCompare(a.date));
   sortedAccounts.forEach(e => {
     const unit = isMetalType(e.type) ? 'gram' :
                  e.type === 'Dolar' || e.type === 'Vadeli Dolar' ? 'USD' :
@@ -2082,6 +2242,8 @@ async function exportExcel() {
 }
 async function exportBillsExcel() {
   if (state.bills.length === 0) return toast('Dışa aktarılacak fatura yok','error');
+  const sortedBills = getFilteredSortedBills();
+  if (sortedBills.length === 0) return toast('Dışa aktarılacak fatura yok','error');
   const wb = new ExcelJS.Workbook();
   const sh = wb.addWorksheet('Faturalar', { views:[{state:'frozen', ySplit:1}] });
   sh.columns = [
@@ -2098,7 +2260,7 @@ async function exportBillsExcel() {
     c.alignment = { vertical:'center', horizontal:'center' };
   });
   sh.autoFilter = { from: 'A1', to: 'F1' };
-  state.bills.forEach(b => {
+  sortedBills.forEach(b => {
     sh.addRow({
       type: b.type, month: b.month, amount: b.amount,
       due: b.due ? new Date(b.due) : '',
@@ -2160,7 +2322,8 @@ async function ensureTurkishFont(doc) {
 }
 
 async function exportPDF() {
-  if (state.accounts.length === 0) return toast('Dışa aktarılacak hesap kaydı yok','error');
+  const sortedAccounts = getFilteredSortedAccounts();
+  if (sortedAccounts.length === 0) return toast('Dışa aktarılacak hesap kaydı yok','error');
   try {
     toast('PDF hazırlanıyor...','warning');
     const { jsPDF } = window.jspdf;
@@ -2176,7 +2339,7 @@ async function exportPDF() {
     doc.setFontSize(9);
     doc.setTextColor(90);
     doc.text(`Oluşturma: ${new Date().toLocaleString('tr-TR')}  |  USD/TRY: ${fmt(state.rates.usd,4)}  EUR/TRY: ${fmt(state.rates.eur,4)}  Gr.Altın: ${fmt(state.rates.gold,2)}  Gr.Gümüş: ${fmt(state.rates.silver,2)}`, 14, 20);
-    const rows = state.accounts.slice().sort((a,b) => b.date.localeCompare(a.date)).map(e => {
+    const rows = sortedAccounts.map(e => {
       const unit = isMetalType(e.type) ? ' g' :
                    e.type === 'Dolar' || e.type === 'Vadeli Dolar' ? ' $' :
                    e.type === 'Euro' ? ' €' : ' ₺';
@@ -2240,7 +2403,8 @@ async function exportPDF() {
 }
 
 async function exportBillsPDF() {
-  if (state.bills.length === 0) return toast('Dışa aktarılacak fatura yok','error');
+  const sortedBills = getFilteredSortedBills();
+  if (sortedBills.length === 0) return toast('Dışa aktarılacak fatura yok','error');
   try {
     toast('PDF hazırlanıyor...','warning');
     const { jsPDF } = window.jspdf;
@@ -2256,10 +2420,11 @@ async function exportBillsPDF() {
     doc.setFontSize(9);
     doc.setTextColor(90);
     doc.text(`Oluşturulma: ${new Date().toLocaleString('tr-TR')}`, 14, 20);
-    const rows = state.bills.slice().sort((a,b) => (a.due||'').localeCompare(b.due||'')).map(b => [
+    const rows = sortedBills.map(b => [
       b.type, b.month, fmt(b.amount, 2) + ' ₺', fmtDate(b.due), b.paid || 'Ödenmedi', b.desc || ''
     ]);
-    const debt = state.bills.filter(b => b.paid !== 'Ödendi').reduce((s,b) => s + (Number(b.amount)||0), 0);
+    // Borç toplamı: filtrelenmiş listedeki ödenmemişler
+    const debt = sortedBills.filter(b => b.paid !== 'Ödendi').reduce((s,b) => s + (Number(b.amount)||0), 0);
     doc.autoTable({
       startY: 25,
       head: [['Tür','Dönem','Tutar','Son Ödeme','Durum','Açıklama']],
