@@ -440,6 +440,125 @@
 
   .session-info { font-size: 11px; color: var(--text-muted); }
 
+  /* ===== Period Picker (iOS tarzı silindir) ===== */
+  .period-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 28, 48, 0.55);
+    z-index: 1500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .period-overlay.show { display: flex; }
+  .period-modal {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .period-head {
+    padding: 14px 18px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .period-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .period-close {
+    border: none;
+    background: transparent;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 2px 8px;
+  }
+  .period-close:hover { background: #eef0f4; border-radius: 4px; }
+  .period-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 14px;
+    background: linear-gradient(180deg, #fafbfc 0%, #fff 50%, #fafbfc 100%);
+    position: relative;
+  }
+  /* Seçim çizgisi (ortadaki vurgulu satır) */
+  .period-cols::before, .period-cols::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    height: 1px;
+    background: var(--primary-light);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .period-cols::before { top: calc(50% - 18px); }
+  .period-cols::after  { top: calc(50% + 18px); }
+  .period-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .period-col-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .period-wheel {
+    height: 180px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    width: 100%;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* Üst ve alt fade efekti */
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 30%, #000 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 30%, #000 70%, transparent 100%);
+    /* Ortaya hizalama için padding */
+    padding: 72px 0;
+    position: relative;
+  }
+  .period-wheel::-webkit-scrollbar { display: none; }
+  .period-wheel-item {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--text-muted);
+    scroll-snap-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: color .15s, font-weight .15s;
+  }
+  .period-wheel-item.selected {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .period-actions {
+    padding: 12px 18px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid var(--border);
+    background: #fafbfc;
+  }
+  .period-actions button { padding: 8px 16px; font-size: 13px; }
+
   .toast {
     position: fixed;
     bottom: 24px;
@@ -704,21 +823,7 @@
         </div>
         <div class="field">
           <label>Dönem <span class="req">*</span></label>
-          <input type="text" id="bMonth" list="monthList" placeholder="Örn: Ocak 2026" autocomplete="off">
-          <datalist id="monthList">
-            <option value="Ocak"></option>
-            <option value="Şubat"></option>
-            <option value="Mart"></option>
-            <option value="Nisan"></option>
-            <option value="Mayıs"></option>
-            <option value="Haziran"></option>
-            <option value="Temmuz"></option>
-            <option value="Ağustos"></option>
-            <option value="Eylül"></option>
-            <option value="Ekim"></option>
-            <option value="Kasım"></option>
-            <option value="Aralık"></option>
-          </datalist>
+          <input type="text" id="bMonth" placeholder="Tıkla: Ocak 2026" autocomplete="off" readonly onclick="openPeriodPicker()" style="cursor:pointer;background:#fff;">
         </div>
         <div class="field">
           <label>Tutar (TL) <span class="req">*</span></label>
@@ -786,6 +891,31 @@
 </div>
 
 <div class="filter-popover" id="filterPopover"></div>
+
+<!-- Period Picker (Ay + Yıl seçici) -->
+<div class="period-overlay" id="periodOverlay" onclick="closePeriodPicker(event)">
+  <div class="period-modal" onclick="event.stopPropagation()">
+    <div class="period-head">
+      <div class="period-title">Dönem Seç</div>
+      <button class="period-close" onclick="closePeriodPicker()" title="Kapat">✕</button>
+    </div>
+    <div class="period-cols">
+      <div class="period-col">
+        <div class="period-col-label">AY</div>
+        <div class="period-wheel" id="monthWheel"></div>
+      </div>
+      <div class="period-col">
+        <div class="period-col-label">YIL</div>
+        <div class="period-wheel" id="yearWheel"></div>
+      </div>
+    </div>
+    <div class="period-actions">
+      <button onclick="closePeriodPicker()" class="ghost">İptal</button>
+      <button onclick="applyPeriodPicker()" class="primary">Tamam</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -872,6 +1002,139 @@ function fmtDate(d) {
 }
 function escapeHtml(s) {
   return (s+'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ===================== Period (Dönem) yardımcıları ===================== */
+const MONTHS_TR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const MONTH_INDEX = MONTHS_TR.reduce((acc, m, i) => { acc[m] = i + 1; return acc; }, {});
+
+// "Ocak 2026" → 202601 ; "Ocak" → 999901 (yılsız olanlar sona düşsün diye yüksek sayı)
+function periodToNumber(period) {
+  if (!period) return 0;
+  const s = period.trim();
+  // Ay ve yıl regex
+  const m = s.match(/^([A-Za-zÇĞİÖŞÜçğıöşü]+)\s*(\d{4})?$/);
+  if (m) {
+    const monthName = m[1];
+    const year = m[2] ? parseInt(m[2], 10) : 9999;
+    const monthNum = MONTH_INDEX[monthName] || 0;
+    return year * 100 + monthNum;
+  }
+  return 0;
+}
+
+// Yıl listesi: bu yıldan ±10 yıl
+function getYearRange() {
+  const now = new Date().getFullYear();
+  const arr = [];
+  for (let y = now - 10; y <= now + 10; y++) arr.push(y);
+  return arr;
+}
+
+let _periodPickerState = { month: null, year: null };
+
+function openPeriodPicker() {
+  const overlay = document.getElementById('periodOverlay');
+  const monthWheel = document.getElementById('monthWheel');
+  const yearWheel = document.getElementById('yearWheel');
+
+  // Mevcut input değerini parse et, varsa onu seç; yoksa bu ay/yıl
+  const cur = document.getElementById('bMonth').value.trim();
+  let curMonth = MONTHS_TR[new Date().getMonth()];
+  let curYear = new Date().getFullYear();
+  const m = cur.match(/^([A-Za-zÇĞİÖŞÜçğıöşü]+)\s*(\d{4})?$/);
+  if (m) {
+    if (MONTH_INDEX[m[1]]) curMonth = m[1];
+    if (m[2]) curYear = parseInt(m[2], 10);
+  }
+  _periodPickerState.month = curMonth;
+  _periodPickerState.year = curYear;
+
+  // Ay wheel'ini doldur
+  monthWheel.innerHTML = MONTHS_TR.map(mn => `<div class="period-wheel-item" data-val="${mn}">${mn}</div>`).join('');
+  // Yıl wheel'ini doldur
+  const years = getYearRange();
+  yearWheel.innerHTML = years.map(y => `<div class="period-wheel-item" data-val="${y}">${y}</div>`).join('');
+
+  overlay.classList.add('show');
+  // Scroll-snap için seçili öğeleri ortaya getir
+  setTimeout(() => {
+    scrollWheelToValue(monthWheel, curMonth);
+    scrollWheelToValue(yearWheel, String(curYear));
+  }, 30);
+
+  // Wheel scroll dinleyicileri (en yakın merkeze hangi item geldiyse onu seç)
+  attachWheelListener(monthWheel, val => { _periodPickerState.month = val; });
+  attachWheelListener(yearWheel,  val => { _periodPickerState.year = parseInt(val, 10); });
+
+  // Tıklanınca da seçilebilsin
+  monthWheel.querySelectorAll('.period-wheel-item').forEach(it => {
+    it.addEventListener('click', () => {
+      _periodPickerState.month = it.dataset.val;
+      scrollWheelToValue(monthWheel, it.dataset.val);
+    });
+  });
+  yearWheel.querySelectorAll('.period-wheel-item').forEach(it => {
+    it.addEventListener('click', () => {
+      _periodPickerState.year = parseInt(it.dataset.val, 10);
+      scrollWheelToValue(yearWheel, it.dataset.val);
+    });
+  });
+}
+
+function scrollWheelToValue(wheel, val) {
+  const item = wheel.querySelector(`.period-wheel-item[data-val="${CSS.escape(val)}"]`);
+  if (!item) return;
+  // padding-top 72px, item yüksekliği 36px → ortalamak için
+  const targetTop = item.offsetTop - wheel.clientHeight / 2 + 18;
+  wheel.scrollTo({ top: targetTop, behavior: 'auto' });
+  highlightSelectedItem(wheel);
+}
+
+function highlightSelectedItem(wheel) {
+  const wheelRect = wheel.getBoundingClientRect();
+  const centerY = wheelRect.top + wheelRect.height / 2;
+  let closest = null;
+  let closestDist = Infinity;
+  wheel.querySelectorAll('.period-wheel-item').forEach(it => {
+    const r = it.getBoundingClientRect();
+    const d = Math.abs((r.top + r.height / 2) - centerY);
+    if (d < closestDist) { closestDist = d; closest = it; }
+    it.classList.remove('selected');
+  });
+  if (closest) closest.classList.add('selected');
+  return closest;
+}
+
+function attachWheelListener(wheel, onChange) {
+  let scrollTimer;
+  wheel.onscroll = () => {
+    highlightSelectedItem(wheel);
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      // Kaydırma durduğunda en yakın öğeyi tam ortaya snap et
+      const closest = highlightSelectedItem(wheel);
+      if (closest) {
+        const targetTop = closest.offsetTop - wheel.clientHeight / 2 + 18;
+        wheel.scrollTo({ top: targetTop, behavior: 'smooth' });
+        onChange(closest.dataset.val);
+      }
+    }, 120);
+  };
+}
+
+function closePeriodPicker(ev) {
+  if (ev && ev.target.id !== 'periodOverlay') return;
+  document.getElementById('periodOverlay').classList.remove('show');
+}
+
+function applyPeriodPicker() {
+  const m = _periodPickerState.month;
+  const y = _periodPickerState.year;
+  if (m && y) {
+    document.getElementById('bMonth').value = `${m} ${y}`;
+  }
+  document.getElementById('periodOverlay').classList.remove('show');
 }
 
 /* ===================== Rates ===================== */
@@ -1405,7 +1668,12 @@ document.addEventListener('click', (ev) => {
   if (ev.target.classList.contains('filter-icon')) return;
   closePopover();
 });
-document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closePopover(); });
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') {
+    closePopover();
+    document.getElementById('periodOverlay').classList.remove('show');
+  }
+});
 
 /* ===================== Filter application ===================== */
 function passesFilter(entry, filters) {
@@ -1521,6 +1789,10 @@ function renderBillTable() {
   arr.sort((a, b) => {
     let va = a[state.billSort.key], vb = b[state.billSort.key];
     if (state.billSort.key === 'amount') return ((+va||0) - (+vb||0)) * dir;
+    if (state.billSort.key === 'month') {
+      // Dönem string'ini "yıl*100 + ay" gibi sayıya çevir, böylece kronolojik sırala
+      return (periodToNumber(va) - periodToNumber(vb)) * dir;
+    }
     va = (va || '') + ''; vb = (vb || '') + '';
     return va.localeCompare(vb, 'tr') * dir;
   });
