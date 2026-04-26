@@ -155,7 +155,7 @@
 
   .entry-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 12px 14px;
   }
   .entry-grid .span-2 { grid-column: span 2; }
@@ -734,6 +734,12 @@
     /* Filter popover mobilde geniş */
     .filter-popover { max-width: calc(100vw - 20px); min-width: 200px; }
   }
+  #pwdInput, #pwdInput2 {
+    padding: 12px 14px;
+    font-size: 16px;
+    height: 44px;
+  }
+</style>
 </style>
 </head>
 <body>
@@ -868,7 +874,7 @@
           <label>Vade Sonu Değeri</label>
           <input type="number" id="aMaturityValue" step="0.01" placeholder="0.00">
         </div>
-        <div class="field span-6">
+        <div class="field span-7">
           <label>Açıklama</label>
           <input type="text" id="aDesc" placeholder="Opsiyonel not">
         </div>
@@ -907,7 +913,7 @@
           <label>Son Ödeme Tarihi <span class="req">*</span></label>
           <input type="date" id="bDue">
         </div>
-        <div class="field span-2">
+        <div class="field span-1">
           <label>Açıklama</label>
           <input type="text" id="bDesc" placeholder="Opsiyonel not">
         </div>
@@ -942,7 +948,7 @@
           <label>Tutar (TL) <span class="req">*</span></label>
           <input type="number" id="iAmount" step="0.01" placeholder="0.00">
         </div>
-        <div class="field span-2">
+        <div class="field span-1">
           <label>Açıklama</label>
           <input type="text" id="iDesc" placeholder="Opsiyonel not">
         </div>
@@ -2359,7 +2365,7 @@ function renderAccountTable() {
                  e.type === 'Dolar' || e.type === 'Vadeli Dolar' ? ' $' :
                  e.type === 'Euro' ? ' €' : ' ₺';
     const rate = getEntryRate(e);
-    const rateHtml = rate != null ? fmt(rate, 4) : '<span style="color:var(--text-muted);">—</span>';
+    const rateHtml = rate != null ? fmt(rate, 2) : '<span style="color:var(--text-muted);">—</span>';
     const editing = state.editingAccountId === e.id ? 'editing' : '';
     return `<tr class="${editing}">
       <td>${fmtDate(e.date)}</td>
@@ -2876,7 +2882,7 @@ async function exportExcel() {
   sh.getColumn('amount').numFmt = '#,##0.00';
   sh.getColumn('try').numFmt = '#,##0.00';
   sh.getColumn('delta').numFmt = '+#,##0.00;-#,##0.00;0.00';
-  sh.getColumn('rate').numFmt = '#,##0.0000';
+  sh.getColumn('rate').numFmt = '#,##0.00';
   sh.getColumn('matval').numFmt = '#,##0.00';
 
   // Toplam satırları (filtrelenmiş veriden)
@@ -3094,7 +3100,7 @@ async function exportPDF() {
       const delta = computeDelta(e);
       const deltaStr = delta === null ? '—' : (delta > 0 ? '+' : '') + fmt(delta, 2);
       const rateVal = getEntryRate(e);
-      const rateStr = rateVal != null ? fmt(rateVal, 4) : '-';
+      const rateStr = rateVal != null ? fmt(rateVal, 2) : '-';
       return [
         fmtDate(e.date), e.bank, e.type,
         fmt(e.amount, 2) + unit,
