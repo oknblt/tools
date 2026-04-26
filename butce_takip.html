@@ -734,12 +734,6 @@
     /* Filter popover mobilde geniş */
     .filter-popover { max-width: calc(100vw - 20px); min-width: 200px; }
   }
-  #pwdInput, #pwdInput2 {
-    padding: 12px 14px;
-    font-size: 16px;
-    height: 44px;
-  }
-
 </style>
 </head>
 <body>
@@ -861,6 +855,10 @@
         <div class="field">
           <label>Tutar / Miktar <span class="req">*</span></label>
           <input type="number" id="aAmount" step="0.0001" placeholder="0.00">
+        </div>
+        <div class="field">
+          <label>Kur (TRY) <span style="font-size:9px;color:var(--text-muted);font-weight:400;">— döviz/maden</span></label>
+          <input type="number" id="aRate" step="0.0001" placeholder="—" disabled>
         </div>
         <div class="field">
           <label>Vade Tarihi</label>
@@ -1117,6 +1115,7 @@ const ACC_COLS = [
   { key:'amount',        label:'Tutar/Miktar',     filter:'range', sortable:true, align:'right' },
   { key:'try',           label:'TRY Karşılığı',    filter:'range', sortable:true, align:'right' },
   { key:'delta',         label:'Değişim',          filter:null,    sortable:false, align:'right' },
+  { key:'rate',          label:'Kur',              filter:'range', sortable:true, align:'right', width:'85px' },
   { key:'maturity',      label:'Vade',             filter:'date',  sortable:true },
   { key:'maturityValue', label:'Vade Sonu Değeri', filter:'range', sortable:true, align:'right' },
   { key:'desc',          label:'Açıklama',         filter:'set',   sortable:true },
@@ -1165,14 +1164,37 @@ function toTry(type, amount, customRate) {
   if (type === 'Euro') return amount * rates.eur;
   if (type === 'Altın') return amount * rates.gold;
   if (type === 'Gümüş') return amount * rates.silver;
-  return amount; // Bilinmeyen tip → TL gibi davran
+  return amount;
 }
-// Bir hesap kaydının TRY karşılığı: o kayıttaki kuru kullan (kayıt edildiği andaki kur)
+
+// Bir hesap kaydının kuru (number) — döviz/maden için. TL ise null.
+function getEntryRate(entry) {
+  if (isTlType(entry.type)) return null;
+  if (typeof entry.rate === 'number' && !isNaN(entry.rate)) return entry.rate;
+  // Geriye dönük uyumluluk: eski rateAtEntry obje formatından oku
+  if (entry.rateAtEntry) {
+    if (entry.type === 'Dolar' || entry.type === 'Vadeli Dolar') return entry.rateAtEntry.usd;
+    if (entry.type === 'Euro') return entry.rateAtEntry.eur;
+    if (entry.type === 'Altın') return entry.rateAtEntry.gold;
+    if (entry.type === 'Gümüş') return entry.rateAtEntry.silver;
+  }
+  // Hiçbir şey yoksa o anki güncel kuru kullan
+  if (entry.type === 'Dolar' || entry.type === 'Vadeli Dolar') return state.rates.usd;
+  if (entry.type === 'Euro') return state.rates.eur;
+  if (entry.type === 'Altın') return state.rates.gold;
+  if (entry.type === 'Gümüş') return state.rates.silver;
+  return null;
+}
+
+// Bir hesap kaydının TRY karşılığı: kayıttaki kuru kullan
 function entryToTry(entry) {
-  if (entry.rateAtEntry) return toTry(entry.type, entry.amount, entry.rateAtEntry);
-  return toTry(entry.type, entry.amount);
+  if (!entry.amount) return 0;
+  if (isTlType(entry.type)) return entry.amount;
+  const r = getEntryRate(entry);
+  return entry.amount * (r || 0);
 }
-// Banka özeti için her zaman güncel kuru kullan
+
+// Banka özeti için her zaman güncel kuru kullan (üst kart toplamları da bunu kullanır)
 function entryToTryLive(entry) {
   return toTry(entry.type, entry.amount);
 }
@@ -1357,16 +1379,41 @@ function clearAccountForm() {
   document.getElementById('aBank').value = '';
   document.getElementById('aType').value = '';
   document.getElementById('aAmount').value = '';
+  document.getElementById('aRate').value = '';
+  document.getElementById('aRate').disabled = true;
+  document.getElementById('aRate').placeholder = '—';
   document.getElementById('aMaturity').value = '';
   document.getElementById('aMaturityValue').value = '';
   document.getElementById('aDesc').value = '';
   cancelEdit();
+}
+
+// Hesap türü değiştiğinde Kur input'unu uygun şekilde aç/kapa ve default doldur
+function onAccountTypeChange() {
+  const type = document.getElementById('aType').value.trim();
+  const rateInput = document.getElementById('aRate');
+  if (isCurrencyType(type) || isMetalType(type)) {
+    rateInput.disabled = false;
+    let defaultRate = '';
+    if (type === 'Dolar' || type === 'Vadeli Dolar') defaultRate = state.rates.usd;
+    else if (type === 'Euro') defaultRate = state.rates.eur;
+    else if (type === 'Altın') defaultRate = state.rates.gold;
+    else if (type === 'Gümüş') defaultRate = state.rates.silver;
+    // Sadece kullanıcı henüz boş bırakmışsa default ata, yoksa kullanıcı değerine dokunma
+    if (!rateInput.value) rateInput.value = defaultRate;
+    rateInput.placeholder = String(defaultRate);
+  } else {
+    rateInput.disabled = true;
+    rateInput.value = '';
+    rateInput.placeholder = '—';
+  }
 }
 function saveAccount() {
   const date = document.getElementById('aDate').value;
   const bank = document.getElementById('aBank').value.trim();
   const type = document.getElementById('aType').value.trim();
   const amount = parseFloat(document.getElementById('aAmount').value);
+  const rateRaw = parseFloat(document.getElementById('aRate').value);
   const maturity = document.getElementById('aMaturity').value;
   const maturityValue = parseFloat(document.getElementById('aMaturityValue').value);
   const desc = document.getElementById('aDesc').value.trim();
@@ -1375,29 +1422,27 @@ function saveAccount() {
   if (!type) return toast('Hesap türü zorunlu', 'error');
   if (isNaN(amount)) return toast('Tutar zorunlu', 'error');
 
-  // Edit modunda eski rateAtEntry'yi koru, yeni kayıtta o anki kuru sakla
-  let rateAtEntry = null;
+  // Döviz/maden ise kur belirle: input'ta varsa onu, yoksa o anki güncel kuru
+  let rate = null;
   if (isCurrencyType(type) || isMetalType(type)) {
-    if (state.editingAccountId) {
-      const existing = state.accounts.find(e => e.id === state.editingAccountId);
-      // Düzenlemede tip değişmediyse ve eski kayıtta rate varsa onu koru, değilse o anki kuru al
-      if (existing && existing.rateAtEntry && existing.type === type) {
-        rateAtEntry = existing.rateAtEntry;
-      } else {
-        rateAtEntry = { ...state.rates };
-      }
+    if (!isNaN(rateRaw) && rateRaw > 0) {
+      rate = rateRaw;
     } else {
-      rateAtEntry = { ...state.rates };
+      // Default güncel kur
+      if (type === 'Dolar' || type === 'Vadeli Dolar') rate = state.rates.usd;
+      else if (type === 'Euro') rate = state.rates.eur;
+      else if (type === 'Altın') rate = state.rates.gold;
+      else if (type === 'Gümüş') rate = state.rates.silver;
     }
   }
 
   const entry = {
     id: state.editingAccountId || uid(),
     date, bank, type, amount,
+    rate,
     maturity: maturity || '',
     maturityValue: isNaN(maturityValue) ? null : maturityValue,
-    desc,
-    rateAtEntry
+    desc
   };
   if (state.editingAccountId) {
     const idx = state.accounts.findIndex(e => e.id === state.editingAccountId);
@@ -1421,6 +1466,12 @@ function editAccount(id) {
   document.getElementById('aMaturity').value = e.maturity || '';
   document.getElementById('aMaturityValue').value = e.maturityValue ?? '';
   document.getElementById('aDesc').value = e.desc || '';
+  // Kur alanı: önce input'u aktive et (tipe göre), sonra kayıttaki kuru yaz
+  onAccountTypeChange();
+  if (isCurrencyType(e.type) || isMetalType(e.type)) {
+    const r = getEntryRate(e);
+    if (r != null) document.getElementById('aRate').value = r;
+  }
   state.editingAccountId = id;
   document.getElementById('btnSubmitA').textContent = '💾 Güncelle';
   document.getElementById('btnCancelA').style.display = '';
@@ -1436,23 +1487,29 @@ function deleteAccount(id) {
 
 // Her döviz/maden hesabı (banka+tür+açıklama) için en son tarihli kaydın rateAtEntry'sini güncel kura çeker
 function syncLatestRates() {
-  // Bul: her unique (bank+type+desc) kombinasyonu için en son tarihli kayıt (sadece döviz/maden)
+  // Anahtar normalleştirme - mükerrer kayıt önleme
+  const norm = s => (s == null ? '' : String(s).trim());
   const latestByKey = {};
   for (const e of state.accounts) {
     if (!isCurrencyType(e.type) && !isMetalType(e.type)) continue;
-    const key = `${e.bank}||${e.type}||${e.desc || ''}`;
+    const key = `${norm(e.bank)}||${norm(e.type)}||${norm(e.desc)}`;
     if (!latestByKey[key] || e.date > latestByKey[key].date) latestByKey[key] = e;
   }
   let count = 0;
   for (const key in latestByKey) {
     const e = latestByKey[key];
-    e.rateAtEntry = { ...state.rates };
+    // Tipe göre güncel kuru ata
+    if (e.type === 'Dolar' || e.type === 'Vadeli Dolar') e.rate = state.rates.usd;
+    else if (e.type === 'Euro') e.rate = state.rates.eur;
+    else if (e.type === 'Altın') e.rate = state.rates.gold;
+    else if (e.type === 'Gümüş') e.rate = state.rates.silver;
+    delete e.rateAtEntry; // eski format temizle
     count++;
   }
   if (count === 0) {
     toast('Güncellenecek döviz/maden kaydı yok','warning');
   } else {
-    toast(`${count} hesabın TRY karşılığı güncel kura göre yenilendi`,'success');
+    toast(`${count} hesabın kuru güncel kura göre yenilendi`,'success');
   }
   renderAll();
 }
@@ -1837,8 +1894,11 @@ function buildHeader(headRowId, cols, filters, sortState, onSort) {
     );
     const sortClass = sortable ? 'sortable' : '';
     const filterIcon = c.filter ? `<span class="filter-icon ${hasFilter?'active':''}" data-key="${c.key}" data-table="${headRowId}" title="Filtrele">▾</span>` : '';
-    const align = c.align === 'right' ? 'style="text-align:right;"' : '';
-    return `<th class="${sortClass}" ${align} data-key="${c.key}" data-table="${headRowId}">
+    let styleParts = [];
+    if (c.align === 'right') styleParts.push('text-align:right');
+    if (c.width) styleParts.push(`width:${c.width}`);
+    const styleAttr = styleParts.length ? `style="${styleParts.join(';')}"` : '';
+    return `<th class="${sortClass}" ${styleAttr} data-key="${c.key}" data-table="${headRowId}">
       <div class="th-content">
         <span class="th-label">${escapeHtml(c.label)} <span class="sort-ind">${sortInd}</span></span>
         ${filterIcon}
@@ -2173,6 +2233,7 @@ function passesFilter(entry, filters) {
     const f = filters[key];
     let val;
     if (key === 'try') val = entryToTry(entry);
+    else if (key === 'rate') val = getEntryRate(entry);
     else val = entry[key];
     if (f.type === 'set') {
       const sval = val === undefined || val === null ? '' : String(val);
@@ -2196,8 +2257,10 @@ function passesFilter(entry, filters) {
 
 /* ===================== Account table ===================== */
 function computeDelta(entry) {
+  const norm = s => (s == null ? '' : String(s).trim());
+  const eBank = norm(entry.bank), eType = norm(entry.type), eDesc = norm(entry.desc);
   const prev = state.accounts
-    .filter(e => e.bank === entry.bank && e.type === entry.type && (e.desc || '') === (entry.desc || '') && e.date < entry.date)
+    .filter(e => norm(e.bank) === eBank && norm(e.type) === eType && norm(e.desc) === eDesc && e.date < entry.date)
     .sort((a,b) => b.date.localeCompare(a.date))[0];
   if (!prev) return null;
   return entry.amount - prev.amount;
@@ -2210,6 +2273,7 @@ function getFilteredSortedAccounts() {
   arr.sort((a, b) => {
     let va, vb;
     if (state.sort.key === 'try') { va = entryToTry(a); vb = entryToTry(b); return (va - vb) * dir; }
+    if (state.sort.key === 'rate') { va = getEntryRate(a) || 0; vb = getEntryRate(b) || 0; return (va - vb) * dir; }
     va = a[state.sort.key]; vb = b[state.sort.key];
     if (state.sort.key === 'amount' || state.sort.key === 'maturityValue') {
       return ((+va || 0) - (+vb || 0)) * dir;
@@ -2294,6 +2358,8 @@ function renderAccountTable() {
     const unit = isMetalType(e.type) ? ' g' :
                  e.type === 'Dolar' || e.type === 'Vadeli Dolar' ? ' $' :
                  e.type === 'Euro' ? ' €' : ' ₺';
+    const rate = getEntryRate(e);
+    const rateHtml = rate != null ? fmt(rate, 4) : '<span style="color:var(--text-muted);">—</span>';
     const editing = state.editingAccountId === e.id ? 'editing' : '';
     return `<tr class="${editing}">
       <td>${fmtDate(e.date)}</td>
@@ -2302,6 +2368,7 @@ function renderAccountTable() {
       <td class="num sensitive">${fmt(e.amount, 2)}${unit}</td>
       <td class="num sensitive">${fmtTry(try_)}</td>
       <td class="num sensitive">${deltaHtml}</td>
+      <td class="num">${rateHtml}</td>
       <td>${fmtDate(e.maturity)}</td>
       <td class="num sensitive">${e.maturityValue != null ? fmt(e.maturityValue, 2) : '—'}</td>
       <td>${escapeHtml(e.desc || '')}</td>
@@ -2441,9 +2508,11 @@ function sortInc(key) {
 
 /* ===================== Bank summary ===================== */
 function computeBankSnapshot() {
+  // Anahtar normalleştirme: desc undefined/null/whitespace → boş string olarak kabul et
+  const norm = s => (s == null ? '' : String(s).trim());
   const latestByKey = {};
   for (const e of state.accounts) {
-    const key = `${e.bank}||${e.type}||${e.desc || ''}`;
+    const key = `${norm(e.bank)}||${norm(e.type)}||${norm(e.desc)}`;
     if (!latestByKey[key] || e.date > latestByKey[key].date) latestByKey[key] = e;
   }
   const summary = {};
@@ -2773,6 +2842,7 @@ async function exportExcel() {
     { header:'Para Birimi', key:'cur', width:10 },
     { header:'TRY Karşılığı', key:'try', width:16 },
     { header:'Değişim', key:'delta', width:14 },
+    { header:'Kur', key:'rate', width:12 },
     { header:'Vade Tarihi', key:'maturity', width:12 },
     { header:'Vade Sonu Değeri', key:'matval', width:18 },
     { header:'Açıklama', key:'desc', width:28 }
@@ -2783,17 +2853,19 @@ async function exportExcel() {
     c.font = { color:{argb:'FFFFFFFF'}, bold:true };
     c.alignment = { vertical:'center', horizontal:'center' };
   });
-  sh.autoFilter = { from: 'A1', to: 'J1' };
+  sh.autoFilter = { from: 'A1', to: 'K1' };
   sortedAccounts.forEach(e => {
     const unit = isMetalType(e.type) ? 'gram' :
                  e.type === 'Dolar' || e.type === 'Vadeli Dolar' ? 'USD' :
                  e.type === 'Euro' ? 'EUR' : 'TRY';
     const delta = computeDelta(e);
+    const rateVal = getEntryRate(e);
     sh.addRow({
       date: e.date ? new Date(e.date) : '',
       bank: e.bank, type: e.type, amount: e.amount, cur: unit,
       try: entryToTry(e),
       delta: delta === null ? '' : delta,
+      rate: rateVal != null ? rateVal : '',
       maturity: e.maturity ? new Date(e.maturity) : '',
       matval: e.maturityValue ?? '',
       desc: e.desc || ''
@@ -2804,6 +2876,7 @@ async function exportExcel() {
   sh.getColumn('amount').numFmt = '#,##0.00';
   sh.getColumn('try').numFmt = '#,##0.00';
   sh.getColumn('delta').numFmt = '+#,##0.00;-#,##0.00;0.00';
+  sh.getColumn('rate').numFmt = '#,##0.0000';
   sh.getColumn('matval').numFmt = '#,##0.00';
 
   // Toplam satırları (filtrelenmiş veriden)
@@ -2815,11 +2888,11 @@ async function exportExcel() {
   if (accTotals.byUnit.au) totalParts.push(`${fmt(accTotals.byUnit.au, 2)} g AU`);
   if (accTotals.byUnit.ag) totalParts.push(`${fmt(accTotals.byUnit.ag, 2)} g AG`);
   sh.addRow([]);
-  const r1 = sh.addRow(['', '', 'TOPLAM TUTAR:', totalParts.join('   '), '', '']);
+  const r1 = sh.addRow(['', '', 'TOPLAM TUTAR:', totalParts.join('   '), '', '', '']);
   r1.eachCell(c => { c.font = { bold: true }; c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE8EEF7'} }; });
   r1.getCell(3).alignment = { horizontal: 'right' };
   r1.getCell(4).alignment = { horizontal: 'left' };
-  const r2 = sh.addRow(['', '', 'TOPLAM TRY KARŞILIĞI:', '', '', accTotals.tryTotal]);
+  const r2 = sh.addRow(['', '', 'TOPLAM TRY KARŞILIĞI:', '', '', accTotals.tryTotal, '']);
   r2.eachCell(c => { c.font = { bold: true }; c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE8EEF7'} }; });
   r2.getCell(3).alignment = { horizontal: 'right' };
   r2.getCell(6).numFmt = '#,##0.00 "₺"';
@@ -3020,11 +3093,14 @@ async function exportPDF() {
                    e.type === 'Euro' ? ' €' : ' ₺';
       const delta = computeDelta(e);
       const deltaStr = delta === null ? '—' : (delta > 0 ? '+' : '') + fmt(delta, 2);
+      const rateVal = getEntryRate(e);
+      const rateStr = rateVal != null ? fmt(rateVal, 4) : '-';
       return [
         fmtDate(e.date), e.bank, e.type,
         fmt(e.amount, 2) + unit,
         fmt(entryToTry(e), 2) + ' ₺',
         deltaStr,
+        rateStr,
         e.maturity ? fmtDate(e.maturity) : '-',
         e.maturityValue != null ? fmt(e.maturityValue, 2) : '-',
         e.desc || ''
@@ -3032,13 +3108,13 @@ async function exportPDF() {
     });
     doc.autoTable({
       startY: 25,
-      head: [['Tarih','Banka','Hesap Türü','Tutar','TRY Karşılığı','Değişim','Vade','Vade Sonu','Açıklama']],
+      head: [['Tarih','Banka','Hesap Türü','Tutar','TRY Karşılığı','Değişim','Kur','Vade','Vade Sonu','Açıklama']],
       body: rows,
       styles: { font: fontName, fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [53,103,173], textColor: 255, fontStyle: 'bold', font: fontName },
       bodyStyles: { font: fontName },
       alternateRowStyles: { fillColor: [245, 246, 248] },
-      columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 7: { halign: 'right' } }
+      columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 8: { halign: 'right' } }
     });
     // Toplam satırı (filtrelenmiş)
     const accTotals = computeAccountTotals(sortedAccounts);
@@ -3192,6 +3268,9 @@ window.addEventListener('DOMContentLoaded', () => {
   ['rateUsd','rateEur','rateGold','rateSilver'].forEach(id => {
     document.getElementById(id).addEventListener('input', refreshRatesFromInputs);
   });
+  // Hesap türü değişince Kur input'unu yönet
+  document.getElementById('aType').addEventListener('input', onAccountTypeChange);
+  document.getElementById('aType').addEventListener('change', onAccountTypeChange);
   const today = new Date().toISOString().slice(0,10);
   document.getElementById('aDate').value = today;
   document.getElementById('iDate').value = today;
