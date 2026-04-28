@@ -1816,6 +1816,24 @@ function applyHideMode() {
       delete el.dataset.original;
     }
   });
+
+// Notlar alanı
+  const notesEl = document.getElementById('notesArea');
+  if (notesEl) {
+    if (hide) {
+      if (notesEl.dataset.original === undefined) {
+        notesEl.dataset.original = notesEl.value;
+      }
+      notesEl.value = '••••••••';
+      notesEl.disabled = true;
+    } else if (notesEl.dataset.original !== undefined) {
+      notesEl.value = notesEl.dataset.original;
+      delete notesEl.dataset.original;
+      notesEl.disabled = false;
+      autoResizeNotes();
+    }
+  }
+
 }
 
 /* ===================== Bill CRUD ===================== */
