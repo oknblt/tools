@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Health Tracker | Blood pressure & vital signs</title>
+  <title>Health Tracker | Tansiyon ve Nabız Takibi</title>
   <style>
     /* base style reset & soft blue theme – darker than light but much more readable than original deep navy */
     * {
@@ -164,7 +164,7 @@
       </div>
 
       <button id="ht-add" class="ht-btn">Add entry</button>
-      <button id="ht-cancel-edit" class="ht-btn ht-btn-secondary" style="display: none; margin-top: 10px;">Cancel edit</button>
+      <button id="ht-cancel-edit" class="ht-btn ht-btn-secondary" style="display: none; margin-top: 8px;">Cancel edit</button>
     </div>
 
     <div class="ht-card">
@@ -174,9 +174,9 @@
       </div>
 
       <div class="ht-stats" id="ht-stats" style="display: none;">
-        <div class="ht-stat"><div class="ht-stat-label">Avg sys</div><div class="ht-stat-val" id="ht-avg-sys">—</div></div>
-        <div class="ht-stat"><div class="ht-stat-label">Avg dia</div><div class="ht-stat-val" id="ht-avg-dia">—</div></div>
-        <div class="ht-stat"><div class="ht-stat-label">Avg pulse</div><div class="ht-stat-val" id="ht-avg-pulse">—</div></div>
+        <div class="ht-stat"><div class="ht-stat-label">AVG SYS</div><div class="ht-stat-val" id="ht-avg-sys">—</div></div>
+        <div class="ht-stat"><div class="ht-stat-label">AVG DIA</div><div class="ht-stat-val" id="ht-avg-dia">—</div></div>
+        <div class="ht-stat"><div class="ht-stat-label">AVG PULSE</div><div class="ht-stat-val" id="ht-avg-pulse">—</div></div>
       </div>
 
       <ul class="ht-list" id="ht-list"></ul>
@@ -185,11 +185,11 @@
 
     <div class="ht-card">
       <p class="ht-h">Notes</p>
-      <textarea id="ht-notes" class="ht-textarea" rows="3" placeholder="General notes — area expands as you type."></textarea>
+      <textarea id="ht-notes" class="ht-textarea" rows="3" placeholder="General notes - area expands as you type."></textarea>
     </div>
 
     <div class="ht-card">
-      <p class="ht-h">Export &amp; backup</p>
+      <p class="ht-h">Export & backup</p>
       <div class="ht-export-grid">
         <button id="ht-pdf" class="ht-btn ht-btn-secondary">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -377,14 +377,14 @@
 
   addBtn.addEventListener('click', () => {
     const data = readForm();
-    if (!data) { alert('Please enter both systolic and diastolic values.'); return; }
+    if (!data) { alert('Sistolik ve diyastolik değerleri giriniz.'); return; }
     if (editingId) {
       const idx = records.findIndex(r => r.id === editingId);
       if (idx >= 0) records[idx] = { ...records[idx], ...data };
-      toast('Entry updated');
+      toast('Kayıt güncellendi');
     } else {
       records.push({ id: uid(), ...data });
-      toast('Entry added');
+      toast('Kayıt eklendi');
     }
     clearForm();
     render();
@@ -394,10 +394,10 @@
 
   $('ht-clear').addEventListener('click', () => {
     if (records.length === 0) return;
-    if (!confirm('Delete all entries? This cannot be undone.')) return;
+    if (!confirm('Tüm kayıtları sil? Bu geri alınamaz.')) return;
     records = [];
     render();
-    toast('All entries cleared');
+    toast('Tüm kayıtlar temizlendi');
   });
 
   notesEl.addEventListener('input', () => {
@@ -406,19 +406,66 @@
   });
   setTimeout(() => autosize(notesEl), 0);
 
-  // ---------- Export: PDF (same logic, compatible fonts) ----------
+  // ----- TÜRKÇE KARAKTER DESTEKLİ PDF (Roboto / Unicode TTF) -----
+  let _ttfBase64 = null;
+  let _fontTried = false;
+  async function ensureTurkishFont(doc) {
+    if (!_ttfBase64 && !_fontTried) {
+      _fontTried = true;
+      const urls = [
+        'https://cdn.jsdelivr.net/gh/googlefonts/roboto-classic@main/src/hinted/Roboto-Regular.ttf',
+        'https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf'
+      ];
+      for (const url of urls) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const buf = await res.arrayBuffer();
+          if (buf.byteLength < 10000) continue;
+          const bytes = new Uint8Array(buf);
+          // TTF imza kontrolü: true type veya OpenType
+          const isValidTTF =
+            (bytes[0] === 0x00 && bytes[1] === 0x01 && bytes[2] === 0x00 && bytes[3] === 0x00) ||
+            (bytes[0] === 0x4F && bytes[1] === 0x54 && bytes[2] === 0x54 && bytes[3] === 0x4F) ||
+            (bytes[0] === 0x74 && bytes[1] === 0x72 && bytes[2] === 0x75 && bytes[3] === 0x65);
+          if (!isValidTTF) continue;
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+          _ttfBase64 = btoa(binary);
+          break;
+        } catch(e) { /* next */ }
+      }
+    }
+    if (!_ttfBase64) return false;
+    try {
+      doc.addFileToVFS('CustomFont.ttf', _ttfBase64);
+      doc.addFont('CustomFont.ttf', 'CustomFont', 'normal');
+      doc.addFont('CustomFont.ttf', 'CustomFont', 'bold');
+      return true;
+    } catch(e) { return false; }
+  }
+
+  // PDF butonu async, Türkçe karakter desteği ile
   $('ht-pdf').addEventListener('click', async () => {
     try {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-      doc.setFont('helvetica');
+      
+      // Unicode font yükleme (Türkçe karakterler için)
+      let activeFont = 'helvetica';
+      try {
+        const fontOk = await ensureTurkishFont(doc);
+        if (fontOk) activeFont = 'CustomFont';
+      } catch (e) { console.warn('Font yüklenemedi, standart helvetica kullanılacak.', e); }
+      
+      doc.setFont(activeFont);
       doc.setFontSize(16);
-      doc.text('Health Tracker — Blood pressure log', 40, 50);
+      doc.text('Health Tracker — Kan Basıncı / Blood Pressure', 40, 50);
       doc.setFontSize(10);
       const today = new Date();
-      doc.text(`Generated: ${today.toLocaleString()}`, 40, 68);
+      doc.text(`Oluşturulma / Generated: ${today.toLocaleString('tr-TR')}`, 40, 68);
 
-      const head = [['Date', 'Time', 'Sys', 'Dia', 'Pulse', 'Note']];
+      const head = [['Tarih / Date', 'Saat / Time', 'Sys', 'Dia', 'Nabız / Pulse', 'Not / Note']];
       const sorted = [...records].sort((a,b) => {
         const ka = (a.date||'') + 'T' + (a.time||'00:00');
         const kb = (b.date||'') + 'T' + (b.time||'00:00');
@@ -429,31 +476,35 @@
         const dStr = (y && m && d) ? `${d}.${m}.${y}` : '';
         return [dStr, r.time||'', String(r.sys), String(r.dia), Number.isFinite(r.pulse) ? String(r.pulse) : '', r.desc || ''];
       });
+      
       doc.autoTable({
         head, body,
         startY: 84,
-        styles: { fontSize: 10, cellPadding: 6 },
-        headStyles: { fillColor: [80, 120, 200], textColor: 255, fontStyle: 'bold' },
+        styles: { font: activeFont, fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: [80, 120, 200], textColor: 255, fontStyle: 'bold', font: activeFont },
+        bodyStyles: { font: activeFont },
         columnStyles: { 5: { cellWidth: 180 } }
       });
+      
       let y = doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY + 24 : 100;
       if (notes && notes.trim()) {
         if (y > 720) { doc.addPage(); y = 50; }
+        doc.setFont(activeFont);
         doc.setFontSize(12);
-        doc.text('Notes', 40, y); y += 16;
+        doc.text('Genel notlar / General notes', 40, y); y += 16;
         doc.setFontSize(10);
         const lines = doc.splitTextToSize(notes, 515);
         doc.text(lines, 40, y);
       }
       doc.save(`health_tracker_${today.toISOString().slice(0,10)}.pdf`);
-      toast('PDF downloaded');
+      toast('PDF (UTF-8) başarıyla indirildi');
     } catch (e) {
       console.error(e);
-      alert('Could not generate PDF.');
+      alert('PDF oluşturulurken hata oluştu, ancak Türkçe karakterler yine de desteklenmeye çalışıldı.');
     }
   });
 
-  // XLSX
+  // XLSX (desteği var, değişiklik yok)
   $('ht-xlsx').addEventListener('click', () => {
     try {
       const sorted = [...records].sort((a,b) => {
@@ -465,33 +516,33 @@
         const [y,m,d] = (r.date||'').split('-');
         const dStr = (y && m && d) ? `${d}.${m}.${y}` : '';
         return {
-          'Date': dStr,
-          'Time': r.time || '',
-          'Systolic (mmHg)': r.sys,
-          'Diastolic (mmHg)': r.dia,
-          'Pulse (bpm)': Number.isFinite(r.pulse) ? r.pulse : '',
-          'Note': r.desc || ''
+          'Tarih / Date': dStr,
+          'Saat / Time': r.time || '',
+          'Sistolik / Systolic (mmHg)': r.sys,
+          'Diyastolik / Diastolic (mmHg)': r.dia,
+          'Nabız / Pulse (bpm)': Number.isFinite(r.pulse) ? r.pulse : '',
+          'Not / Note': r.desc || ''
         };
       });
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Date':'', 'Time':'', 'Systolic (mmHg)':'', 'Diastolic (mmHg)':'', 'Pulse (bpm)':'', 'Note':'' }]);
+      const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Tarih / Date':'', 'Saat / Time':'', 'Sistolik (mmHg)':'', 'Diyastolik (mmHg)':'', 'Nabız (bpm)':'', 'Not / Note':'' }]);
       ws['!cols'] = [{wch:12},{wch:8},{wch:16},{wch:16},{wch:10},{wch:40}];
-      XLSX.utils.book_append_sheet(wb, ws, 'Entries');
+      XLSX.utils.book_append_sheet(wb, ws, 'KanBasinci');
       if (notes && notes.trim()) {
-        const wsN = XLSX.utils.aoa_to_sheet([['Notes'], ...notes.split('\n').map(l => [l])]);
+        const wsN = XLSX.utils.aoa_to_sheet([['Genel Notlar / General Notes'], ...notes.split('\n').map(l => [l])]);
         wsN['!cols'] = [{wch:80}];
-        XLSX.utils.book_append_sheet(wb, wsN, 'Notes');
+        XLSX.utils.book_append_sheet(wb, wsN, 'Notlar');
       }
       const today = new Date().toISOString().slice(0,10);
       XLSX.writeFile(wb, `health_tracker_${today}.xlsx`);
-      toast('Excel downloaded');
+      toast('Excel dosyası indirildi');
     } catch (e) {
       console.error(e);
-      alert('Could not generate Excel file.');
+      alert('Excel oluşturulamadı.');
     }
   });
 
-  // JSON save / upload (identical)
+  // JSON save / upload (tamamen aynı)
   $('ht-json-save').addEventListener('click', () => {
     const payload = { version: 1, exportedAt: new Date().toISOString(), records, notes };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -501,7 +552,7 @@
     a.href = url; a.download = `health_tracker_backup_${today}.json`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast('Backup saved');
+    toast('Yedek kaydedildi');
   });
 
   $('ht-json-load').addEventListener('click', () => $('ht-file').click());
@@ -513,7 +564,7 @@
       try {
         const data = JSON.parse(reader.result);
         if (!data || !Array.isArray(data.records)) throw new Error('format');
-        const ok = confirm(`Load ${data.records.length} entries from backup? Current data will be replaced.`);
+        const ok = confirm(`${data.records.length} kayıt yedekten yüklenecek. Mevcut verilerin üzerine yazılacak. Devam et?`);
         if (!ok) return;
         records = data.records.map(r => ({
           id: r.id || uid(),
@@ -528,9 +579,9 @@
         notesEl.value = notes;
         autosize(notesEl);
         render();
-        toast('Backup loaded');
+        toast('Yedek başarıyla yüklendi');
       } catch (err) {
-        alert('Invalid JSON file.');
+        alert('Geçersiz JSON dosyası.');
       } finally {
         e.target.value = '';
       }
