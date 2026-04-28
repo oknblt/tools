@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Photo Compressor & Stamper</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #1a2a4a 0%, #0d1b35 100%);
+  min-height: 100vh;
+  padding: 20px 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.top-bar {
+  display: flex; align-items: center; gap: 12px;
+  max-width: 700px; margin: 0 auto 16px;
+  flex-wrap: wrap;
+}
+.back-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff; border-radius: 8px;
+  padding: 7px 14px; font-size: 13px;
+  cursor: pointer; text-decoration: none; transition: background 0.15s;
+}
+.back-btn:hover { background: rgba(255,255,255,0.18); }
+.title-block { display: flex; flex-direction: column; }
+.top-bar h1 { font-size: 16px; font-weight: 600; color: #fff; line-height: 1.2; }
+.brand-tag {
+  font-size: 10px; color: #7aafd4;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.wrap { max-width: 700px; margin: 0 auto; }
+
+.drop-zone {
+  border: 1.5px dashed #3a5a8a;
+  border-radius: 14px; padding: 1.8rem 1rem;
+  text-align: center; cursor: pointer;
+  background: #eef3fa; transition: background 0.15s;
+}
+.drop-zone:hover, .drop-zone.drag-over { background: #dce8f7; }
+.drop-zone p { font-size: 15px; font-weight: 600; color: #1a3558; margin-bottom: 4px; }
+.drop-zone span { font-size: 12px; color: #4a6a8a; }
+
+.panel {
+  background: #1a3558; border-radius: 14px;
+  padding: 14px 16px; margin-top: 10px;
+}
+.panel-title {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: #7aafd4; margin-bottom: 10px;
+}
+
+/* Toggle switch */
+.toggle-row { display: flex; align-items: center; gap: 10px; }
+.toggle-label { font-size: 13px; color: #a8c8e8; }
+.switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider-sw {
+  position: absolute; inset: 0;
+  background: #2a4a6a; border-radius: 99px; cursor: pointer; transition: background 0.2s;
+}
+.slider-sw:before {
+  content: ''; position: absolute;
+  width: 16px; height: 16px; left: 3px; top: 3px;
+  background: #7aafd4; border-radius: 50%; transition: transform 0.2s, background 0.2s;
+}
+.switch input:checked + .slider-sw { background: #4a9edd; }
+.switch input:checked + .slider-sw:before { transform: translateX(18px); background: #fff; }
+
+.btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.opt-btn {
+  height: 30px; padding: 0 14px; border-radius: 99px;
+  border: 1px solid #3a6090; background: #243f60; color: #a8c8e8;
+  font-size: 13px; cursor: pointer; transition: all 0.15s;
+}
+.opt-btn:hover { background: #2e5080; color: #d0e8f8; }
+.opt-btn.active { background: #4a9edd; color: #fff; border-color: #4a9edd; }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+
+.corner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.corner-btn {
+  height: 34px; border-radius: 10px;
+  border: 1px solid #3a6090; background: #243f60; color: #a8c8e8;
+  font-size: 12px; cursor: pointer; transition: all 0.15s;
+  padding: 0 4px;
+}
+.corner-btn:hover { background: #2e5080; color: #d0e8f8; }
+.corner-btn.active { background: #4a9edd; color: #fff; border-color: #4a9edd; }
+
+.ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.ctrl-row:last-child { margin-bottom: 0; }
+.ctrl-label { font-size: 12px; color: #a8c8e8; flex: 1; }
+.ctrl-val { font-size: 12px; color: #d0e8f8; min-width: 32px; text-align: right; }
+input[type=range] { width: 80px; accent-color: #4a9edd; }
+input[type=color] {
+  width: 32px; height: 26px;
+  border: 1px solid #3a6090; border-radius: 6px;
+  padding: 1px 2px; cursor: pointer; background: #243f60;
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px; margin-top: 10px;
+}
+.preview-card {
+  border: 1px solid #2a4f78; border-radius: 10px;
+  overflow: hidden; background: #162d4a;
+}
+.preview-card canvas { width: 100%; display: block; }
+.preview-info { padding: 6px 8px; font-size: 11px; color: #a8c8e8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview-src { font-size: 10px; color: #5a8ab0; margin-top: 2px; }
+
+/* Single big action button */
+.btn-action {
+  width: 100%;
+  height: 48px; border-radius: 12px; border: none;
+  background: #4a9edd; color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 14px;
+}
+.btn-action svg { width: 18px; height: 18px; }
+.btn-action:hover:not(:disabled) { background: #3a8ecc; }
+.btn-action:disabled {
+  background: #2a4a6a; color: #6a8aaa; cursor: not-allowed; opacity: 0.7;
+}
+
+.bottom-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px; flex-wrap: wrap;
+}
+.btn-clear {
+  height: 36px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid #3a6090; background: #243f60; color: #a8c8e8;
+  font-size: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-clear:hover { background: #2e5080; }
+.btn-clear svg { width: 14px; height: 14px; }
+.count-tag { font-size: 12px; color: #5a8ab0; margin-left: auto; }
+
+/* Progress overlay */
+.progress-overlay {
+  position: fixed; inset: 0;
+  background: rgba(8, 16, 32, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.progress-overlay.active { display: flex; }
+.progress-card {
+  background: #1a3558;
+  border: 1px solid #3a6090;
+  border-radius: 16px;
+  padding: 24px 22px;
+  width: 100%; max-width: 340px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+.progress-icon {
+  width: 44px; height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: rgba(74, 158, 221, 0.15);
+  display: flex; align-items: center; justify-content: center;
+}
+.progress-icon svg {
+  width: 24px; height: 24px;
+  color: #4a9edd;
+  animation: spin 1.4s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-title {
+  font-size: 15px; font-weight: 600; color: #fff;
+  margin-bottom: 4px;
+}
+.progress-sub {
+  font-size: 12px; color: #7aafd4;
+  margin-bottom: 16px;
+}
+.progress-bar-outer {
+  height: 8px; background: #243f60; border-radius: 99px;
+  overflow: hidden; margin-bottom: 8px;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a9edd, #6ab8f0);
+  border-radius: 99px;
+  transition: width 0.25s ease;
+  width: 0%;
+}
+.progress-percent {
+  font-size: 13px; color: #d0e8f8; font-weight: 600;
+}
+
+/* Mobile tweaks */
+@media (max-width: 480px) {
+  body { padding: 16px 10px; }
+  .panel { padding: 12px 14px; }
+  .preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  .opt-btn { font-size: 12px; padding: 0 10px; }
+  .corner-btn { font-size: 11px; }
+  .row2 { grid-template-columns: 1fr; }
+  .top-bar h1 { font-size: 15px; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a class="back-btn" href="index.html">← Back</a>
+  <div class="title-block">
+    <h1>📷 Photo Compressor &amp; Stamper</h1>
+    <span class="brand-tag">Bulut Projects</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="drop-zone" id="dropZone">
+    <p>Choose photos or drag &amp; drop</p>
+    <span>EXIF date is read automatically · Multiple files supported</span>
+    <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+  </div>
+
+  <div id="settingsArea" style="display:none">
+
+    <!-- Output size -->
+    <div class="panel">
+      <div class="panel-title">Output size</div>
+      <div class="btn-group" id="sizeBtns">
+        <button class="opt-btn" data-size="small">Small</button>
+        <button class="opt-btn active" data-size="medium">Medium</button>
+        <button class="opt-btn" data-size="high">High</button>
+        <button class="opt-btn" data-size="original">Original</button>
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:#4a7aa0" id="sizeHint">~1600px long edge · 75% quality</div>
+    </div>
+
+    <!-- Stamp toggle (default OFF) -->
+    <div class="panel">
+      <div class="toggle-row">
+        <label class="switch">
+          <input type="checkbox" id="stampToggle">
+          <span class="slider-sw"></span>
+        </label>
+        <span class="toggle-label">Add date &amp; time stamp</span>
+      </div>
+    </div>
+
+    <!-- Stamp settings — only shown when toggle is ON -->
+    <div id="stampPanel" style="display:none">
+      <div class="panel">
+        <div class="panel-title">Date format</div>
+        <div class="btn-group" id="formatBtns">
+          <button class="opt-btn active" data-fmt="DD.MM.YYYY HH:mm">DD.MM.YYYY HH:mm</button>
+          <button class="opt-btn" data-fmt="DD.MM.YYYY HH:mm:ss">DD.MM.YYYY HH:mm:ss</button>
+          <button class="opt-btn" data-fmt="DD/MM/YYYY HH:mm">DD/MM/YYYY HH:mm</button>
+          <button class="opt-btn" data-fmt="YYYY-MM-DD HH:mm">YYYY-MM-DD HH:mm</button>
+          <button class="opt-btn" data-fmt="DD.MM.YYYY">Date only</button>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="panel">
+          <div class="panel-title">Position</div>
+          <div class="corner-grid">
+            <button class="corner-btn" data-pos="top-left">↖ Top-left</button>
+            <button class="corner-btn" data-pos="top-right">Top-right ↗</button>
+            <button class="corner-btn active" data-pos="bottom-left">↙ Bottom-left</button>
+            <button class="corner-btn" data-pos="bottom-right">Bottom-right ↘</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Appearance</div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">Text color</span>
+            <input type="color" id="textColor" value="#ffffff">
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">Background</span>
+            <input type="color" id="bgColor" value="#000000">
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">Opacity</span>
+            <input type="range" id="bgOpacity" min="0" max="100" value="55" step="5">
+            <span class="ctrl-val" id="opacityVal">55%</span>
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">Font size</span>
+            <input type="range" id="fontSize" min="10" max="48" value="18">
+            <span class="ctrl-val" id="fontSizeVal">18</span>
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">Padding</span>
+            <input type="range" id="padding" min="4" max="40" value="14">
+            <span class="ctrl-val" id="paddingVal">14</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="previewGrid" class="preview-grid"></div>
+
+    <!-- Single action button -->
+    <button class="btn-action" id="downloadBtn" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      <span id="downloadBtnLabel">Download</span>
+    </button>
+
+    <div class="bottom-bar">
+      <button class="btn-clear" id="clearAll">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        </svg>
+        Clear all
+      </button>
+      <span class="count-tag" id="countTag">0 photos</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- Progress overlay -->
+<div class="progress-overlay" id="progressOverlay">
+  <div class="progress-card">
+    <div class="progress-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-6.2-8.55"/>
+      </svg>
+    </div>
+    <div class="progress-title" id="progressTitle">Processing...</div>
+    <div class="progress-sub" id="progressSub">Preparing your photos</div>
+    <div class="progress-bar-outer">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-percent" id="progressPercent">0%</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const state = {
+  photos: [], format: 'DD.MM.YYYY HH:mm',
+  textColor: '#ffffff', bgColor: '#000000',
+  bgOpacity: 55, fontSize: 18, position: 'bottom-left', padding: 14,
+  stampEnabled: false, size: 'medium'
+};
+
+const SIZE_MAP = {
+  small:    { maxPx: 800,  quality: 0.60, hint: '~800px long edge · 60% quality' },
+  medium:   { maxPx: 1600, quality: 0.75, hint: '~1600px long edge · 75% quality' },
+  high:     { maxPx: 2400, quality: 0.88, hint: '~2400px long edge · 88% quality' },
+  original: { maxPx: null, quality: 0.93, hint: 'Original size · 93% quality' }
+};
+
+function fmt(date, f) {
+  const p = n => String(n).padStart(2,'0');
+  return f.replace('YYYY',date.getFullYear())
+          .replace('MM',p(date.getMonth()+1))
+          .replace('DD',p(date.getDate()))
+          .replace('HH',p(date.getHours()))
+          .replace('mm',p(date.getMinutes()))
+          .replace('ss',p(date.getSeconds()));
+}
+
+function hexRgb(hex) {
+  return { r:parseInt(hex.slice(1,3),16), g:parseInt(hex.slice(3,5),16), b:parseInt(hex.slice(5,7),16) };
+}
+
+function processCanvas(img, date, opts) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const { maxPx } = SIZE_MAP[opts.size];
+  let w = img.naturalWidth, h = img.naturalHeight;
+  if (maxPx) {
+    const longest = Math.max(w, h);
+    if (longest > maxPx) { const r = maxPx / longest; w = Math.round(w*r); h = Math.round(h*r); }
+  }
+  canvas.width = w; canvas.height = h;
+  ctx.drawImage(img, 0, 0, w, h);
+
+  if (opts.stampEnabled) {
+    const scale = Math.max(w, h) / 1000;
+    const fs = Math.max(opts.fontSize, 8) * scale;
+    const pad = opts.padding * scale;
+    ctx.font = `bold ${fs}px Arial, sans-serif`;
+    const label = fmt(date, opts.format);
+    const tw = ctx.measureText(label).width;
+    const lh = fs * 1.5;
+    const pos = opts.position;
+    const x = pos.includes('right') ? w - tw - pad*2 : pad;
+    const y = pos.includes('top') ? pad : h - lh - pad;
+    const {r,g,b} = hexRgb(opts.bgColor);
+    ctx.fillStyle = `rgba(${r},${g},${b},${opts.bgOpacity/100})`;
+    ctx.beginPath();
+    ctx.roundRect(x - pad*0.5, y - fs*0.15, tw + pad, lh, pad*0.4);
+    ctx.fill();
+    ctx.fillStyle = opts.textColor;
+    ctx.fillText(label, x, y + fs*0.88);
+  }
+  return canvas;
+}
+
+// Lower-res preview canvas — keeps grid snappy on mobile regardless of output size
+function previewCanvas(img, date, opts) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const previewMax = 480;
+  let w = img.naturalWidth, h = img.naturalHeight;
+  const longest = Math.max(w, h);
+  if (longest > previewMax) {
+    const r = previewMax / longest; w = Math.round(w*r); h = Math.round(h*r);
+  }
+  canvas.width = w; canvas.height = h;
+  ctx.drawImage(img, 0, 0, w, h);
+
+  if (opts.stampEnabled) {
+    const scale = Math.max(w, h) / 1000;
+    const fs = Math.max(opts.fontSize, 8) * scale;
+    const pad = opts.padding * scale;
+    ctx.font = `bold ${fs}px Arial, sans-serif`;
+    const label = fmt(date, opts.format);
+    const tw = ctx.measureText(label).width;
+    const lh = fs * 1.5;
+    const pos = opts.position;
+    const x = pos.includes('right') ? w - tw - pad*2 : pad;
+    const y = pos.includes('top') ? pad : h - lh - pad;
+    const {r,g,b} = hexRgb(opts.bgColor);
+    ctx.fillStyle = `rgba(${r},${g},${b},${opts.bgOpacity/100})`;
+    ctx.beginPath();
+    ctx.roundRect(x - pad*0.5, y - fs*0.15, tw + pad, lh, pad*0.4);
+    ctx.fill();
+    ctx.fillStyle = opts.textColor;
+    ctx.fillText(label, x, y + fs*0.88);
+  }
+  return canvas;
+}
+
+function refreshPreviews() {
+  const grid = document.getElementById('previewGrid');
+  grid.innerHTML = '';
+  state.photos.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'preview-card';
+
+    const canvas = previewCanvas(p.img, p.date, state);
+    card.appendChild(canvas);
+
+    const info = document.createElement('div');
+    info.className = 'preview-info';
+    info.textContent = p.name;
+    const src = document.createElement('div');
+    src.className = 'preview-src';
+    src.textContent = (state.stampEnabled
+      ? fmt(p.date, state.format) + (p.exif ? ' · EXIF' : ' · file date')
+      : (p.exif ? 'EXIF: ' + fmt(p.date,'DD.MM.YYYY HH:mm') : 'File date: ' + fmt(p.date,'DD.MM.YYYY HH:mm')));
+    info.appendChild(src);
+    card.appendChild(info);
+
+    grid.appendChild(card);
+  });
+  updateDownloadButton();
+}
+
+function updateDownloadButton() {
+  const total = state.photos.length;
+  document.getElementById('countTag').textContent = total + (total === 1 ? ' photo' : ' photos');
+  document.getElementById('downloadBtn').disabled = total === 0;
+  // Label reflects what the button will actually do
+  const label = state.stampEnabled ? 'Compress & Stamp · Download' : 'Compress · Download';
+  document.getElementById('downloadBtnLabel').textContent = label;
+}
+
+async function getExifDate(file, img) {
+  return new Promise(resolve => {
+    try {
+      EXIF.getData(img, function() {
+        // Prefer DateTimeOriginal (when photo was taken), fall back to digitized, then DateTime
+        const dt = EXIF.getTag(this,'DateTimeOriginal')
+                || EXIF.getTag(this,'DateTimeDigitized')
+                || EXIF.getTag(this,'DateTime');
+        if (dt) {
+          // EXIF format: "YYYY:MM:DD HH:MM:SS"
+          const [dp, tp] = dt.split(' ');
+          const [y, m, d] = dp.split(':');
+          const [h, mn, s] = (tp || '00:00:00').split(':');
+          const date = new Date(+y, +m-1, +d, +h, +mn, +(s || 0));
+          if (isNaN(date.getTime())) resolve({ date: new Date(file.lastModified), exif: false });
+          else resolve({ date, exif: true });
+        } else {
+          resolve({ date: new Date(file.lastModified), exif: false });
+        }
+      });
+    } catch {
+      resolve({ date: new Date(file.lastModified), exif: false });
+    }
+  });
+}
+
+function showProgress(title, sub) {
+  const overlay = document.getElementById('progressOverlay');
+  document.getElementById('progressTitle').textContent = title;
+  document.getElementById('progressSub').textContent = sub;
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressPercent').textContent = '0%';
+  overlay.classList.add('active');
+}
+function setProgress(pct, sub) {
+  const p = Math.max(0, Math.min(100, Math.round(pct)));
+  document.getElementById('progressFill').style.width = p + '%';
+  document.getElementById('progressPercent').textContent = p + '%';
+  if (sub) document.getElementById('progressSub').textContent = sub;
+}
+function hideProgress() {
+  document.getElementById('progressOverlay').classList.remove('active');
+}
+
+async function loadFiles(files) {
+  const fileArr = Array.from(files).filter(f => f.type.startsWith('image/'));
+  if (!fileArr.length) return;
+
+  const useOverlay = fileArr.length > 1;
+  if (useOverlay) showProgress('Loading photos...', `0 / ${fileArr.length}`);
+
+  for (let i = 0; i < fileArr.length; i++) {
+    const file = fileArr[i];
+    await new Promise(res => {
+      const img = new Image();
+      img.onload = async () => {
+        const { date, exif } = await getExifDate(file, img);
+        state.photos.push({ img, name: file.name, date, exif });
+        res();
+      };
+      img.onerror = () => res();
+      img.src = URL.createObjectURL(file);
+    });
+    if (useOverlay) setProgress(((i+1)/fileArr.length)*100, `${i+1} / ${fileArr.length}`);
+  }
+
+  if (useOverlay) hideProgress();
+  document.getElementById('settingsArea').style.display = 'block';
+  refreshPreviews();
+}
+
+// --- Drop zone ---
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { loadFiles(e.target.files); fileInput.value = ''; });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); loadFiles(e.dataTransfer.files); });
+
+// --- Stamp toggle ---
+document.getElementById('stampToggle').addEventListener('change', e => {
+  state.stampEnabled = e.target.checked;
+  document.getElementById('stampPanel').style.display = e.target.checked ? 'block' : 'none';
+  refreshPreviews();
+});
+
+// --- Size buttons ---
+document.getElementById('sizeBtns').addEventListener('click', e => {
+  const btn = e.target.closest('.opt-btn'); if (!btn) return;
+  document.querySelectorAll('#sizeBtns .opt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.size = btn.dataset.size;
+  document.getElementById('sizeHint').textContent = SIZE_MAP[state.size].hint;
+  // Size only affects export, not preview rendering — no refresh needed
+});
+
+// --- Format buttons ---
+document.getElementById('formatBtns').addEventListener('click', e => {
+  const btn = e.target.closest('.opt-btn'); if (!btn) return;
+  document.querySelectorAll('#formatBtns .opt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); state.format = btn.dataset.fmt; refreshPreviews();
+});
+
+// --- Corner buttons ---
+document.querySelectorAll('.corner-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.corner-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); state.position = btn.dataset.pos; refreshPreviews();
+  });
+});
+
+// --- Appearance controls ---
+document.getElementById('textColor').addEventListener('input', e => { state.textColor = e.target.value; refreshPreviews(); });
+document.getElementById('bgColor').addEventListener('input', e => { state.bgColor = e.target.value; refreshPreviews(); });
+document.getElementById('bgOpacity').addEventListener('input', e => { state.bgOpacity = +e.target.value; document.getElementById('opacityVal').textContent = e.target.value+'%'; refreshPreviews(); });
+document.getElementById('fontSize').addEventListener('input', e => { state.fontSize = +e.target.value; document.getElementById('fontSizeVal').textContent = e.target.value; refreshPreviews(); });
+document.getElementById('padding').addEventListener('input', e => { state.padding = +e.target.value; document.getElementById('paddingVal').textContent = e.target.value; refreshPreviews(); });
+
+// --- Download (single button: applies whatever is configured) ---
+document.getElementById('downloadBtn').addEventListener('click', async () => {
+  if (!state.photos.length) return;
+  const quality = SIZE_MAP[state.size].quality;
+  const title = state.stampEnabled ? 'Compressing & stamping...' : 'Compressing photos...';
+
+  // Single file: skip zip, keep original filename (with .jpg extension)
+  if (state.photos.length === 1) {
+    showProgress(title, '1 / 1');
+    setProgress(20, '1 / 1');
+    const p = state.photos[0];
+    const canvas = processCanvas(p.img, p.date, state);
+    setProgress(70, '1 / 1');
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+    setProgress(100, 'Done');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = p.name.replace(/\.[^.]+$/, '') + '.jpg';
+    a.click();
+    setTimeout(hideProgress, 400);
+    return;
+  }
+
+  showProgress(title, `0 / ${state.photos.length}`);
+  const zip = new JSZip();
+  const total = state.photos.length;
+  // Track filename collisions inside the zip (rare, but possible if user adds duplicate names)
+  const usedNames = new Set();
+
+  for (let i = 0; i < total; i++) {
+    const p = state.photos[i];
+    const canvas = processCanvas(p.img, p.date, state);
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+    let baseName = p.name.replace(/\.[^.]+$/, '') + '.jpg';
+    let finalName = baseName;
+    let n = 1;
+    while (usedNames.has(finalName)) {
+      finalName = baseName.replace(/\.jpg$/, '') + ' (' + n + ').jpg';
+      n++;
+    }
+    usedNames.add(finalName);
+    zip.file(finalName, blob);
+    setProgress(((i+1)/total)*90, `${i+1} / ${total}`);
+    await new Promise(r => setTimeout(r, 10));
+  }
+
+  setProgress(94, 'Building archive...');
+  const zipBlob = await zip.generateAsync(
+    { type:'blob', compression:'DEFLATE', compressionOptions:{level:3} },
+    meta => setProgress(94 + (meta.percent * 0.06), 'Building archive...')
+  );
+  setProgress(100, 'Done');
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(zipBlob);
+  a.download = 'photos.zip';
+  a.click();
+
+  setTimeout(hideProgress, 500);
+});
+
+// --- Clear all ---
+document.getElementById('clearAll').addEventListener('click', () => {
+  state.photos = [];
+  document.getElementById('previewGrid').innerHTML = '';
+  document.getElementById('settingsArea').style.display = 'none';
+  document.getElementById('countTag').textContent = '0 photos';
+  fileInput.value = '';
+});
+
+// roundRect polyfill for older Safari
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') r = [r, r, r, r];
+    this.moveTo(x + r[0], y);
+    this.arcTo(x + w, y, x + w, y + h, r[1]);
+    this.arcTo(x + w, y + h, x, y + h, r[2]);
+    this.arcTo(x, y + h, x, y, r[3]);
+    this.arcTo(x, y, x + w, y, r[0]);
+    return this;
+  };
+}
+</script>
+</body>
+</html>
