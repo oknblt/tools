@@ -1,0 +1,459 @@
+<h2 class="sr-only">Tansiyon kayıt uygulaması — kayıt ekleme, listeleme, notlar ve yedekleme</h2>
+
+<style>
+  .tk-wrap { font-family: var(--font-sans); padding: 1rem 0; color: var(--color-text-primary); }
+  .tk-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .tk-h { font-size: 16px; font-weight: 500; margin: 0 0 12px; }
+  .tk-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .tk-row > * { flex: 0 0 auto; }
+  .tk-label { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px; display: block; }
+  .tk-bp { display: inline-flex; align-items: center; gap: 6px; }
+  .tk-bp input { width: 70px; text-align: center; }
+  .tk-sep { font-size: 18px; color: var(--color-text-secondary); }
+  .tk-unit { font-size: 13px; color: var(--color-text-secondary); }
+  .tk-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .tk-btn-primary { background: var(--color-text-primary); color: var(--color-background-primary); border: 0.5px solid var(--color-text-primary); }
+  .tk-btn-primary:hover { opacity: 0.85; }
+  .tk-list { list-style: none; padding: 0; margin: 0; }
+  .tk-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .tk-item:last-child { border-bottom: none; }
+  .tk-time { font-size: 13px; color: var(--color-text-secondary); min-width: 130px; font-variant-numeric: tabular-nums; }
+  .tk-val { font-size: 15px; font-weight: 500; min-width: 110px; font-variant-numeric: tabular-nums; }
+  .tk-desc { font-size: 13px; color: var(--color-text-secondary); flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .tk-icon-btn { background: transparent; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 6px; cursor: pointer; color: var(--color-text-secondary); display: inline-flex; align-items: center; justify-content: center; }
+  .tk-icon-btn:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+  .tk-icon-btn svg { width: 14px; height: 14px; }
+  .tk-empty { font-size: 13px; color: var(--color-text-tertiary); padding: 12px 0; text-align: center; }
+  .tk-notes { width: 100%; box-sizing: border-box; resize: none; overflow: hidden; min-height: 76px; font-family: var(--font-sans); }
+  .tk-toast { position: absolute; bottom: 8px; right: 8px; background: var(--color-background-success); color: var(--color-text-success); font-size: 12px; padding: 6px 10px; border-radius: var(--border-radius-md); opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .tk-toast.show { opacity: 1; }
+  .tk-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 8px; }
+  .tk-stat { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; }
+  .tk-stat-label { font-size: 12px; color: var(--color-text-secondary); }
+  .tk-stat-val { font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .tk-hint { font-size: 12px; color: var(--color-text-tertiary); margin-top: 6px; }
+  input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; }
+</style>
+
+<div class="tk-wrap" style="position: relative;">
+
+  <div class="tk-card">
+    <p class="tk-h">Yeni kayıt</p>
+
+    <div class="tk-row" style="margin-bottom: 12px;">
+      <div>
+        <label class="tk-label" for="tk-date">Tarih</label>
+        <input type="date" id="tk-date" />
+      </div>
+      <div>
+        <label class="tk-label" for="tk-time">Saat</label>
+        <input type="time" id="tk-time" />
+      </div>
+      <div>
+        <label class="tk-label">Tansiyon (mmHg)</label>
+        <div class="tk-bp">
+          <input type="number" id="tk-sys" min="0" max="300" placeholder="120" inputmode="numeric" />
+          <span class="tk-sep">/</span>
+          <input type="number" id="tk-dia" min="0" max="999" placeholder="80" inputmode="numeric" />
+        </div>
+      </div>
+      <div>
+        <label class="tk-label" for="tk-pulse">Nabız (ops.)</label>
+        <input type="number" id="tk-pulse" min="0" max="300" placeholder="—" inputmode="numeric" style="width: 80px;" />
+      </div>
+    </div>
+
+    <div style="margin-bottom: 8px;">
+      <label class="tk-label" for="tk-desc">Açıklama (opsiyonel)</label>
+      <input type="text" id="tk-desc" placeholder="Örn: sabah, ilaçtan önce" style="width: 100%; box-sizing: border-box;" />
+    </div>
+
+    <div class="tk-actions">
+      <button id="tk-add" class="tk-btn-primary">Ekle</button>
+      <button id="tk-now">Şimdi</button>
+      <button id="tk-cancel-edit" style="display: none;">Düzenlemeyi iptal et</button>
+    </div>
+  </div>
+
+  <div class="tk-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <p class="tk-h" style="margin: 0;">Kayıtlar (<span id="tk-count">0</span>)</p>
+      <div class="tk-row" style="gap: 6px;">
+        <button id="tk-clear" title="Tümünü sil">Tümünü sil</button>
+      </div>
+    </div>
+
+    <div class="tk-stat-grid" id="tk-stats" style="display: none;">
+      <div class="tk-stat"><div class="tk-stat-label">Ortalama büyük</div><div class="tk-stat-val" id="tk-avg-sys">—</div></div>
+      <div class="tk-stat"><div class="tk-stat-label">Ortalama küçük</div><div class="tk-stat-val" id="tk-avg-dia">—</div></div>
+      <div class="tk-stat"><div class="tk-stat-label">Ortalama nabız</div><div class="tk-stat-val" id="tk-avg-pulse">—</div></div>
+      <div class="tk-stat"><div class="tk-stat-label">Son ölçüm</div><div class="tk-stat-val" id="tk-last">—</div></div>
+    </div>
+
+    <ul class="tk-list" id="tk-list"></ul>
+    <div class="tk-empty" id="tk-empty">Henüz kayıt yok. Yukarıdan ilk kaydını ekle.</div>
+  </div>
+
+  <div class="tk-card">
+    <p class="tk-h">Notlar</p>
+    <textarea id="tk-notes" class="tk-notes" rows="3" placeholder="Buraya genel notlarınızı yazabilirsiniz. Yazdıkça alan büyür."></textarea>
+  </div>
+
+  <div class="tk-card">
+    <p class="tk-h">Dışa / İçe aktar</p>
+    <div class="tk-actions">
+      <button id="tk-pdf">PDF indir</button>
+      <button id="tk-xlsx">Excel indir</button>
+      <button id="tk-json-save">JSON yedekle</button>
+      <button id="tk-json-load">JSON geri yükle</button>
+      <input type="file" id="tk-file" accept="application/json,.json" style="display: none;" />
+    </div>
+    <p class="tk-hint">Veriler tarayıcıda yalnızca bu oturum boyunca saklanır. Kalıcı yedek için JSON dosyasını indirip saklayın.</p>
+  </div>
+
+  <div class="tk-toast" id="tk-toast">Tamam</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+  let records = [];
+  let notes = '';
+  let editingId = null;
+
+  const $ = (id) => document.getElementById(id);
+  const dateEl = $('tk-date'), timeEl = $('tk-time'), sysEl = $('tk-sys'), diaEl = $('tk-dia'), pulseEl = $('tk-pulse'), descEl = $('tk-desc');
+  const addBtn = $('tk-add'), nowBtn = $('tk-now'), cancelEditBtn = $('tk-cancel-edit');
+  const listEl = $('tk-list'), emptyEl = $('tk-empty'), countEl = $('tk-count');
+  const notesEl = $('tk-notes');
+  const toastEl = $('tk-toast');
+  const statsEl = $('tk-stats');
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function setNow(){
+    const d = new Date();
+    dateEl.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    timeEl.value = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function fmtDateTime(dateStr, timeStr){
+    if (!dateStr) return '';
+    const [y,m,d] = dateStr.split('-');
+    return `${d}.${m}.${y} ${timeStr || ''}`.trim();
+  }
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toastEl.classList.remove('show'), 1600);
+  }
+
+  function autosize(el){
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight + 2) + 'px';
+  }
+
+  function sortRecords(){
+    records.sort((a,b) => {
+      const ka = (a.date||'') + 'T' + (a.time||'00:00');
+      const kb = (b.date||'') + 'T' + (b.time||'00:00');
+      return kb.localeCompare(ka);
+    });
+  }
+
+  function renderStats(){
+    if (records.length === 0) { statsEl.style.display = 'none'; return; }
+    statsEl.style.display = 'grid';
+    const sys = records.map(r => r.sys).filter(v => Number.isFinite(v));
+    const dia = records.map(r => r.dia).filter(v => Number.isFinite(v));
+    const pulse = records.map(r => r.pulse).filter(v => Number.isFinite(v));
+    const avg = (arr) => arr.length ? Math.round(arr.reduce((s,v)=>s+v,0)/arr.length) : null;
+    $('tk-avg-sys').textContent = avg(sys) ?? '—';
+    $('tk-avg-dia').textContent = avg(dia) ?? '—';
+    $('tk-avg-pulse').textContent = avg(pulse) ?? '—';
+    const last = records[0];
+    $('tk-last').textContent = last ? `${last.sys}/${last.dia}` : '—';
+  }
+
+  function iconEdit(){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+  }
+  function iconDelete(){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>';
+  }
+
+  function render(){
+    sortRecords();
+    listEl.innerHTML = '';
+    countEl.textContent = records.length;
+    emptyEl.style.display = records.length === 0 ? 'block' : 'none';
+    records.forEach(r => {
+      const li = document.createElement('li');
+      li.className = 'tk-item';
+      const time = document.createElement('div');
+      time.className = 'tk-time';
+      time.textContent = fmtDateTime(r.date, r.time);
+      const val = document.createElement('div');
+      val.className = 'tk-val';
+      const pulseTxt = Number.isFinite(r.pulse) ? ` · ${r.pulse} bpm` : '';
+      val.textContent = `${r.sys}/${r.dia} mmHg${pulseTxt}`;
+      const desc = document.createElement('div');
+      desc.className = 'tk-desc';
+      desc.textContent = r.desc || '';
+      const editBtn = document.createElement('button');
+      editBtn.className = 'tk-icon-btn';
+      editBtn.title = 'Düzenle';
+      editBtn.innerHTML = iconEdit();
+      editBtn.addEventListener('click', () => startEdit(r.id));
+      const delBtn = document.createElement('button');
+      delBtn.className = 'tk-icon-btn';
+      delBtn.title = 'Sil';
+      delBtn.innerHTML = iconDelete();
+      delBtn.addEventListener('click', () => removeRecord(r.id));
+      li.appendChild(time);
+      li.appendChild(val);
+      li.appendChild(desc);
+      li.appendChild(editBtn);
+      li.appendChild(delBtn);
+      listEl.appendChild(li);
+    });
+    renderStats();
+  }
+
+  function readForm(){
+    const sys = parseInt(sysEl.value, 10);
+    const dia = parseInt(diaEl.value, 10);
+    const pulse = pulseEl.value === '' ? null : parseInt(pulseEl.value, 10);
+    if (!Number.isFinite(sys) || !Number.isFinite(dia)) return null;
+    if (sys <= 0 || dia <= 0) return null;
+    return {
+      date: dateEl.value,
+      time: timeEl.value,
+      sys, dia,
+      pulse: Number.isFinite(pulse) ? pulse : null,
+      desc: descEl.value.trim()
+    };
+  }
+
+  function clearForm(){
+    sysEl.value = ''; diaEl.value = ''; pulseEl.value = ''; descEl.value = '';
+    setNow();
+    editingId = null;
+    addBtn.textContent = 'Ekle';
+    cancelEditBtn.style.display = 'none';
+  }
+
+  function startEdit(id){
+    const r = records.find(x => x.id === id);
+    if (!r) return;
+    editingId = id;
+    dateEl.value = r.date; timeEl.value = r.time;
+    sysEl.value = r.sys; diaEl.value = r.dia;
+    pulseEl.value = r.pulse ?? '';
+    descEl.value = r.desc || '';
+    addBtn.textContent = 'Kaydet';
+    cancelEditBtn.style.display = '';
+    sysEl.focus();
+  }
+
+  function removeRecord(id){
+    if (!confirm('Bu kaydı silmek istiyor musunuz?')) return;
+    records = records.filter(r => r.id !== id);
+    render();
+    toast('Kayıt silindi');
+  }
+
+  addBtn.addEventListener('click', () => {
+    const data = readForm();
+    if (!data) { alert('Lütfen büyük ve küçük tansiyon değerlerini girin.'); return; }
+    if (editingId) {
+      const idx = records.findIndex(r => r.id === editingId);
+      if (idx >= 0) records[idx] = { ...records[idx], ...data };
+      toast('Kayıt güncellendi');
+    } else {
+      records.push({ id: uid(), ...data });
+      toast('Kayıt eklendi');
+    }
+    clearForm();
+    render();
+  });
+
+  nowBtn.addEventListener('click', setNow);
+  cancelEditBtn.addEventListener('click', clearForm);
+
+  $('tk-clear').addEventListener('click', () => {
+    if (records.length === 0) return;
+    if (!confirm('Tüm kayıtlar silinsin mi? Bu işlem geri alınamaz.')) return;
+    records = [];
+    render();
+    toast('Tüm kayıtlar silindi');
+  });
+
+  // Notes autosize
+  notesEl.addEventListener('input', () => {
+    notes = notesEl.value;
+    autosize(notesEl);
+  });
+  // initial size
+  setTimeout(() => autosize(notesEl), 0);
+
+  // ---------- Export: PDF ----------
+  $('tk-pdf').addEventListener('click', async () => {
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      // Use a Unicode font for Turkish chars
+      try {
+        const fontUrl = 'https://cdnjs.cloudflare.com/ajax/libs/dejavu-sans/1.0.0/fonts/dejavu-sans.ttf';
+        const buf = await fetch(fontUrl).then(r => { if(!r.ok) throw new Error('font'); return r.arrayBuffer(); });
+        const bytes = new Uint8Array(buf);
+        let bin = ''; for (let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+        const b64 = btoa(bin);
+        doc.addFileToVFS('DejaVuSans.ttf', b64);
+        doc.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
+        doc.setFont('DejaVuSans');
+      } catch (e) {
+        // Fallback: helvetica won't render Turkish chars perfectly but PDF will still generate
+        doc.setFont('helvetica');
+      }
+      doc.setFontSize(16);
+      doc.text('Tansiyon Kayıtları', 40, 50);
+      doc.setFontSize(10);
+      const today = new Date();
+      doc.text(`Oluşturma: ${today.toLocaleString('tr-TR')}`, 40, 68);
+
+      const head = [['Tarih', 'Saat', 'Büyük', 'Küçük', 'Nabız', 'Açıklama']];
+      const sorted = [...records].sort((a,b) => {
+        const ka = (a.date||'') + 'T' + (a.time||'00:00');
+        const kb = (b.date||'') + 'T' + (b.time||'00:00');
+        return kb.localeCompare(ka);
+      });
+      const body = sorted.map(r => {
+        const [y,m,d] = (r.date||'').split('-');
+        const dStr = (y && m && d) ? `${d}.${m}.${y}` : '';
+        return [dStr, r.time||'', String(r.sys), String(r.dia), Number.isFinite(r.pulse) ? String(r.pulse) : '', r.desc || ''];
+      });
+      doc.autoTable({
+        head, body,
+        startY: 84,
+        styles: { font: doc.getFont().fontName, fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: [240,240,240], textColor: 20, font: doc.getFont().fontName, fontStyle: 'normal' },
+        columnStyles: { 5: { cellWidth: 180 } }
+      });
+      let y = doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY + 24 : 100;
+      if (notes && notes.trim()) {
+        if (y > 720) { doc.addPage(); y = 50; }
+        doc.setFontSize(12);
+        doc.text('Notlar', 40, y); y += 16;
+        doc.setFontSize(10);
+        const lines = doc.splitTextToSize(notes, 515);
+        doc.text(lines, 40, y);
+      }
+      doc.save(`tansiyon_kayitlari_${today.toISOString().slice(0,10)}.pdf`);
+      toast('PDF indirildi');
+    } catch (e) {
+      console.error(e);
+      alert('PDF oluşturulurken bir sorun oldu.');
+    }
+  });
+
+  // ---------- Export: XLSX ----------
+  $('tk-xlsx').addEventListener('click', () => {
+    try {
+      const sorted = [...records].sort((a,b) => {
+        const ka = (a.date||'') + 'T' + (a.time||'00:00');
+        const kb = (b.date||'') + 'T' + (b.time||'00:00');
+        return kb.localeCompare(ka);
+      });
+      const rows = sorted.map(r => {
+        const [y,m,d] = (r.date||'').split('-');
+        const dStr = (y && m && d) ? `${d}.${m}.${y}` : '';
+        return {
+          'Tarih': dStr,
+          'Saat': r.time || '',
+          'Büyük (mmHg)': r.sys,
+          'Küçük (mmHg)': r.dia,
+          'Nabız': Number.isFinite(r.pulse) ? r.pulse : '',
+          'Açıklama': r.desc || ''
+        };
+      });
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Tarih':'', 'Saat':'', 'Büyük (mmHg)':'', 'Küçük (mmHg)':'', 'Nabız':'', 'Açıklama':'' }]);
+      ws['!cols'] = [{wch:12},{wch:8},{wch:14},{wch:14},{wch:8},{wch:40}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Kayıtlar');
+      if (notes && notes.trim()) {
+        const wsN = XLSX.utils.aoa_to_sheet([['Notlar'], ...notes.split('\n').map(l => [l])]);
+        wsN['!cols'] = [{wch:80}];
+        XLSX.utils.book_append_sheet(wb, wsN, 'Notlar');
+      }
+      const today = new Date().toISOString().slice(0,10);
+      XLSX.writeFile(wb, `tansiyon_kayitlari_${today}.xlsx`);
+      toast('Excel indirildi');
+    } catch (e) {
+      console.error(e);
+      alert('Excel oluşturulurken bir sorun oldu.');
+    }
+  });
+
+  // ---------- JSON backup / restore ----------
+  $('tk-json-save').addEventListener('click', () => {
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      records,
+      notes
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const today = new Date().toISOString().slice(0,10);
+    a.href = url; a.download = `tansiyon_yedek_${today}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('JSON yedeklendi');
+  });
+
+  $('tk-json-load').addEventListener('click', () => $('tk-file').click());
+  $('tk-file').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || !Array.isArray(data.records)) throw new Error('format');
+        const ok = confirm(`Yedekten ${data.records.length} kayıt yüklenecek. Mevcut veriler değiştirilecek. Devam edilsin mi?`);
+        if (!ok) return;
+        records = data.records.map(r => ({
+          id: r.id || uid(),
+          date: r.date || '',
+          time: r.time || '',
+          sys: Number(r.sys),
+          dia: Number(r.dia),
+          pulse: (r.pulse === null || r.pulse === undefined || r.pulse === '') ? null : Number(r.pulse),
+          desc: r.desc || ''
+        })).filter(r => Number.isFinite(r.sys) && Number.isFinite(r.dia));
+        notes = typeof data.notes === 'string' ? data.notes : '';
+        notesEl.value = notes;
+        autosize(notesEl);
+        render();
+        toast('Yedek yüklendi');
+      } catch (err) {
+        alert('Geçersiz JSON dosyası.');
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  });
+
+  // init
+  setNow();
+  render();
+})();
+</script>
