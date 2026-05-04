@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>File Tools — Collect, Merge, Edit & Compress PDF</title>
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <style>
 :root{
@@ -56,6 +57,10 @@ header{
     box-shadow:var(--shadow-md);
 }
 .title h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.2px;}
+.title .sub-brand{
+    font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+    color:var(--accent);margin-top:1px;
+}
 .title .sub{font-size:13px;color:var(--text-dim);margin-top:2px;}
 
 /* Tabs */
@@ -235,26 +240,42 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 .annotation-item.text-ann{
     color:#000;background:rgba(255,255,255,.7);
     padding:1px 3px;font-family:'Roboto',sans-serif;
-    line-height:1.1;white-space:pre;
+    line-height:1.15;white-space:pre;
     border:1px dashed transparent;
+    overflow:hidden;
 }
 .annotation-item.text-ann.pending{border-color:var(--accent);background:rgba(107,164,255,.25);color:#fff;}
-.annotation-item.rect-ann{background:#000;}
-.annotation-item.rect-ann.pending{background:rgba(0,0,0,.55);outline:2px dashed var(--accent);outline-offset:-2px;}
+.annotation-item.rect-ann.black{background:#000;}
+.annotation-item.rect-ann.white{background:#fff;border:1px solid #888;}
+.annotation-item.rect-ann.pending{outline:2px dashed var(--accent);outline-offset:-2px;}
+.annotation-item.rect-ann.black.pending{background:rgba(0,0,0,.55);}
+.annotation-item.rect-ann.white.pending{background:rgba(255,255,255,.6);}
 .annotation-item.image-ann{background:transparent;}
 .annotation-item.image-ann img{width:100%;height:100%;display:block;pointer-events:none;}
 .annotation-item.image-ann.pending{outline:2px dashed var(--accent);outline-offset:-2px;}
 
-.del-btn{
-    position:absolute;top:-12px;right:-12px;
-    width:24px;height:24px;border-radius:50%;
-    background:var(--danger);color:#fff;border:none;
-    font-size:14px;cursor:pointer;
-    display:grid;place-items:center;
-    box-shadow:0 2px 6px rgba(0,0,0,.4);
-    line-height:1;
+/* Resize handles — only visible on pending annotations */
+.resize-handle{
+    position:absolute;
+    width:14px;height:14px;
+    background:#fff;
+    border:2px solid var(--accent);
+    border-radius:3px;
+    box-shadow:0 1px 4px rgba(0,0,0,.5);
+    z-index:5;
+    touch-action:none;
 }
-.del-btn:hover{background:#ff6b75;}
+.resize-handle.nw{top:-8px;left:-8px;cursor:nwse-resize;}
+.resize-handle.ne{top:-8px;right:-8px;cursor:nesw-resize;}
+.resize-handle.sw{bottom:-8px;left:-8px;cursor:nesw-resize;}
+.resize-handle.se{bottom:-8px;right:-8px;cursor:nwse-resize;}
+@media (max-width:780px){
+    .resize-handle{width:18px;height:18px;}
+    .resize-handle.nw{top:-10px;left:-10px;}
+    .resize-handle.ne{top:-10px;right:-10px;}
+    .resize-handle.sw{bottom:-10px;left:-10px;}
+    .resize-handle.se{bottom:-10px;right:-10px;}
+}
 
 .placement-hint{
     position:absolute;top:10px;left:50%;transform:translateX(-50%);
@@ -273,8 +294,22 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 }
 .input-panel.visible{display:block;}
 .input-panel .row{margin-bottom:8px;}
+.input-panel .row:last-child{margin-bottom:0;}
+.input-panel label.field.block{display:block;width:100%;margin:0 0 10px;color:var(--text-dim);font-size:13px;}
+.input-panel textarea{
+    display:block;width:100%;
+    min-height:60px;max-height:240px;
+    background:var(--navy-900);color:var(--text);
+    border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:10px 12px;font-size:14px;font-family:inherit;line-height:1.4;
+    resize:vertical;margin-top:6px;
+    transition:border-color .2s;
+}
+.input-panel textarea:focus{outline:none;border-color:var(--accent);}
+.field-label{color:var(--text-dim);font-size:13px;margin-right:4px;}
+.hint-line{margin-top:6px;font-size:12px;color:var(--text-muted);font-style:italic;}
 
-/* Confirm bar — sticky at the bottom on mobile so Apply/Cancel never get lost */
+/* Confirm bar — sticky at the bottom on mobile so Apply never get lost */
 .annotation-confirm{
     display:none;
     margin-top:12px;padding:12px 14px;
@@ -334,8 +369,9 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 
     .input-panel{padding:12px;}
     .input-panel input[type="text"]{width:100%;}
-    .input-panel label.field{width:100%;margin:6px 0;}
+    .input-panel label.field{margin:6px 0;}
     .input-panel label.field input[type="text"]{flex:1;}
+    .input-panel textarea{font-size:15px;min-height:70px;}
 }
 
 @media (max-width:420px){
@@ -356,6 +392,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     <div class="logo">📂</div>
     <div class="title">
         <h1>File Tools</h1>
+        <div class="sub-brand">Bulut Projects</div>
         <div class="sub">Collect · Merge · Edit · Compress PDFs — runs entirely in your browser</div>
     </div>
 </header>
@@ -422,6 +459,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                 <button id="btnAddSig" class="btn ghost sm">🖼️ Add signature</button>
                 <button id="btnRedact" class="btn ghost sm">⬛ Redact</button>
                 <button id="btnRotate" class="btn ghost sm">🔄 Rotate 90°</button>
+                <button id="btnUndo" class="btn ghost sm" disabled title="Undo last change">↶ Undo</button>
                 <button id="btnDeletePage" class="btn ghost sm">🗑️ Delete page</button>
                 <button id="downloadEditedBtn" class="btn success sm" style="margin-left:auto;">⬇️ Download</button>
             </div>
@@ -438,11 +476,9 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                     </div>
 
                     <div id="textInputBox" class="input-panel">
+                        <label class="field block">Text<textarea id="textContent" placeholder="Type text… (multi-line supported)" rows="2"></textarea></label>
                         <div class="row">
-                            <label class="field">Text: <input type="text" id="textContent" placeholder="Enter text" /></label>
-                            <label class="field">Size: <input type="number" id="textSize" value="16" min="6" max="96" style="width:70px;" /></label>
-                        </div>
-                        <div class="row">
+                            <label class="field">Size <input type="number" id="textSize" value="16" min="6" max="96" style="width:70px;" /></label>
                             <button id="applyText" class="btn">Next: place on page</button>
                             <button id="cancelText" class="btn ghost">Cancel</button>
                         </div>
@@ -455,10 +491,19 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                         </div>
                     </div>
 
+                    <div id="redactColorBox" class="input-panel">
+                        <div class="row">
+                            <span class="field-label">Redaction color:</span>
+                            <label class="field"><input type="radio" name="redactColor" value="black" checked /> Black</label>
+                            <label class="field"><input type="radio" name="redactColor" value="white" /> White</label>
+                            <button id="cancelRedact" class="btn ghost">Cancel</button>
+                        </div>
+                        <div class="hint-line">Drag a rectangle on the page to redact.</div>
+                    </div>
+
                     <div id="annotationConfirmBox" class="annotation-confirm">
-                        <span class="label" id="annotationLabel">Drag to position, then apply.</span>
+                        <span class="label" id="annotationLabel">Drag corners to resize · drag center to move · then apply.</span>
                         <button id="applyAnnotation" class="btn success">✔ Apply</button>
-                        <button id="cancelAnnotation" class="btn danger">✘ Cancel</button>
                     </div>
                 </div>
             </div>
@@ -488,7 +533,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
         </div>
         <progress id="compressProgress" value="0" max="100" style="display:none;"></progress>
         <div id="compressStatus" class="status"></div>
-        <div class="note">Compression works by rasterizing each page at a target DPI and re-saving as JPEG inside a new PDF. Vector text is preserved as a flat image, which trades searchability for file size. Use the "High quality" preset if you need to keep text crisp at print resolution.</div>
+        <div class="note">Two strategies are tried: a lossless re-save (best for text-heavy documents) and a JPEG rasterization at the chosen DPI. Whichever produces the smaller file wins — and if neither beats the original, the original is kept and no download starts.</div>
     </div>
 </div>
 
@@ -655,10 +700,10 @@ const mainCanvas   = document.getElementById('mainCanvas');
 const overlay      = document.getElementById('overlay');
 const placementHint= document.getElementById('placementHint');
 
-// load font (best-effort)
+// load font (best-effort) — Roboto Latin-Ext subset includes Turkish characters
 (async () => {
     try {
-        const resp = await fetch('https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxP.ttf');
+        const resp = await fetch('https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-ext-400-normal.ttf');
         if (resp.ok) fontBytes = new Uint8Array(await resp.arrayBuffer());
     } catch {}
 })();
@@ -818,11 +863,11 @@ function drawAnnotation(ann, idx, pdfW, pdfH, scale) {
     div.dataset.index = idx;
     div.dataset.type = ann.type;
 
-    // pending annotations look distinct
     if (ann.pending) div.classList.add('pending');
 
     if (ann.type === 'rect') {
         div.classList.add('rect-ann');
+        div.classList.add(ann.color === 'white' ? 'white' : 'black');
         const x = ann.x * scale;
         const y = (pdfH - ann.y - ann.height) * scale;
         div.style.left = x + 'px';
@@ -844,50 +889,166 @@ function drawAnnotation(ann, idx, pdfW, pdfH, scale) {
     } else if (ann.type === 'text') {
         div.classList.add('text-ann');
         const x = ann.x * scale;
-        const y = (pdfH - ann.y) * scale;
+        // ann.y is the BASELINE of the first line (PDF coords).
+        // CSS top of the DIV should be one line-height ABOVE the baseline so the text visually sits where the user tapped.
+        const lines = (ann.text || '').split('\n').length;
+        const baselineTop = (pdfH - ann.y) * scale;
+        const fontPx = ann.size * scale;
+        // Approximate ascent: most fonts ≈ 0.8 of em-size. Use 0.8 to align baseline with the bottom of the first line.
+        const ascent = fontPx * 0.8;
         div.style.left = x + 'px';
-        div.style.top = y + 'px';
+        div.style.top = (baselineTop - ascent) + 'px';
         div.textContent = ann.text;
-        div.style.fontSize = (ann.size * scale) + 'px';
+        div.style.fontSize = fontPx + 'px';
+        ann._lines = lines;
     }
 
-    // draggable
-    div.classList.add('draggable');
-    attachDragHandlers(div, ann);
-
-    // delete button (only on confirmed)
-    if (!ann.pending) {
-        const delBtn = document.createElement('button');
-        delBtn.type='button';
-        delBtn.className='del-btn';
-        delBtn.title = 'Delete';
-        delBtn.textContent = '×';
-        const stop = (ev)=>{ ev.stopPropagation(); ev.preventDefault(); };
-        delBtn.addEventListener('mousedown', stop);
-        delBtn.addEventListener('touchstart', stop, {passive:false});
-        delBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            pages[currentPage].annotations.splice(idx, 1);
-            renderMainPage();
-        });
-        div.appendChild(delBtn);
+    // Only PENDING annotations are draggable & resizable
+    if (ann.pending) {
+        div.classList.add('draggable');
+        attachDragHandlers(div, ann);
+        // Add resize handles
+        addResizeHandles(div, ann);
     }
+    // Confirmed annotations are visually finalized — no controls, no drag.
 
     overlay.appendChild(div);
 }
 
 // =============================================================
+//  RESIZE HANDLES (only on pending)
+// =============================================================
+function addResizeHandles(element, ann) {
+    const corners = ['nw','ne','sw','se'];
+    corners.forEach(corner => {
+        const h = document.createElement('div');
+        h.className = 'resize-handle ' + corner;
+        h.dataset.corner = corner;
+        attachResizeHandler(h, element, ann, corner);
+        element.appendChild(h);
+    });
+}
+
+function attachResizeHandler(handle, element, ann, corner) {
+    let resizing = false;
+    let startClientX = 0, startClientY = 0;
+    let startAnnX = 0, startAnnY = 0, startW = 0, startH = 0, startSize = 0;
+    let scale = 1, pdfH = 0, rotation = 0;
+
+    function onDown(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const point = getPoint(e);
+        resizing = true;
+        startClientX = point.clientX;
+        startClientY = point.clientY;
+        startAnnX = ann.x;
+        startAnnY = ann.y;
+        startW = ann.width || 0;
+        startH = ann.height || 0;
+        startSize = ann.size || 16;
+        scale = parseFloat(canvasStage.dataset.scale) || 1;
+        pdfH  = parseFloat(canvasStage.dataset.pdfH)  || 0;
+        rotation = (pages[currentPage].rotation || 0) % 360;
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup',   onUp);
+        document.addEventListener('touchmove', onMove, { passive:false });
+        document.addEventListener('touchend',  onUp);
+        document.addEventListener('touchcancel', onUp);
+    }
+    function onMove(e) {
+        if (!resizing) return;
+        e.preventDefault();
+        const point = getPoint(e);
+        // screen delta -> stage-local delta (inverse rotation)
+        const dx = point.clientX - startClientX;
+        const dy = point.clientY - startClientY;
+        const rad = -rotation * Math.PI/180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        const stageDX = dx*cos - dy*sin;
+        const stageDY = dx*sin + dy*cos;
+        // pdf-space deltas: x same direction, y inverted
+        const pdfDX =  stageDX / scale;
+        const pdfDYTop = stageDY / scale; // delta in screen-y converted to pdf top-down units
+
+        if (ann.type === 'rect' || ann.type === 'image') {
+            // PDF rect anchored at bottom-left (ann.x, ann.y) with width/height.
+            // Visual corners (looking at unrotated page top-down):
+            //   nw = top-left,    se = bottom-right
+            //   ne = top-right,   sw = bottom-left
+            // PDF y is bottom-up; visual top = ann.y + ann.height; visual bottom = ann.y.
+            let newX = startAnnX, newY = startAnnY, newW = startW, newH = startH;
+            if (corner === 'se') {
+                // bottom-right in screen = (anchor.x + width, anchor.y) in PDF.
+                // user drags bottom-right: width changes by +pdfDX, but bottom edge moves down (screen) which means PDF y decreases by pdfDYTop.
+                newW = Math.max(8, startW + pdfDX);
+                const dY = pdfDYTop; // pdfDYTop>0 means user moved DOWN on screen => bottom edge moved down => height grows AND ann.y decreases.
+                newH = Math.max(8, startH + dY);
+                newY = startAnnY - dY;
+            } else if (corner === 'ne') {
+                newW = Math.max(8, startW + pdfDX);
+                // top edge moves => height = startH - pdfDYTop (moving top-edge up grows height); ann.y unchanged
+                newH = Math.max(8, startH - pdfDYTop);
+            } else if (corner === 'sw') {
+                newW = Math.max(8, startW - pdfDX);
+                newX = startAnnX + pdfDX;
+                const dY = pdfDYTop;
+                newH = Math.max(8, startH + dY);
+                newY = startAnnY - dY;
+            } else if (corner === 'nw') {
+                newW = Math.max(8, startW - pdfDX);
+                newX = startAnnX + pdfDX;
+                newH = Math.max(8, startH - pdfDYTop);
+                // ann.y unchanged (anchor still at bottom-left in PDF)
+            }
+            ann.x = newX; ann.y = newY; ann.width = newW; ann.height = newH;
+            applyAnnotationPosition(element, ann, scale, pdfH);
+        } else if (ann.type === 'text') {
+            // For text we scale the font size by drag distance from the original corner.
+            // Use the diagonal magnitude as the scaling cue.
+            // Direction: SE / NE corners growing right/down or up should ENLARGE; NW / SW shrinking-right should SHRINK.
+            let factor = 1;
+            // Use stageDX (horizontal motion in stage local) primarily
+            const pixelDelta = (corner === 'nw' || corner === 'sw') ? -stageDX : stageDX;
+            // Also factor in vertical: NE/NW growing up = bigger; SE/SW growing down = bigger
+            const pixelDeltaY = (corner === 'ne' || corner === 'nw') ? -stageDY : stageDY;
+            const combined = (pixelDelta + pixelDeltaY) / 2;
+            const baseSizePx = startSize * scale;
+            factor = (baseSizePx + combined) / Math.max(1, baseSizePx);
+            const newSize = Math.max(6, Math.min(200, Math.round(startSize * factor)));
+            ann.size = newSize;
+            element.style.fontSize = (newSize * scale) + 'px';
+            // Re-apply position (top-left stays where anchor is)
+            applyAnnotationPosition(element, ann, scale, pdfH);
+        }
+    }
+    function onUp() {
+        if (!resizing) return;
+        resizing = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend',  onUp);
+        document.removeEventListener('touchcancel', onUp);
+    }
+    handle.addEventListener('mousedown',  onDown);
+    handle.addEventListener('touchstart', onDown, { passive:false });
+}
+
+// =============================================================
 //  DRAGGING (FIXED — no re-render during drag)
+//  Only PENDING annotations are draggable.
 // =============================================================
 function attachDragHandlers(element, ann) {
     let dragging = false;
     let startClientX = 0, startClientY = 0;
-    let startAnnX = 0, startAnnY = 0; // PDF-space (bottom-up)
+    let startAnnX = 0, startAnnY = 0;
     let scale = 1, pdfW = 0, pdfH = 0;
     let rotation = 0;
 
     function onPointerDown(e) {
-        if (e.target && e.target.classList && e.target.classList.contains('del-btn')) return;
+        // Skip if user grabbed a resize handle
+        if (e.target && e.target.classList && e.target.classList.contains('resize-handle')) return;
         // Don't allow drag while a tool is "placing" something new
         if (activeTool === 'placeText' || activeTool === 'placeImage' || activeTool === 'redact') return;
         e.preventDefault();
@@ -913,17 +1074,14 @@ function attachDragHandlers(element, ann) {
         if (!dragging) return;
         e.preventDefault();
         const point = getPoint(e);
-        // raw screen-pixel deltas
         let dx = point.clientX - startClientX;
         let dy = point.clientY - startClientY;
-        // translate screen delta -> stage-local delta by inverting rotation
         const rad = -rotation * Math.PI/180;
         const cos = Math.cos(rad), sin = Math.sin(rad);
         const stageDX = dx*cos - dy*sin;
         const stageDY = dx*sin + dy*cos;
-        // convert to pdf-space delta
         const pdfDX =  stageDX / scale;
-        const pdfDY = -stageDY / scale; // y inverted (pdf bottom-up)
+        const pdfDY = -stageDY / scale;
         ann.x = startAnnX + pdfDX;
         ann.y = startAnnY + pdfDY;
         applyAnnotationPosition(element, ann, scale, pdfH);
@@ -950,9 +1108,13 @@ function applyAnnotationPosition(element, ann, scale, pdfH) {
     if (ann.type === 'rect' || ann.type === 'image') {
         element.style.left = (ann.x * scale) + 'px';
         element.style.top  = ((pdfH - ann.y - ann.height) * scale) + 'px';
+        element.style.width  = (ann.width  * scale) + 'px';
+        element.style.height = (ann.height * scale) + 'px';
     } else if (ann.type === 'text') {
+        const fontPx = ann.size * scale;
+        const ascent = fontPx * 0.8;
         element.style.left = (ann.x * scale) + 'px';
-        element.style.top  = ((pdfH - ann.y) * scale) + 'px';
+        element.style.top  = ((pdfH - ann.y) * scale - ascent) + 'px';
     }
 }
 
@@ -963,19 +1125,62 @@ const btnAddText        = document.getElementById('btnAddText');
 const btnAddSig         = document.getElementById('btnAddSig');
 const btnRedact         = document.getElementById('btnRedact');
 const btnRotate         = document.getElementById('btnRotate');
+const btnUndo           = document.getElementById('btnUndo');
 const btnDeletePage     = document.getElementById('btnDeletePage');
 const textInputBox      = document.getElementById('textInputBox');
 const sigFileBox        = document.getElementById('sigFileBox');
+const redactColorBox    = document.getElementById('redactColorBox');
 const textContent       = document.getElementById('textContent');
 const textSize          = document.getElementById('textSize');
 const applyTextBtn      = document.getElementById('applyText');
 const cancelTextBtn     = document.getElementById('cancelText');
 const sigFileInput      = document.getElementById('sigFile');
 const cancelSigBtn      = document.getElementById('cancelSig');
+const cancelRedactBtn   = document.getElementById('cancelRedact');
 const annotationConfirmBox = document.getElementById('annotationConfirmBox');
 const applyAnnotationBtn   = document.getElementById('applyAnnotation');
-const cancelAnnotationBtn  = document.getElementById('cancelAnnotation');
 const downloadEditedBtn    = document.getElementById('downloadEditedBtn');
+
+// =============================================================
+//  HISTORY (UNDO)
+// =============================================================
+const history = [];
+const HISTORY_MAX = 30;
+
+function pushHistory() {
+    // Deep snapshot of pages state
+    const snapshot = pages.map(p => ({
+        originalIndex: p.originalIndex,
+        rotation: p.rotation,
+        annotations: p.annotations.map(a => ({...a}))
+    }));
+    history.push({
+        pages: snapshot,
+        currentPage,
+    });
+    if (history.length > HISTORY_MAX) history.shift();
+    updateUndoButton();
+}
+function updateUndoButton() {
+    btnUndo.disabled = history.length === 0;
+}
+async function popHistory() {
+    if (!history.length) return;
+    const snap = history.pop();
+    pages = snap.pages.map(p => ({
+        originalIndex: p.originalIndex,
+        rotation: p.rotation,
+        annotations: p.annotations.map(a => ({...a}))
+    }));
+    currentPage = Math.min(snap.currentPage, pages.length - 1);
+    pendingAnnotation = null;
+    annotationConfirmBox.classList.remove('visible');
+    resetToolState(true);
+    renderPageList();
+    await renderMainPage();
+    updateUndoButton();
+}
+btnUndo.addEventListener('click', popHistory);
 
 function setToolButtons(disabled){
     btnAddText.disabled = disabled;
@@ -988,6 +1193,7 @@ function resetToolState(hideConfirm = true) {
     setToolButtons(false);
     textInputBox.classList.remove('visible');
     sigFileBox.classList.remove('visible');
+    redactColorBox.classList.remove('visible');
     canvasWrap.style.cursor = 'default';
     if (hideConfirm && !pendingAnnotation) {
         annotationConfirmBox.classList.remove('visible');
@@ -995,20 +1201,29 @@ function resetToolState(hideConfirm = true) {
     updatePlacementHint();
 }
 
+// Auto-grow textarea
+function autoGrowTextarea() {
+    textContent.style.height = 'auto';
+    textContent.style.height = Math.min(240, textContent.scrollHeight + 2) + 'px';
+}
+textContent.addEventListener('input', autoGrowTextarea);
+
 btnAddText.addEventListener('click', () => {
     if (activeTool || pendingAnnotation) return;
     activeTool = 'text';
     textInputBox.classList.add('visible');
     sigFileBox.classList.remove('visible');
+    redactColorBox.classList.remove('visible');
     setToolButtons(true);
     textContent.value = '';
     textSize.value = '16';
+    autoGrowTextarea();
     setTimeout(()=>textContent.focus(), 50);
 });
 applyTextBtn.addEventListener('click', () => {
-    const txt = textContent.value.trim();
+    const txt = textContent.value;  // keep newlines/spaces; just verify non-empty
+    if (!txt.trim()) { alert('Please enter some text.'); return; }
     const size = parseInt(textSize.value) || 16;
-    if (!txt) { alert('Please enter some text.'); return; }
     activeTool = 'placeText';
     pendingAnnotation = { type: 'text', text: txt, size, pageIndex: currentPage, pending: true };
     textInputBox.classList.remove('visible');
@@ -1027,6 +1242,7 @@ btnAddSig.addEventListener('click', () => {
     activeTool = 'signature';
     sigFileBox.classList.add('visible');
     textInputBox.classList.remove('visible');
+    redactColorBox.classList.remove('visible');
     setToolButtons(true);
     sigFileInput.value='';
 });
@@ -1060,19 +1276,33 @@ cancelSigBtn.addEventListener('click', () => {
 btnRedact.addEventListener('click', () => {
     if (activeTool || pendingAnnotation) return;
     activeTool = 'redact';
+    redactColorBox.classList.add('visible');
+    sigFileBox.classList.remove('visible');
+    textInputBox.classList.remove('visible');
     setToolButtons(true);
     canvasWrap.style.cursor = 'crosshair';
     updatePlacementHint();
 });
+cancelRedactBtn.addEventListener('click', () => {
+    pendingAnnotation = null;
+    resetToolState(true);
+    annotationConfirmBox.classList.remove('visible');
+});
+function getRedactColor() {
+    const checked = document.querySelector('input[name="redactColor"]:checked');
+    return (checked && checked.value === 'white') ? 'white' : 'black';
+}
 
 btnRotate.addEventListener('click', async () => {
     if (currentPage < 0) return;
+    pushHistory();
     pages[currentPage].rotation = (pages[currentPage].rotation + 90) % 360;
     await renderMainPage();
 });
 btnDeletePage.addEventListener('click', async () => {
     if (pages.length <= 1) { alert('Cannot delete the last page.'); return; }
     if (!confirm('Delete this page?')) return;
+    pushHistory();
     pages.splice(currentPage, 1);
     if (currentPage >= pages.length) currentPage = pages.length - 1;
     pendingAnnotation = null;
@@ -1155,10 +1385,10 @@ function pointerDownWrap(e) {
     const c = getStageCoords(e);
     redactStart = c;
     isDrawing = true;
-    // create preview element inside overlay (positioned in stage-local px)
+    const color = getRedactColor();
     redactPreviewEl = document.createElement('div');
     redactPreviewEl.style.position = 'absolute';
-    redactPreviewEl.style.background = 'rgba(0,0,0,.6)';
+    redactPreviewEl.style.background = color === 'white' ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.6)';
     redactPreviewEl.style.outline = '2px dashed var(--accent)';
     redactPreviewEl.style.left = c.localX + 'px';
     redactPreviewEl.style.top  = c.localY + 'px';
@@ -1195,7 +1425,6 @@ async function pointerUpWrap(e) {
     }
     const x = Math.min(c.localX, start.localX);
     const y = Math.min(c.localY, start.localY);
-    // convert to pdf-space
     const scale = c.scale, pdfH = c.pdfH;
     const pdfX = x / scale;
     const pdfY = pdfH - (y / scale) - (h / scale);
@@ -1205,12 +1434,14 @@ async function pointerUpWrap(e) {
         y: pdfY,
         width:  w / scale,
         height: h / scale,
+        color: getRedactColor(),
         pending: true,
         pageIndex: currentPage
     };
     pendingAnnotation = newAnn;
     pages[currentPage].annotations.push(newAnn);
     activeTool = null;
+    redactColorBox.classList.remove('visible');
     setToolButtons(false);
     canvasWrap.style.cursor = 'default';
     annotationConfirmBox.classList.add('visible');
@@ -1224,21 +1455,14 @@ canvasWrap.addEventListener('touchstart', (e)=>{ if(activeTool==='redact'){ poin
 canvasWrap.addEventListener('touchmove',  (e)=>{ if(isDrawing){ pointerMoveWrap(e);} }, { passive:false });
 canvasWrap.addEventListener('touchend',   (e)=>{ if(isDrawing){ pointerUpWrap(e);} });
 
-// Apply / cancel
+// Apply — confirms the pending annotation (no longer draggable/resizable, no cancel button)
+// To undo, the user uses the Undo button in the toolbar.
 applyAnnotationBtn.addEventListener('click', async () => {
     if (!pendingAnnotation) return;
+    pushHistory();
     const pageObj = pages[pendingAnnotation.pageIndex];
     const idx = pageObj.annotations.findIndex(a => a === pendingAnnotation);
     if (idx !== -1) pageObj.annotations[idx].pending = false;
-    pendingAnnotation = null;
-    annotationConfirmBox.classList.remove('visible');
-    await renderMainPage();
-});
-cancelAnnotationBtn.addEventListener('click', async () => {
-    if (!pendingAnnotation) return;
-    const pageObj = pages[pendingAnnotation.pageIndex];
-    const idx = pageObj.annotations.findIndex(a => a === pendingAnnotation);
-    if (idx !== -1) pageObj.annotations.splice(idx, 1);
     pendingAnnotation = null;
     annotationConfirmBox.classList.remove('visible');
     await renderMainPage();
@@ -1284,9 +1508,15 @@ downloadEditedBtn.addEventListener('click', async () => {
     editStatus.className='status';
     try{
         const newPdf = await PDFLib.PDFDocument.create();
+        // Register fontkit so we can embed custom (TTF) fonts with full Unicode support
+        if (window.fontkit) {
+            try { newPdf.registerFontkit(window.fontkit); } catch {}
+        }
         let robotoFont = null;
-        if (fontBytes) {
-            try { robotoFont = await newPdf.embedFont(fontBytes); } catch {}
+        if (fontBytes && window.fontkit) {
+            try { robotoFont = await newPdf.embedFont(fontBytes, { subset: true }); } catch (err) {
+                console.warn('Roboto embed failed, falling back to Helvetica:', err);
+            }
         }
         const fallbackFont = await newPdf.embedFont(PDFLib.StandardFonts.Helvetica);
         const originalPdf = await PDFLib.PDFDocument.load(originalPdfBytes, { ignoreEncryption: true });
@@ -1297,12 +1527,26 @@ downloadEditedBtn.addEventListener('click', async () => {
             for (const ann of pageObj.annotations) {
                 if (ann.pending) continue;
                 if (ann.type === 'text') {
-                    copiedPage.drawText(ann.text, {
-                        x: ann.x, y: ann.y,
-                        size: ann.size,
-                        font: robotoFont || fallbackFont,
-                        color: PDFLib.rgb(0,0,0)
-                    });
+                    // Pick a font: prefer Roboto for full Unicode (Turkish, etc.); fall back to Helvetica.
+                    let useFont = robotoFont || fallbackFont;
+                    let textToDraw = ann.text;
+                    if (!robotoFont) {
+                        // Strip / transliterate characters Helvetica's WinAnsi can't encode.
+                        textToDraw = sanitizeForWinAnsi(textToDraw);
+                    }
+                    // Multi-line: split on \n, draw each line; PDF y is bottom-up baseline.
+                    // Treat ann.y as the baseline of the FIRST line (closest to user's tap origin).
+                    const lines = textToDraw.split('\n');
+                    const lineHeight = ann.size * 1.2;
+                    for (let li = 0; li < lines.length; li++) {
+                        copiedPage.drawText(lines[li], {
+                            x: ann.x,
+                            y: ann.y - li * lineHeight,
+                            size: ann.size,
+                            font: useFont,
+                            color: PDFLib.rgb(0,0,0)
+                        });
+                    }
                 } else if (ann.type === 'image') {
                     const imgBytes = await (await fetch(ann.dataUrl)).arrayBuffer();
                     let image;
@@ -1313,10 +1557,11 @@ downloadEditedBtn.addEventListener('click', async () => {
                         width: ann.width, height: ann.height
                     });
                 } else if (ann.type === 'rect') {
+                    const isWhite = ann.color === 'white';
                     copiedPage.drawRectangle({
                         x: ann.x, y: ann.y,
                         width: ann.width, height: ann.height,
-                        color: PDFLib.rgb(0,0,0),
+                        color: isWhite ? PDFLib.rgb(1,1,1) : PDFLib.rgb(0,0,0),
                         borderWidth: 0
                     });
                 }
@@ -1329,8 +1574,19 @@ downloadEditedBtn.addEventListener('click', async () => {
     }catch(e){
         editStatus.textContent = '❌ ' + e.message;
         editStatus.className='status err';
+        console.error(e);
     }
 });
+
+// Best-effort transliteration for the Helvetica/WinAnsi fallback path so that
+// Turkish characters at least produce a readable PDF if the custom font failed to load.
+function sanitizeForWinAnsi(s) {
+    const map = {
+        'ğ':'g','Ğ':'G','ş':'s','Ş':'S','ı':'i','İ':'I',
+        'ç':'c','Ç':'C','ü':'u','Ü':'U','ö':'o','Ö':'O',
+    };
+    return s.replace(/[ğĞşŞıİçÇüÜöÖ]/g, ch => map[ch] || ch);
+}
 
 // Re-render on resize so the canvas fits
 let resizeT;
@@ -1342,11 +1598,19 @@ window.addEventListener('resize', ()=>{
 // =============================================================
 //  4. COMPRESS PDF
 // =============================================================
+// Strategy:
+//   1) First, try a "lossless" re-save with pdf-lib (useObjectStreams: true)
+//      — this often shrinks PDFs that were saved without object streams.
+//   2) Then, try the rasterize+JPEG pipeline at the chosen preset.
+//   3) Pick whichever output is smallest (and never larger than the original).
+//
+// This avoids the surprise of a "compressed" file ending up bigger than the
+// input — which can happen when a mostly-text PDF gets rasterized.
 const PRESETS = {
     high:    { dpi: 150, jpegQuality: 0.85 },
-    medium:  { dpi: 110, jpegQuality: 0.72 },
-    low:     { dpi: 85,  jpegQuality: 0.6  },
-    extreme: { dpi: 70,  jpegQuality: 0.45 },
+    medium:  { dpi: 120, jpegQuality: 0.72 },
+    low:     { dpi: 90,  jpegQuality: 0.55 },
+    extreme: { dpi: 72,  jpegQuality: 0.40 },
 };
 document.getElementById('compressBtn').addEventListener('click', async () => {
     const file = document.getElementById('compressFileInput').files[0];
@@ -1361,50 +1625,81 @@ document.getElementById('compressBtn').addEventListener('click', async () => {
         progress.style.display = 'block';
         progress.value = 0;
         const buf = await file.arrayBuffer();
+        const originalSize = buf.byteLength;
+
+        // ---- Strategy A: lossless re-save with object streams ----
+        let resaveBytes = null;
+        try {
+            status.textContent = 'Re-saving (lossless)…';
+            const doc = await PDFLib.PDFDocument.load(buf, { ignoreEncryption: true });
+            resaveBytes = await doc.save({ useObjectStreams: true });
+        } catch (e) {
+            console.warn('Lossless re-save failed:', e);
+        }
+
+        // ---- Strategy B: rasterize each page to JPEG ----
+        status.textContent = 'Rasterizing pages…';
         const srcDoc = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
-        const newPdf = await PDFLib.PDFDocument.create();
         const numPages = srcDoc.numPages;
         progress.max = numPages;
+        const rasterPdf = await PDFLib.PDFDocument.create();
         for (let i = 1; i <= numPages; i++) {
-            status.textContent = `Compressing page ${i} of ${numPages}…`;
+            status.textContent = `Rasterizing page ${i} of ${numPages}…`;
             const page = await srcDoc.getPage(i);
-            // pdf.js viewport scale 1 = 72 DPI, so target/72 gives the scale
             const scale = preset.dpi / 72;
             const viewport = page.getViewport({ scale });
             const canvas = document.createElement('canvas');
-            canvas.width = Math.floor(viewport.width);
+            canvas.width  = Math.floor(viewport.width);
             canvas.height = Math.floor(viewport.height);
             const ctx = canvas.getContext('2d');
-            // white bg in case page has transparency
             ctx.fillStyle = '#fff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             await page.render({ canvasContext: ctx, viewport }).promise;
             const jpegDataUrl = canvas.toDataURL('image/jpeg', preset.jpegQuality);
             const jpegBytes = await (await fetch(jpegDataUrl)).arrayBuffer();
-            const jpegImg = await newPdf.embedJpg(jpegBytes);
-            // Original page size in points
+            const jpegImg = await rasterPdf.embedJpg(jpegBytes);
             const origViewport = page.getViewport({ scale: 1 });
-            const newPage = newPdf.addPage([origViewport.width, origViewport.height]);
+            const newPage = rasterPdf.addPage([origViewport.width, origViewport.height]);
             newPage.drawImage(jpegImg, {
                 x: 0, y: 0,
                 width: origViewport.width,
                 height: origViewport.height,
             });
             progress.value = i;
-            // free memory
             canvas.width = 0; canvas.height = 0;
         }
-        status.textContent = 'Saving…';
-        const bytes = await newPdf.save();
-        const ratio = ((1 - bytes.byteLength / buf.byteLength) * 100).toFixed(1);
-        downloadBlob(bytes, file.name.replace(/\.pdf$/i,'') + '_compressed.pdf', 'application/pdf');
-        status.textContent = `✅ Done — ${fmtBytes(buf.byteLength)} → ${fmtBytes(bytes.byteLength)} (${ratio}% smaller)`;
-        status.className = 'status ' + (bytes.byteLength < buf.byteLength ? 'ok' : '');
+        const rasterBytes = await rasterPdf.save({ useObjectStreams: true });
+
+        // ---- Pick the best result ----
+        const candidates = [
+            { label: 'original',  bytes: new Uint8Array(buf) },
+            { label: 're-saved',  bytes: resaveBytes ? new Uint8Array(resaveBytes) : null },
+            { label: 'rasterized',bytes: new Uint8Array(rasterBytes) },
+        ].filter(c => c.bytes);
+        candidates.sort((a, b) => a.bytes.byteLength - b.bytes.byteLength);
+        const winner = candidates[0];
+
+        if (winner.label === 'original') {
+            // Compression made things worse — let the user know clearly.
+            status.textContent = `ℹ️ This PDF is already well compressed (${fmtBytes(originalSize)}). Nothing smaller produced — original kept.`;
+            status.className = 'status';
+            progress.style.display = 'none';
+            return;
+        }
+
+        const ratio = ((1 - winner.bytes.byteLength / originalSize) * 100).toFixed(1);
+        downloadBlob(winner.bytes, file.name.replace(/\.pdf$/i,'') + '_compressed.pdf', 'application/pdf');
+        const techNote = winner.label === 're-saved'
+            ? ' (lossless re-save — text quality preserved)'
+            : ` (rasterized at ${preset.dpi} DPI)`;
+        status.textContent = `✅ ${fmtBytes(originalSize)} → ${fmtBytes(winner.bytes.byteLength)} · ${ratio}% smaller${techNote}`;
+        status.className = 'status ok';
         progress.style.display = 'none';
     }catch(e){
         status.textContent = '❌ ' + e.message;
         status.className='status err';
         progress.style.display = 'none';
+        console.error(e);
     }
 });
 </script>
