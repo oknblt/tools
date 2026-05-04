@@ -1,152 +1,537 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Tools – Collect, Merge & Edit PDF</title>
-    <!-- pdf-lib -->
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js">
-    </script>
-    <!-- pdf.js -->
-    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js">
-    </script>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; max-width: 1200px; margin: auto; padding: 10px 15px; }
-        .tab { overflow: hidden; border-bottom: 1px solid #ccc; display: flex; flex-wrap: wrap; }
-        .tab button { background-color: inherit; border: none; outline: none; cursor: pointer; 
-                      padding: 12px 15px; transition: 0.2s; font-size: 15px; flex: 1 1 auto; }
-        .tab button:hover { background-color: #e0e0e0; }
-        .tab button.active { background-color: #f0f0f0; border-bottom: 2px solid #0078d4; }
-        .tabcontent { display: none; padding: 20px 0; }
-        .visible { display: block; }
-        button, input, select { margin: 5px; padding: 8px 12px; }
-        .status { margin: 10px 0; color: #333; font-style: italic; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>File Tools — Collect, Merge, Edit & Compress PDF</title>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<style>
+:root{
+    --navy-900:#0a1628;
+    --navy-800:#0f2444;
+    --navy-700:#16335f;
+    --navy-600:#1e4685;
+    --navy-500:#2d5fb3;
+    --navy-400:#4a7ed1;
+    --accent:#6ba4ff;
+    --accent-soft:#8fb8ff;
+    --gold:#e6b86b;
+    --text:#e8eef9;
+    --text-dim:#9fb3d1;
+    --text-muted:#6c7e9c;
+    --surface:#142a4a;
+    --surface-2:#1a3358;
+    --surface-3:#22416e;
+    --border:#2a4775;
+    --border-soft:#1f3760;
+    --danger:#ef5560;
+    --success:#4caf7d;
+    --shadow-lg:0 20px 60px rgba(0,0,0,.45);
+    --shadow-md:0 6px 20px rgba(0,0,0,.3);
+    --radius:14px;
+    --radius-sm:8px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;
+    background:radial-gradient(ellipse at top,var(--navy-700) 0%,var(--navy-900) 60%,#050b18 100%);
+    color:var(--text);
+    min-height:100vh;
+    padding:20px 16px 60px;
+    -webkit-font-smoothing:antialiased;
+}
+.shell{max-width:1280px;margin:0 auto;}
 
-        /* Editor Layout */
-        #editorContainer { display: flex; flex-wrap: wrap; gap: 20px; }
-        .page-list { flex: 1 1 200px; max-height: 70vh; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
-        .page-list h4 { margin-top: 0; }
-        .page-thumb { margin-bottom: 10px; cursor: pointer; border: 2px solid transparent; position: relative; }
-        .page-thumb.selected { border-color: #0078d4; }
-        .page-thumb canvas { width: 100%; height: auto; display: block; }
-        .page-info { font-size: 12px; text-align: center; background: rgba(0,0,0,0.5); color: white; padding: 2px; }
-        .edit-area { flex: 3 1 600px; min-width: 300px; }
-        .main-canvas-container { position: relative; border: 1px solid #ccc; margin-bottom: 10px; background: #f9f9f9; cursor: crosshair; }
-        .main-canvas-container canvas { display: block; width: 100%; height: auto; }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .overlay > * { pointer-events: auto; }
-        .toolbar { margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
-        .toolbar button { margin-right: 5px; }
-        .annotation-confirm { display: none; margin-top: 10px; padding: 10px; background: #e6f7ff; border-radius: 5px; }
-        .annotation-confirm button { margin-right: 10px; }
-        .input-panel { display: none; margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px; }
-        .input-panel label { margin-right: 5px; }
-        .dragover { background: #e0f0ff; }
-        @media (max-width: 600px) {
-            .tab button { padding: 10px; font-size: 14px; }
-        }
-    </style>
+/* Header */
+header{
+    display:flex;align-items:center;gap:14px;
+    margin-bottom:24px;
+}
+.logo{
+    width:48px;height:48px;border-radius:12px;
+    background:linear-gradient(135deg,var(--navy-500),var(--accent));
+    display:grid;place-items:center;font-size:24px;
+    box-shadow:var(--shadow-md);
+}
+.title h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.2px;}
+.title .sub{font-size:13px;color:var(--text-dim);margin-top:2px;}
+
+/* Tabs */
+.tabs{
+    display:flex;gap:6px;background:var(--surface);
+    padding:6px;border-radius:var(--radius);
+    border:1px solid var(--border-soft);
+    margin-bottom:20px;overflow-x:auto;scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none;}
+.tab-btn{
+    flex:1 1 auto;min-width:max-content;
+    background:transparent;border:none;color:var(--text-dim);
+    padding:11px 16px;border-radius:9px;cursor:pointer;
+    font-size:14px;font-weight:500;font-family:inherit;
+    transition:all .2s;display:flex;align-items:center;gap:8px;
+    justify-content:center;white-space:nowrap;
+}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.tab-btn.active{
+    background:linear-gradient(135deg,var(--navy-600),var(--navy-500));
+    color:#fff;box-shadow:0 4px 14px rgba(45,95,179,.4);
+}
+
+/* Cards */
+.card{
+    background:var(--surface);
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius);
+    padding:24px;
+    box-shadow:var(--shadow-md);
+}
+.tabcontent{display:none;}
+.tabcontent.visible{display:block;animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+h2{margin:0 0 6px;font-size:18px;font-weight:600;}
+.lead{color:var(--text-dim);font-size:14px;margin:0 0 20px;line-height:1.5;}
+
+/* Buttons & Inputs */
+.btn{
+    background:linear-gradient(135deg,var(--navy-600),var(--navy-500));
+    color:#fff;border:none;padding:11px 18px;
+    border-radius:var(--radius-sm);cursor:pointer;
+    font-size:14px;font-weight:500;font-family:inherit;
+    transition:transform .15s,box-shadow .2s,background .2s;
+    display:inline-flex;align-items:center;gap:8px;
+    box-shadow:0 4px 12px rgba(0,0,0,.25);
+}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(45,95,179,.35);}
+.btn:active:not(:disabled){transform:translateY(0);}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text);box-shadow:none;}
+.btn.ghost:hover:not(:disabled){background:var(--surface-2);border-color:var(--navy-400);}
+.btn.success{background:linear-gradient(135deg,#2d8c5f,var(--success));}
+.btn.danger{background:linear-gradient(135deg,#c93a44,var(--danger));}
+.btn.gold{background:linear-gradient(135deg,#c98e3e,var(--gold));color:#1a1006;}
+.btn.sm{padding:8px 12px;font-size:13px;}
+
+input[type="file"],input[type="text"],input[type="number"],select{
+    background:var(--navy-900);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:10px 12px;font-size:14px;font-family:inherit;
+    transition:border-color .2s;
+}
+input[type="text"]:focus,input[type="number"]:focus,select:focus{
+    outline:none;border-color:var(--accent);
+}
+input[type="file"]{padding:8px 10px;cursor:pointer;}
+input[type="file"]::file-selector-button{
+    background:var(--navy-600);color:#fff;border:none;
+    padding:7px 12px;border-radius:6px;font-family:inherit;
+    margin-right:10px;cursor:pointer;font-size:13px;
+}
+label.field{display:inline-flex;align-items:center;gap:8px;margin:4px 6px 4px 0;font-size:14px;color:var(--text-dim);}
+label.field input{width:auto;}
+
+.status{
+    margin-top:14px;font-size:13px;color:var(--text-dim);
+    min-height:18px;display:flex;align-items:center;gap:8px;
+}
+.status.ok{color:var(--success);}
+.status.err{color:var(--danger);}
+
+progress{
+    width:100%;height:8px;border-radius:4px;border:none;
+    background:var(--navy-900);overflow:hidden;
+    margin-top:10px;
+}
+progress::-webkit-progress-bar{background:var(--navy-900);}
+progress::-webkit-progress-value{background:linear-gradient(90deg,var(--navy-500),var(--accent));border-radius:4px;}
+progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var(--accent));}
+
+.note{
+    background:var(--surface-2);
+    border-left:3px solid var(--accent);
+    padding:12px 14px;border-radius:8px;
+    font-size:13px;color:var(--text-dim);
+    margin-top:14px;line-height:1.5;
+}
+
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+
+/* ===================== EDIT PDF ===================== */
+.edit-toolbar{
+    display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;
+    padding:10px;background:var(--surface-2);border-radius:var(--radius-sm);
+    border:1px solid var(--border-soft);
+}
+.edit-toolbar .btn{padding:9px 14px;font-size:13px;}
+
+#editorContainer{display:none;}
+
+.editor-grid{
+    display:grid;
+    grid-template-columns:220px 1fr;
+    gap:16px;
+}
+.page-list{
+    background:var(--surface-2);
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius-sm);
+    padding:12px;
+    max-height:75vh;overflow-y:auto;
+}
+.page-list h4{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);}
+.page-thumb{
+    margin-bottom:10px;cursor:pointer;
+    border:2px solid transparent;border-radius:6px;
+    overflow:hidden;position:relative;
+    background:#fff;transition:border-color .15s;
+}
+.page-thumb:hover{border-color:var(--navy-400);}
+.page-thumb.selected{border-color:var(--accent);box-shadow:0 0 0 3px rgba(107,164,255,.2);}
+.page-thumb canvas{width:100%;height:auto;display:block;}
+.page-info{
+    font-size:11px;text-align:center;
+    background:rgba(10,22,40,.85);color:var(--text);
+    padding:3px;
+}
+
+.edit-area{min-width:0;}
+
+.canvas-wrap{
+    position:relative;
+    background:var(--navy-900);
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius-sm);
+    overflow:hidden;
+    margin-bottom:12px;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
+}
+/* Inner stage that ROTATES with the page (overlay travels with canvas) */
+.canvas-stage{
+    position:relative;
+    margin:0 auto;
+    transform-origin:center center;
+    transition:transform .25s ease;
+}
+.canvas-stage canvas{display:block;width:100%;height:auto;background:#fff;}
+.overlay{
+    position:absolute;inset:0;
+    pointer-events:none;
+}
+.overlay > *{pointer-events:auto;}
+
+.annotation-item{
+    position:absolute;
+    box-sizing:border-box;
+}
+.annotation-item.draggable{cursor:grab;}
+.annotation-item.draggable.dragging{cursor:grabbing;}
+.annotation-item.text-ann{
+    color:#000;background:rgba(255,255,255,.7);
+    padding:1px 3px;font-family:'Roboto',sans-serif;
+    line-height:1.1;white-space:pre;
+    border:1px dashed transparent;
+}
+.annotation-item.text-ann.pending{border-color:var(--accent);background:rgba(107,164,255,.25);color:#fff;}
+.annotation-item.rect-ann{background:#000;}
+.annotation-item.rect-ann.pending{background:rgba(0,0,0,.55);outline:2px dashed var(--accent);outline-offset:-2px;}
+.annotation-item.image-ann{background:transparent;}
+.annotation-item.image-ann img{width:100%;height:100%;display:block;pointer-events:none;}
+.annotation-item.image-ann.pending{outline:2px dashed var(--accent);outline-offset:-2px;}
+
+.del-btn{
+    position:absolute;top:-12px;right:-12px;
+    width:24px;height:24px;border-radius:50%;
+    background:var(--danger);color:#fff;border:none;
+    font-size:14px;cursor:pointer;
+    display:grid;place-items:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.4);
+    line-height:1;
+}
+.del-btn:hover{background:#ff6b75;}
+
+.placement-hint{
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    background:rgba(10,22,40,.92);color:var(--text);
+    padding:8px 14px;border-radius:20px;font-size:13px;
+    border:1px solid var(--accent);
+    pointer-events:none;
+    z-index:10;
+}
+
+.input-panel{
+    display:none;margin-top:12px;padding:14px;
+    background:var(--surface-2);
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius-sm);
+}
+.input-panel.visible{display:block;}
+.input-panel .row{margin-bottom:8px;}
+
+/* Confirm bar — sticky at the bottom on mobile so Apply/Cancel never get lost */
+.annotation-confirm{
+    display:none;
+    margin-top:12px;padding:12px 14px;
+    background:linear-gradient(135deg,var(--navy-700),var(--navy-600));
+    border:1px solid var(--accent);
+    border-radius:var(--radius-sm);
+    align-items:center;gap:10px;flex-wrap:wrap;
+}
+.annotation-confirm.visible{display:flex;}
+.annotation-confirm .label{flex:1;font-size:14px;color:var(--text);min-width:140px;}
+.annotation-confirm .btn{padding:9px 16px;}
+
+/* ===================== MOBILE ===================== */
+@media (max-width:780px){
+    body{padding:14px 10px 80px;}
+    header{margin-bottom:18px;}
+    .title h1{font-size:18px;}
+    .title .sub{font-size:12px;}
+    .card{padding:16px;}
+    .tab-btn{padding:9px 12px;font-size:13px;}
+    .tab-btn span.tab-label{display:none;}
+    .tab-btn span.tab-icon{font-size:18px;}
+
+    .editor-grid{
+        grid-template-columns:1fr;
+        gap:12px;
+    }
+    .page-list{
+        order:2;
+        max-height:none;
+        display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;
+        gap:8px;padding:10px;
+    }
+    .page-list h4{display:none;}
+    .page-thumb{
+        margin-bottom:0;flex:0 0 90px;width:90px;
+    }
+    .edit-area{order:1;}
+
+    .edit-toolbar{
+        position:sticky;top:0;z-index:5;
+        margin:-16px -16px 12px;
+        border-radius:0;
+        border-left:none;border-right:none;border-top:none;
+        padding:10px 12px;
+    }
+    .edit-toolbar .btn{flex:1 1 auto;justify-content:center;padding:10px 8px;font-size:12px;}
+
+    /* Mobile sticky confirm bar */
+    .annotation-confirm.visible{
+        position:fixed;
+        left:10px;right:10px;bottom:10px;
+        margin:0;z-index:50;
+        box-shadow:0 -8px 30px rgba(0,0,0,.5);
+    }
+    .annotation-confirm .btn{flex:1 1 auto;justify-content:center;}
+
+    .input-panel{padding:12px;}
+    .input-panel input[type="text"]{width:100%;}
+    .input-panel label.field{width:100%;margin:6px 0;}
+    .input-panel label.field input[type="text"]{flex:1;}
+}
+
+@media (max-width:420px){
+    .row{gap:8px;}
+    .btn{padding:10px 14px;font-size:13px;}
+    h2{font-size:16px;}
+}
+
+/* Drag preview helpers */
+.drag-src{opacity:.4;}
+.drag-target{outline:2px dashed var(--accent);outline-offset:-3px;}
+</style>
 </head>
 <body>
+<div class="shell">
 
-<h1>📂 File Tools</h1>
-
-<div class="tab">
-    <button class="tablinks active" onclick="openTab(event, 'collect')">📁 Collect Files</button>
-    <button class="tablinks" onclick="openTab(event, 'merge')">📄 Merge PDFs</button>
-    <button class="tablinks" onclick="openTab(event, 'edit')">✏️ Edit PDF</button>
-</div>
-
-<!-- ==================== COLLECT FILES ==================== -->
-<div id="collect" class="tabcontent visible">
-    <h3>Collect PDF & Word files into a 'Combined' folder</h3>
-    <p>Select a main folder – all PDF, DOC, DOCX files from its subfolders will be copied into a new <strong>Combined</strong> folder inside it.</p>
-    <button id="selectDirBtn">📂 Select Main Folder</button>
-    <span id="collectStatus" class="status"></span>
-    <div id="progressContainer" style="display:none;">
-        <progress id="progressBar" value="0" max="100" style="width:100%;"></progress>
+<header>
+    <div class="logo">📂</div>
+    <div class="title">
+        <h1>File Tools</h1>
+        <div class="sub">Collect · Merge · Edit · Compress PDFs — runs entirely in your browser</div>
     </div>
-    <p style="font-size:0.9em; color:#555;">
-        ⚠️ The browser will ask permission to write files inside the folder you choose.
-    </p>
+</header>
+
+<div class="tabs">
+    <button class="tab-btn active" data-tab="collect">
+        <span class="tab-icon">📁</span><span class="tab-label">Collect</span>
+    </button>
+    <button class="tab-btn" data-tab="merge">
+        <span class="tab-icon">🔗</span><span class="tab-label">Merge</span>
+    </button>
+    <button class="tab-btn" data-tab="edit">
+        <span class="tab-icon">✏️</span><span class="tab-label">Edit</span>
+    </button>
+    <button class="tab-btn" data-tab="compress">
+        <span class="tab-icon">🗜️</span><span class="tab-label">Compress</span>
+    </button>
 </div>
 
-<!-- ==================== MERGE PDFs ==================== -->
+<!-- ============ COLLECT ============ -->
+<div id="collect" class="tabcontent visible">
+    <div class="card">
+        <h2>Collect PDF & Word files</h2>
+        <p class="lead">Pick a main folder. Every PDF, DOC and DOCX inside its subfolders will be copied into a new <strong>Combined</strong> folder created in that location.</p>
+        <div class="row">
+            <button id="selectDirBtn" class="btn">📂 Select main folder</button>
+        </div>
+        <div id="progressContainer" style="display:none;">
+            <progress id="progressBar" value="0" max="100"></progress>
+        </div>
+        <div id="collectStatus" class="status"></div>
+        <div class="note">Your browser will ask permission to write files inside the folder you choose. Requires Chrome, Edge, or Opera.</div>
+    </div>
+</div>
+
+<!-- ============ MERGE ============ -->
 <div id="merge" class="tabcontent">
-    <h3>Merge multiple PDFs into one</h3>
-    <input type="file" id="pdfFiles" multiple accept="application/pdf" />
-    <button id="mergeBtn">🔗 Merge and Download</button>
-    <p style="font-size:0.9em; color:#555;">
-        You can select PDFs from the <em>Combined</em> folder created by the collection tool.
-    </p>
+    <div class="card">
+        <h2>Merge multiple PDFs into one</h2>
+        <p class="lead">Pick the PDFs you want to combine — they'll be merged in the order shown.</p>
+        <div class="row">
+            <input type="file" id="pdfFiles" multiple accept="application/pdf" />
+            <button id="mergeBtn" class="btn">🔗 Merge & download</button>
+        </div>
+        <div id="mergeStatus" class="status"></div>
+        <div class="note">Tip: select the PDFs from the <em>Combined</em> folder you generated in the Collect tab.</div>
+    </div>
 </div>
 
-<!-- ==================== EDIT PDF ==================== -->
+<!-- ============ EDIT ============ -->
 <div id="edit" class="tabcontent">
-    <h3>Edit a PDF – rotate, delete, reorder, add text, signature, redact</h3>
-    <input type="file" id="editFileInput" accept="application/pdf" />
-    <button id="loadPdfBtn">Load PDF</button>
-    <span id="editStatus" class="status"></span>
+    <div class="card">
+        <h2>Edit a PDF</h2>
+        <p class="lead">Rotate, delete, reorder pages. Add text or signatures. Redact sensitive areas.</p>
+        <div class="row">
+            <input type="file" id="editFileInput" accept="application/pdf" />
+            <button id="loadPdfBtn" class="btn">Load PDF</button>
+        </div>
+        <div id="editStatus" class="status"></div>
 
-    <div id="editorContainer" style="display:none;">
-        <div class="page-list" id="pageList"></div>
-        <div class="edit-area">
-            <div class="toolbar">
-                <button id="btnAddText">Add Text</button>
-                <button id="btnAddSig">Add Signature</button>
-                <button id="btnRedact">Add Redaction</button>
-                <button id="btnRotate">Rotate (90°)</button>
-                <button id="btnDeletePage">Delete Page</button>
+        <div id="editorContainer">
+            <div class="edit-toolbar">
+                <button id="btnAddText" class="btn ghost sm">✍️ Add text</button>
+                <button id="btnAddSig" class="btn ghost sm">🖼️ Add signature</button>
+                <button id="btnRedact" class="btn ghost sm">⬛ Redact</button>
+                <button id="btnRotate" class="btn ghost sm">🔄 Rotate 90°</button>
+                <button id="btnDeletePage" class="btn ghost sm">🗑️ Delete page</button>
+                <button id="downloadEditedBtn" class="btn success sm" style="margin-left:auto;">⬇️ Download</button>
             </div>
 
-            <div class="main-canvas-container" id="mainCanvasContainer">
-                <canvas id="mainCanvas"></canvas>
-                <div class="overlay" id="overlay"></div>
-            </div>
+            <div class="editor-grid">
+                <div class="page-list" id="pageList"></div>
+                <div class="edit-area">
+                    <div class="canvas-wrap" id="canvasWrap">
+                        <div class="canvas-stage" id="canvasStage">
+                            <canvas id="mainCanvas"></canvas>
+                            <div class="overlay" id="overlay"></div>
+                        </div>
+                        <div id="placementHint" class="placement-hint" style="display:none;">Tap on the page to place</div>
+                    </div>
 
-            <div id="textInputBox" class="input-panel">
-                <label>Text: <input type="text" id="textContent" placeholder="Enter text" /></label>
-                <label>Size: <input type="number" id="textSize" value="16" min="6" max="72" style="width:60px;" /></label>
-                <button id="applyText">Next: Place on page</button>
-                <button id="cancelText">Cancel</button>
-            </div>
+                    <div id="textInputBox" class="input-panel">
+                        <div class="row">
+                            <label class="field">Text: <input type="text" id="textContent" placeholder="Enter text" /></label>
+                            <label class="field">Size: <input type="number" id="textSize" value="16" min="6" max="96" style="width:70px;" /></label>
+                        </div>
+                        <div class="row">
+                            <button id="applyText" class="btn">Next: place on page</button>
+                            <button id="cancelText" class="btn ghost">Cancel</button>
+                        </div>
+                    </div>
 
-            <div id="sigFileBox" class="input-panel">
-                <input type="file" id="sigFile" accept="image/png" />
-                <button id="cancelSig">Cancel</button>
-            </div>
+                    <div id="sigFileBox" class="input-panel">
+                        <div class="row">
+                            <input type="file" id="sigFile" accept="image/png,image/jpeg" />
+                            <button id="cancelSig" class="btn ghost">Cancel</button>
+                        </div>
+                    </div>
 
-            <div id="annotationConfirmBox" class="annotation-confirm">
-                <span id="annotationLabel">Annotation placed.</span>
-                <button id="applyAnnotation">✔ Apply</button>
-                <button id="cancelAnnotation">✘ Cancel</button>
+                    <div id="annotationConfirmBox" class="annotation-confirm">
+                        <span class="label" id="annotationLabel">Drag to position, then apply.</span>
+                        <button id="applyAnnotation" class="btn success">✔ Apply</button>
+                        <button id="cancelAnnotation" class="btn danger">✘ Cancel</button>
+                    </div>
+                </div>
             </div>
-
-            <button id="downloadEditedBtn" style="margin-top:15px;">⬇️ Download Edited PDF</button>
         </div>
     </div>
 </div>
 
+<!-- ============ COMPRESS ============ -->
+<div id="compress" class="tabcontent">
+    <div class="card">
+        <h2>Compress a PDF</h2>
+        <p class="lead">Reduce PDF size by re-encoding embedded images at a lower resolution and quality. Text stays sharp; large photos get smaller.</p>
+        <div class="row">
+            <input type="file" id="compressFileInput" accept="application/pdf" />
+        </div>
+        <div class="row" style="margin-top:8px;">
+            <label class="field">
+                Quality preset:
+                <select id="compressPreset">
+                    <option value="high">High quality (light compression)</option>
+                    <option value="medium" selected>Balanced (recommended)</option>
+                    <option value="low">Strong compression (smaller files)</option>
+                    <option value="extreme">Extreme (smallest, lower image quality)</option>
+                </select>
+            </label>
+            <button id="compressBtn" class="btn gold">🗜️ Compress & download</button>
+        </div>
+        <progress id="compressProgress" value="0" max="100" style="display:none;"></progress>
+        <div id="compressStatus" class="status"></div>
+        <div class="note">Compression works by rasterizing each page at a target DPI and re-saving as JPEG inside a new PDF. Vector text is preserved as a flat image, which trades searchability for file size. Use the "High quality" preset if you need to keep text crisp at print resolution.</div>
+    </div>
+</div>
+
+</div><!-- /shell -->
+
 <script>
-// ==================== GLOBAL HELPERS ====================
-function downloadBlob(bytes, filename, mime) {
+// =============================================================
+//  GLOBAL HELPERS
+// =============================================================
+function downloadBlob(bytes, filename, mime){
     const blob = new Blob([bytes], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+function fmtBytes(n){
+    if(n<1024)return n+' B';
+    if(n<1024*1024)return (n/1024).toFixed(1)+' KB';
+    return (n/(1024*1024)).toFixed(2)+' MB';
 }
 
-// ==================== TAB SWITCHING ====================
-function openTab(evt, tabName) {
-    document.querySelectorAll('.tabcontent').forEach(tc => tc.classList.remove('visible'));
-    document.querySelectorAll('.tablinks').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(tabName).classList.add('visible');
-    evt.currentTarget.classList.add('active');
+// pdf.js worker
+if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 }
 
-// ==================== 1. COLLECT FILES ====================
+// =============================================================
+//  TABS
+// =============================================================
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        const id = btn.dataset.tab;
+        document.querySelectorAll('.tabcontent').forEach(tc=>tc.classList.remove('visible'));
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.getElementById(id).classList.add('visible');
+        btn.classList.add('active');
+    });
+});
+
+// =============================================================
+//  1. COLLECT
+// =============================================================
 document.getElementById('selectDirBtn').addEventListener('click', async () => {
     if (!window.showDirectoryPicker) {
         alert('Your browser does not support the File System Access API. Please use Chrome, Edge, or Opera.');
@@ -155,9 +540,10 @@ document.getElementById('selectDirBtn').addEventListener('click', async () => {
     const status = document.getElementById('collectStatus');
     const progContainer = document.getElementById('progressContainer');
     const progBar = document.getElementById('progressBar');
+    status.className='status';
     try {
         const dirHandle = await window.showDirectoryPicker();
-        status.textContent = 'Scanning folder...';
+        status.textContent = 'Scanning folder…';
         progContainer.style.display = 'block';
         progBar.value = 0;
         const combinedHandle = await dirHandle.getDirectoryHandle('Combined', { create: true });
@@ -166,11 +552,11 @@ document.getElementById('selectDirBtn').addEventListener('click', async () => {
         const extensions = ['pdf', 'doc', 'docx'];
         const targetFiles = allFiles.filter(f => extensions.includes(f.extension.toLowerCase()));
         if (targetFiles.length === 0) {
-            status.textContent = 'No PDF/Word files found.';
+            status.textContent = 'No PDF or Word files found.';
             progContainer.style.display = 'none';
             return;
         }
-        status.textContent = `Found ${targetFiles.length} file(s). Copying...`;
+        status.textContent = `Found ${targetFiles.length} file(s). Copying…`;
         progBar.max = targetFiles.length;
         let processed = 0;
         for (const fileInfo of targetFiles) {
@@ -183,24 +569,24 @@ document.getElementById('selectDirBtn').addEventListener('click', async () => {
             await writable.close();
             processed++;
             progBar.value = processed;
-            status.textContent = `${processed}/${targetFiles.length} copied...`;
+            status.textContent = `${processed}/${targetFiles.length} copied…`;
         }
-        status.textContent = `✅ Success! ${targetFiles.length} file(s) copied to 'Combined' folder.`;
+        status.textContent = `✅ Done — ${targetFiles.length} file(s) copied to the "Combined" folder.`;
+        status.className='status ok';
         progContainer.style.display = 'none';
     } catch (err) {
-        status.textContent = '❌ Operation cancelled or error: ' + err.message;
+        status.textContent = '❌ Cancelled or error: ' + err.message;
+        status.className='status err';
         progContainer.style.display = 'none';
     }
 });
-
 async function scanDirectory(dirHandle, relativePath, accumulator) {
     for await (const [name, handle] of dirHandle.entries()) {
         if (handle.kind === 'file') {
             accumulator.push({
-                name: name,
+                name,
                 extension: name.split('.').pop(),
-                handle: handle,
-                relativePath: relativePath
+                handle, relativePath
             });
         } else if (handle.kind === 'directory') {
             if (name.toLowerCase() === 'combined') continue;
@@ -208,88 +594,104 @@ async function scanDirectory(dirHandle, relativePath, accumulator) {
         }
     }
 }
-
 async function getUniqueName(dirHandle, fileName) {
     const dot = fileName.lastIndexOf('.');
     const base = dot > 0 ? fileName.substring(0, dot) : fileName;
     const ext = dot > 0 ? fileName.substring(dot) : '';
-    let newName = fileName;
-    let counter = 1;
+    let newName = fileName, counter = 1;
     while (true) {
         try { await dirHandle.getFileHandle(newName, { create: false }); }
-        catch (e) { return newName; }
+        catch { return newName; }
         newName = base + '_' + counter + ext;
         counter++;
     }
 }
 
-// ==================== 2. MERGE PDFs ====================
+// =============================================================
+//  2. MERGE
+// =============================================================
 document.getElementById('mergeBtn').addEventListener('click', async () => {
     const files = document.getElementById('pdfFiles').files;
-    if (files.length === 0) {
-        alert('Please select at least one PDF file.');
-        return;
-    }
-    const { PDFDocument } = PDFLib;
-    const mergedPdf = await PDFDocument.create();
-    for (const file of files) {
-        try {
+    const status = document.getElementById('mergeStatus');
+    status.className='status';
+    if (!files.length) { status.textContent = 'Select at least one PDF.'; status.className='status err'; return; }
+    status.textContent = 'Merging…';
+    try{
+        const { PDFDocument } = PDFLib;
+        const mergedPdf = await PDFDocument.create();
+        for (const file of files) {
             const buf = await file.arrayBuffer();
-            const pdf = await PDFDocument.load(buf);
+            const pdf = await PDFDocument.load(buf, { ignoreEncryption: true });
             const copied = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
             copied.forEach(page => mergedPdf.addPage(page));
-        } catch (err) {
-            alert(`Error processing ${file.name}: ${err.message}`);
         }
+        const bytes = await mergedPdf.save();
+        downloadBlob(bytes, 'merged.pdf', 'application/pdf');
+        status.textContent = `✅ Merged ${files.length} file(s) — ${fmtBytes(bytes.byteLength)}`;
+        status.className='status ok';
+    }catch(e){
+        status.textContent = '❌ ' + e.message;
+        status.className='status err';
     }
-    const bytes = await mergedPdf.save();
-    downloadBlob(bytes, 'merged.pdf', 'application/pdf');
 });
 
-// ==================== 3. EDIT PDF ====================
+// =============================================================
+//  3. EDIT PDF
+// =============================================================
 let originalPdfBytes = null;
-let pdfDoc = null;            // pdf-lib orijinal doc
-let pdfJsDoc = null;          // pdf.js doc
-let pages = [];               // { originalIndex, rotation, annotations[] }
+let pdfDoc = null;
+let pdfJsDoc = null;
+let pages = [];
 let currentPage = -1;
-let activeTool = null;        // 'text', 'signature', 'redact', 'placeText', 'placeImage', 'redactDrawing'
-let pendingAnnotation = null; // henüz onaylanmamış annotation
+let activeTool = null;
+let pendingAnnotation = null;
 let isDrawing = false;
+let drawingPreview = null;
 let fontBytes = null;
-const mainCanvasContainer = document.getElementById('mainCanvasContainer');
-const mainCanvas = document.getElementById('mainCanvas');
-const overlay = document.getElementById('overlay');
 
-// Font yükle
+const canvasWrap   = document.getElementById('canvasWrap');
+const canvasStage  = document.getElementById('canvasStage');
+const mainCanvas   = document.getElementById('mainCanvas');
+const overlay      = document.getElementById('overlay');
+const placementHint= document.getElementById('placementHint');
+
+// load font (best-effort)
 (async () => {
     try {
         const resp = await fetch('https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxP.ttf');
-        fontBytes = new Uint8Array(await resp.arrayBuffer());
-    } catch(e) { console.warn('Font not loaded.'); }
+        if (resp.ok) fontBytes = new Uint8Array(await resp.arrayBuffer());
+    } catch {}
 })();
 
-// PDF yükle
 document.getElementById('loadPdfBtn').addEventListener('click', async () => {
     const file = document.getElementById('editFileInput').files[0];
-    if (!file) return;
     const editStatus = document.getElementById('editStatus');
-    editStatus.textContent = 'Loading PDF...';
-    originalPdfBytes = await file.arrayBuffer();
-    pdfDoc = await PDFLib.PDFDocument.load(originalPdfBytes, { ignoreEncryption: true });
-    pdfJsDoc = await pdfjsLib.getDocument({ data: originalPdfBytes.slice(0) }).promise;
-    const numPages = pdfJsDoc.numPages;
-    pages = [];
-    for (let i = 0; i < numPages; i++) {
-        pages.push({ originalIndex: i, rotation: 0, annotations: [] });
+    if (!file) { editStatus.textContent='Choose a PDF first.'; editStatus.className='status err'; return; }
+    editStatus.textContent = 'Loading PDF…';
+    editStatus.className='status';
+    try{
+        originalPdfBytes = await file.arrayBuffer();
+        pdfDoc   = await PDFLib.PDFDocument.load(originalPdfBytes, { ignoreEncryption: true });
+        pdfJsDoc = await pdfjsLib.getDocument({ data: originalPdfBytes.slice(0) }).promise;
+        const numPages = pdfJsDoc.numPages;
+        pages = [];
+        for (let i = 0; i < numPages; i++) {
+            pages.push({ originalIndex: i, rotation: 0, annotations: [] });
+        }
+        currentPage = 0;
+        pendingAnnotation = null;
+        editStatus.textContent = `Loaded ${numPages} page(s) · ${fmtBytes(originalPdfBytes.byteLength)}`;
+        editStatus.className='status ok';
+        document.getElementById('editorContainer').style.display = 'block';
+        renderPageList();
+        await renderMainPage();
+    }catch(e){
+        editStatus.textContent = '❌ ' + e.message;
+        editStatus.className='status err';
     }
-    currentPage = 0;
-    editStatus.textContent = `Loaded ${numPages} page(s).`;
-    document.getElementById('editorContainer').style.display = 'flex';
-    renderPageList();
-    renderMainPage();
 });
 
-// Sayfa listesi render
+// ---- thumbnails ----
 function renderPageList() {
     const pageList = document.getElementById('pageList');
     pageList.innerHTML = '<h4>Pages</h4>';
@@ -299,10 +701,12 @@ function renderPageList() {
         thumbDiv.className = 'page-thumb' + (i === currentPage ? ' selected' : '');
         thumbDiv.draggable = true;
         thumbDiv.dataset.index = i;
-        thumbDiv.addEventListener('click', () => {
+        thumbDiv.addEventListener('click', async () => {
             currentPage = i;
             resetToolState();
-            renderMainPage();
+            // also drop pending if user navigates away with one un-applied
+            pendingAnnotation = null;
+            await renderMainPage();
             renderPageList();
         });
         thumbDiv.addEventListener('dragstart', handleDragStart);
@@ -313,96 +717,154 @@ function renderPageList() {
         thumbDiv.appendChild(canvas);
         const info = document.createElement('div');
         info.className = 'page-info';
-        info.textContent = `Page ${p.originalIndex+1}`;
+        info.textContent = `Page ${p.originalIndex + 1}`;
         thumbDiv.appendChild(info);
         pageList.appendChild(thumbDiv);
         renderThumbnail(p.originalIndex, canvas);
     }
 }
-
 async function renderThumbnail(origIndex, canvas) {
-    const page = await pdfJsDoc.getPage(origIndex + 1);
-    const viewport = page.getViewport({ scale: 0.3 });
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport }).promise;
+    try{
+        const page = await pdfJsDoc.getPage(origIndex + 1);
+        const viewport = page.getViewport({ scale: 0.35 });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+    }catch{}
 }
 
-// Ana sayfa render
+// ---- main page ----
 async function renderMainPage() {
     if (currentPage < 0 || currentPage >= pages.length) return;
     const pageObj = pages[currentPage];
     const page = await pdfJsDoc.getPage(pageObj.originalIndex + 1);
-    const containerWidth = mainCanvasContainer.clientWidth;
-    const viewport = page.getViewport({ scale: 1 });
-    const scale = containerWidth / viewport.width;
-    const scaledViewport = page.getViewport({ scale });
-    mainCanvas.width = scaledViewport.width;
-    mainCanvas.height = scaledViewport.height;
+
+    // base viewport (original PDF size)
+    const baseViewport = page.getViewport({ scale: 1 });
+    const pdfW = baseViewport.width;
+    const pdfH = baseViewport.height;
+
+    // available width (account for wrap padding)
+    const wrapWidth = canvasWrap.clientWidth;
+    // when rotated 90/270, the displayed width equals the original height.
+    // We size the stage to fit the *displayed* width within wrapWidth.
+    const rotation = pageObj.rotation % 360;
+    const isSide = rotation === 90 || rotation === 270;
+    const displayedNaturalWidth  = isSide ? pdfH : pdfW;
+    const scale = wrapWidth / displayedNaturalWidth;
+
+    const renderViewport = page.getViewport({ scale });
+    mainCanvas.width  = renderViewport.width;
+    mainCanvas.height = renderViewport.height;
     const ctx = mainCanvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
-    mainCanvas.style.transform = pageObj.rotation ? `rotate(${pageObj.rotation}deg)` : '';
-    mainCanvas.style.transformOrigin = 'center center';
+    await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+
+    // size canvas-stage to canvas natural CSS size
+    canvasStage.style.width  = (pdfW * scale) + 'px';
+    canvasStage.style.height = (pdfH * scale) + 'px';
+    canvasStage.style.transform = rotation ? `rotate(${rotation}deg)` : '';
+
+    // size canvas-wrap height: when rotated 90/270 the bounding box of the
+    // rotated stage is height x width swapped. Use the displayed dimensions.
+    const displayedW = isSide ? (pdfH * scale) : (pdfW * scale);
+    const displayedH = isSide ? (pdfW * scale) : (pdfH * scale);
+    canvasWrap.style.height = displayedH + 'px';
+    // Center the stage horizontally within the wrap when rotated
+    canvasStage.style.position = 'absolute';
+    canvasStage.style.left = ((displayedW - (pdfW*scale))/2) + 'px';
+    canvasStage.style.top  = ((displayedH - (pdfH*scale))/2) + 'px';
+
+    // ensure canvas natural CSS scales fit
+    mainCanvas.style.width  = (pdfW * scale) + 'px';
+    mainCanvas.style.height = (pdfH * scale) + 'px';
+
+    // store scale for drag math
+    canvasStage.dataset.scale = scale;
+    canvasStage.dataset.pdfW  = pdfW;
+    canvasStage.dataset.pdfH  = pdfH;
+
+    // rebuild overlay
     overlay.innerHTML = '';
-    pageObj.annotations.forEach((ann, idx) => drawAnnotation(ann, idx, viewport.width, viewport.height, scale));
-    // Pending varsa onay kutusunu uygun şekilde ayarla
-    if (pendingAnnotation && pendingAnnotation.pageIndex === currentPage) {
-        document.getElementById('annotationConfirmBox').style.display = 'block';
+    pageObj.annotations.forEach((ann, idx) => drawAnnotation(ann, idx, pdfW, pdfH, scale));
+
+    updateConfirmVisibility();
+    updatePlacementHint();
+}
+
+function updateConfirmVisibility(){
+    const box = document.getElementById('annotationConfirmBox');
+    if (pendingAnnotation && pendingAnnotation.pageIndex === currentPage && pendingAnnotation.x !== undefined) {
+        box.classList.add('visible');
     } else {
-        document.getElementById('annotationConfirmBox').style.display = 'none';
+        box.classList.remove('visible');
+    }
+}
+function updatePlacementHint(){
+    if (activeTool === 'placeText' || activeTool === 'placeImage') {
+        placementHint.style.display = 'block';
+        placementHint.textContent = activeTool === 'placeText' ? 'Tap on the page to place text' : 'Tap on the page to place signature';
+    } else if (activeTool === 'redact') {
+        placementHint.style.display = 'block';
+        placementHint.textContent = 'Drag a rectangle to redact';
+    } else {
+        placementHint.style.display = 'none';
     }
 }
 
 function drawAnnotation(ann, idx, pdfW, pdfH, scale) {
     const div = document.createElement('div');
     div.className = 'annotation-item';
-    div.style.position = 'absolute';
-    div.style.pointerEvents = 'auto';
-    div.style.cursor = 'move';
     div.dataset.index = idx;
     div.dataset.type = ann.type;
-    // Redact veya image için boyutlandırma
-    if (ann.type === 'rect' || ann.type === 'image') {
+
+    // pending annotations look distinct
+    if (ann.pending) div.classList.add('pending');
+
+    if (ann.type === 'rect') {
+        div.classList.add('rect-ann');
         const x = ann.x * scale;
-        const y = (pdfH - ann.y - ann.height) * scale; // top-left
+        const y = (pdfH - ann.y - ann.height) * scale;
         div.style.left = x + 'px';
         div.style.top = y + 'px';
-        div.style.width = (ann.width * scale) + 'px';
+        div.style.width  = (ann.width  * scale) + 'px';
         div.style.height = (ann.height * scale) + 'px';
-        if (ann.type === 'rect') {
-            div.style.backgroundColor = 'black';
-            div.style.opacity = '0.9';
-        } else {
-            const img = document.createElement('img');
-            img.src = ann.dataUrl;
-            img.style.width = '100%';
-            img.style.height = '100%';
-            div.appendChild(img);
-        }
+    } else if (ann.type === 'image') {
+        div.classList.add('image-ann');
+        const x = ann.x * scale;
+        const y = (pdfH - ann.y - ann.height) * scale;
+        div.style.left = x + 'px';
+        div.style.top = y + 'px';
+        div.style.width  = (ann.width  * scale) + 'px';
+        div.style.height = (ann.height * scale) + 'px';
+        const img = document.createElement('img');
+        img.src = ann.dataUrl;
+        img.draggable = false;
+        div.appendChild(img);
     } else if (ann.type === 'text') {
-        // Metin için top-left kullan
+        div.classList.add('text-ann');
         const x = ann.x * scale;
         const y = (pdfH - ann.y) * scale;
         div.style.left = x + 'px';
         div.style.top = y + 'px';
         div.textContent = ann.text;
         div.style.fontSize = (ann.size * scale) + 'px';
-        div.style.fontFamily = 'Roboto, sans-serif';
-        div.style.color = 'black';
-        div.style.background = 'rgba(255,255,255,0.8)';
-        div.style.padding = '2px';
     }
-    // Silme butonu (sadece onaylanmış notlar için, pending değilse göster)
+
+    // draggable
+    div.classList.add('draggable');
+    attachDragHandlers(div, ann);
+
+    // delete button (only on confirmed)
     if (!ann.pending) {
         const delBtn = document.createElement('button');
-        delBtn.textContent = '🗑';
-        delBtn.title = 'Delete annotation';
-        delBtn.style.position = 'absolute';
-        delBtn.style.top = '-20px';
-        delBtn.style.right = '-20px';
-        delBtn.style.pointerEvents = 'auto';
-        delBtn.style.cursor = 'pointer';
+        delBtn.type='button';
+        delBtn.className='del-btn';
+        delBtn.title = 'Delete';
+        delBtn.textContent = '×';
+        const stop = (ev)=>{ ev.stopPropagation(); ev.preventDefault(); };
+        delBtn.addEventListener('mousedown', stop);
+        delBtn.addEventListener('touchstart', stop, {passive:false});
         delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             pages[currentPage].annotations.splice(idx, 1);
@@ -410,349 +872,393 @@ function drawAnnotation(ann, idx, pdfW, pdfH, scale) {
         });
         div.appendChild(delBtn);
     }
-    // Sürükleme olayları
-    div.addEventListener('mousedown', (e) => { if (e.target === delBtn) return; startDragging(e, div, ann); });
-    div.addEventListener('touchstart', (e) => { e.preventDefault(); startDragging(e.touches[0], div, ann); });
+
     overlay.appendChild(div);
 }
 
-// Sürükleme başlatma
-let draggedItem = null;
-let dragOffsetX = 0, dragOffsetY = 0;
+// =============================================================
+//  DRAGGING (FIXED — no re-render during drag)
+// =============================================================
+function attachDragHandlers(element, ann) {
+    let dragging = false;
+    let startClientX = 0, startClientY = 0;
+    let startAnnX = 0, startAnnY = 0; // PDF-space (bottom-up)
+    let scale = 1, pdfW = 0, pdfH = 0;
+    let rotation = 0;
 
-function startDragging(e, element, ann) {
-    draggedItem = { element, ann };
-    const clientX = e.clientX;
-    const clientY = e.clientY;
-    const rect = element.getBoundingClientRect();
-    dragOffsetX = clientX - rect.left;
-    dragOffsetY = clientY - rect.top;
-    document.addEventListener('mousemove', onDragMove);
-    document.addEventListener('mouseup', onDragEnd);
-    document.addEventListener('touchmove', onDragMoveTouch, { passive: false });
-    document.addEventListener('touchend', onDragEndTouch);
-}
+    function onPointerDown(e) {
+        if (e.target && e.target.classList && e.target.classList.contains('del-btn')) return;
+        // Don't allow drag while a tool is "placing" something new
+        if (activeTool === 'placeText' || activeTool === 'placeImage' || activeTool === 'redact') return;
+        e.preventDefault();
+        const point = getPoint(e);
+        dragging = true;
+        element.classList.add('dragging');
+        startClientX = point.clientX;
+        startClientY = point.clientY;
+        startAnnX = ann.x;
+        startAnnY = ann.y;
+        scale = parseFloat(canvasStage.dataset.scale) || 1;
+        pdfW  = parseFloat(canvasStage.dataset.pdfW)  || 0;
+        pdfH  = parseFloat(canvasStage.dataset.pdfH)  || 0;
+        rotation = (pages[currentPage].rotation || 0) % 360;
 
-async function onDragMove(e) {
-    if (!draggedItem) return;
-    moveAnnotation(e.clientX, e.clientY);
-}
-
-function onDragMoveTouch(e) {
-    if (!draggedItem) return;
-    e.preventDefault();
-    moveAnnotation(e.touches[0].clientX, e.touches[0].clientY);
-}
-
-async function moveAnnotation(clientX, clientY) {
-    const containerRect = mainCanvasContainer.getBoundingClientRect();
-    const scaleX = mainCanvas.width / containerRect.width;
-    const scaleY = mainCanvas.height / containerRect.height;
-    // Yeni sol-üst köşe konumu (container içinde)
-    const newContainerX = clientX - containerRect.left - dragOffsetX;
-    const newContainerY = clientY - containerRect.top - dragOffsetY;
-    // Canvas piksel koordinatlarına çevir
-    const canvasX = newContainerX * scaleX;
-    const canvasY = newContainerY * scaleY;
-    const pageObj = pages[currentPage];
-    const pdfPage = await pdfJsDoc.getPage(pageObj.originalIndex + 1);
-    const viewport = pdfPage.getViewport({ scale: 1 });
-    const pdfW = viewport.width, pdfH = viewport.height;
-    const scale = mainCanvas.width / pdfW;
-    const ann = draggedItem.ann;
-    if (ann.type === 'rect' || ann.type === 'image') {
-        const newPdfX = canvasX / scale;
-        const newPdfY = pdfH - (canvasY / scale + ann.height);
-        ann.x = newPdfX;
-        ann.y = newPdfY;
-    } else if (ann.type === 'text') {
-        const newPdfX = canvasX / scale;
-        const newPdfY = pdfH - (canvasY / scale);
-        ann.x = newPdfX;
-        ann.y = newPdfY;
+        document.addEventListener('mousemove', onPointerMove);
+        document.addEventListener('mouseup',   onPointerUp);
+        document.addEventListener('touchmove', onPointerMove, { passive:false });
+        document.addEventListener('touchend',  onPointerUp);
+        document.addEventListener('touchcancel', onPointerUp);
     }
-    renderMainPage();
+    function onPointerMove(e) {
+        if (!dragging) return;
+        e.preventDefault();
+        const point = getPoint(e);
+        // raw screen-pixel deltas
+        let dx = point.clientX - startClientX;
+        let dy = point.clientY - startClientY;
+        // translate screen delta -> stage-local delta by inverting rotation
+        const rad = -rotation * Math.PI/180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        const stageDX = dx*cos - dy*sin;
+        const stageDY = dx*sin + dy*cos;
+        // convert to pdf-space delta
+        const pdfDX =  stageDX / scale;
+        const pdfDY = -stageDY / scale; // y inverted (pdf bottom-up)
+        ann.x = startAnnX + pdfDX;
+        ann.y = startAnnY + pdfDY;
+        applyAnnotationPosition(element, ann, scale, pdfH);
+    }
+    function onPointerUp() {
+        if (!dragging) return;
+        dragging = false;
+        element.classList.remove('dragging');
+        document.removeEventListener('mousemove', onPointerMove);
+        document.removeEventListener('mouseup',   onPointerUp);
+        document.removeEventListener('touchmove', onPointerMove);
+        document.removeEventListener('touchend',  onPointerUp);
+        document.removeEventListener('touchcancel', onPointerUp);
+    }
+    element.addEventListener('mousedown',  onPointerDown);
+    element.addEventListener('touchstart', onPointerDown, { passive:false });
+}
+function getPoint(e) {
+    if (e.touches && e.touches.length) return { clientX:e.touches[0].clientX, clientY:e.touches[0].clientY };
+    if (e.changedTouches && e.changedTouches.length) return { clientX:e.changedTouches[0].clientX, clientY:e.changedTouches[0].clientY };
+    return { clientX:e.clientX, clientY:e.clientY };
+}
+function applyAnnotationPosition(element, ann, scale, pdfH) {
+    if (ann.type === 'rect' || ann.type === 'image') {
+        element.style.left = (ann.x * scale) + 'px';
+        element.style.top  = ((pdfH - ann.y - ann.height) * scale) + 'px';
+    } else if (ann.type === 'text') {
+        element.style.left = (ann.x * scale) + 'px';
+        element.style.top  = ((pdfH - ann.y) * scale) + 'px';
+    }
 }
 
-function onDragEnd(e) {
-    stopDrag();
-}
-
-function onDragEndTouch(e) {
-    stopDrag();
-}
-
-function stopDrag() {
-    draggedItem = null;
-    document.removeEventListener('mousemove', onDragMove);
-    document.removeEventListener('mouseup', onDragEnd);
-    document.removeEventListener('touchmove', onDragMoveTouch);
-    document.removeEventListener('touchend', onDragEndTouch);
-}
-
-// Tool butonları
-const btnAddText = document.getElementById('btnAddText');
-const btnAddSig = document.getElementById('btnAddSig');
-const btnRedact = document.getElementById('btnRedact');
-const btnRotate = document.getElementById('btnRotate');
-const btnDeletePage = document.getElementById('btnDeletePage');
-const textInputBox = document.getElementById('textInputBox');
-const sigFileBox = document.getElementById('sigFileBox');
-const textContent = document.getElementById('textContent');
-const textSize = document.getElementById('textSize');
-const applyTextBtn = document.getElementById('applyText');
-const cancelTextBtn = document.getElementById('cancelText');
-const sigFileInput = document.getElementById('sigFile');
-const cancelSigBtn = document.getElementById('cancelSig');
+// =============================================================
+//  TOOL BUTTONS
+// =============================================================
+const btnAddText        = document.getElementById('btnAddText');
+const btnAddSig         = document.getElementById('btnAddSig');
+const btnRedact         = document.getElementById('btnRedact');
+const btnRotate         = document.getElementById('btnRotate');
+const btnDeletePage     = document.getElementById('btnDeletePage');
+const textInputBox      = document.getElementById('textInputBox');
+const sigFileBox        = document.getElementById('sigFileBox');
+const textContent       = document.getElementById('textContent');
+const textSize          = document.getElementById('textSize');
+const applyTextBtn      = document.getElementById('applyText');
+const cancelTextBtn     = document.getElementById('cancelText');
+const sigFileInput      = document.getElementById('sigFile');
+const cancelSigBtn      = document.getElementById('cancelSig');
 const annotationConfirmBox = document.getElementById('annotationConfirmBox');
-const applyAnnotationBtn = document.getElementById('applyAnnotation');
-const cancelAnnotationBtn = document.getElementById('cancelAnnotation');
-const downloadEditedBtn = document.getElementById('downloadEditedBtn');
+const applyAnnotationBtn   = document.getElementById('applyAnnotation');
+const cancelAnnotationBtn  = document.getElementById('cancelAnnotation');
+const downloadEditedBtn    = document.getElementById('downloadEditedBtn');
 
+function setToolButtons(disabled){
+    btnAddText.disabled = disabled;
+    btnAddSig.disabled  = disabled;
+    btnRedact.disabled  = disabled;
+}
 function resetToolState(hideConfirm = true) {
     activeTool = null;
     isDrawing = false;
-    btnAddText.disabled = false;
-    btnAddSig.disabled = false;
-    btnRedact.disabled = false;
-    textInputBox.style.display = 'none';
-    sigFileBox.style.display = 'none';
-    if (hideConfirm) {
-        // Sadece onay bekleyen varsa göstermeye devam et, yoksa gizle
-        if (!pendingAnnotation) annotationConfirmBox.style.display = 'none';
+    setToolButtons(false);
+    textInputBox.classList.remove('visible');
+    sigFileBox.classList.remove('visible');
+    canvasWrap.style.cursor = 'default';
+    if (hideConfirm && !pendingAnnotation) {
+        annotationConfirmBox.classList.remove('visible');
     }
-    mainCanvasContainer.style.cursor = 'crosshair';
+    updatePlacementHint();
 }
 
 btnAddText.addEventListener('click', () => {
-    if (activeTool) return;
+    if (activeTool || pendingAnnotation) return;
     activeTool = 'text';
-    textInputBox.style.display = 'block';
-    sigFileBox.style.display = 'none';
-    btnAddText.disabled = true;
-    btnAddSig.disabled = true;
-    btnRedact.disabled = true;
+    textInputBox.classList.add('visible');
+    sigFileBox.classList.remove('visible');
+    setToolButtons(true);
     textContent.value = '';
     textSize.value = '16';
+    setTimeout(()=>textContent.focus(), 50);
 });
-
 applyTextBtn.addEventListener('click', () => {
     const txt = textContent.value.trim();
     const size = parseInt(textSize.value) || 16;
-    if (!txt) { alert('Enter text'); return; }
+    if (!txt) { alert('Please enter some text.'); return; }
     activeTool = 'placeText';
-    pendingAnnotation = { type: 'text', text: txt, size: size, pageIndex: currentPage, pending: true };
-    textInputBox.style.display = 'none';
-    if (currentPage === pendingAnnotation.pageIndex) {
-        annotationConfirmBox.style.display = 'block';
-    }
-    btnAddText.disabled = false;
-    btnAddSig.disabled = false;
-    btnRedact.disabled = false;
-    mainCanvasContainer.style.cursor = 'crosshair';
+    pendingAnnotation = { type: 'text', text: txt, size, pageIndex: currentPage, pending: true };
+    textInputBox.classList.remove('visible');
+    setToolButtons(false);
+    canvasWrap.style.cursor = 'crosshair';
+    updatePlacementHint();
 });
-
 cancelTextBtn.addEventListener('click', () => {
-    resetToolState(true);
     pendingAnnotation = null;
-    annotationConfirmBox.style.display = 'none';
+    resetToolState(true);
+    annotationConfirmBox.classList.remove('visible');
 });
 
 btnAddSig.addEventListener('click', () => {
-    if (activeTool) return;
+    if (activeTool || pendingAnnotation) return;
     activeTool = 'signature';
-    sigFileBox.style.display = 'block';
-    textInputBox.style.display = 'none';
-    btnAddText.disabled = true;
-    btnAddSig.disabled = true;
-    btnRedact.disabled = true;
+    sigFileBox.classList.add('visible');
+    textInputBox.classList.remove('visible');
+    setToolButtons(true);
+    sigFileInput.value='';
 });
-
 sigFileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-        pendingAnnotation = { type: 'image', dataUrl: ev.target.result, width: 100, height: 100, pageIndex: currentPage, pending: true };
+        pendingAnnotation = {
+            type: 'image',
+            dataUrl: ev.target.result,
+            mime: file.type,
+            width: 100, height: 100,
+            pageIndex: currentPage,
+            pending: true
+        };
         activeTool = 'placeImage';
-        sigFileBox.style.display = 'none';
-        btnAddText.disabled = false;
-        btnAddSig.disabled = false;
-        btnRedact.disabled = false;
-        annotationConfirmBox.style.display = 'block';
-        mainCanvasContainer.style.cursor = 'crosshair';
+        sigFileBox.classList.remove('visible');
+        setToolButtons(false);
+        canvasWrap.style.cursor = 'crosshair';
+        updatePlacementHint();
     };
     reader.readAsDataURL(file);
 });
-
 cancelSigBtn.addEventListener('click', () => {
-    resetToolState(true);
     pendingAnnotation = null;
-    annotationConfirmBox.style.display = 'none';
+    resetToolState(true);
+    annotationConfirmBox.classList.remove('visible');
 });
 
 btnRedact.addEventListener('click', () => {
-    if (activeTool) return;
+    if (activeTool || pendingAnnotation) return;
     activeTool = 'redact';
-    btnAddText.disabled = true;
-    btnAddSig.disabled = true;
-    btnRedact.disabled = true;
-    mainCanvasContainer.style.cursor = 'crosshair';
+    setToolButtons(true);
+    canvasWrap.style.cursor = 'crosshair';
+    updatePlacementHint();
 });
 
-btnRotate.addEventListener('click', () => {
+btnRotate.addEventListener('click', async () => {
+    if (currentPage < 0) return;
     pages[currentPage].rotation = (pages[currentPage].rotation + 90) % 360;
-    renderMainPage();
+    await renderMainPage();
 });
-
-btnDeletePage.addEventListener('click', () => {
-    if (pages.length <= 1) { alert('Cannot delete last page.'); return; }
+btnDeletePage.addEventListener('click', async () => {
+    if (pages.length <= 1) { alert('Cannot delete the last page.'); return; }
+    if (!confirm('Delete this page?')) return;
     pages.splice(currentPage, 1);
     if (currentPage >= pages.length) currentPage = pages.length - 1;
+    pendingAnnotation = null;
     renderPageList();
-    renderMainPage();
+    await renderMainPage();
 });
 
-// Koordinat dönüşüm yardımcısı
-function getCanvasCoords(e) {
-    const containerRect = mainCanvasContainer.getBoundingClientRect();
-    const scaleX = mainCanvas.width / containerRect.width;
-    const scaleY = mainCanvas.height / containerRect.height;
-    const containerX = e.clientX - containerRect.left;
-    const containerY = e.clientY - containerRect.top;
-    return {
-        x: containerX * scaleX,
-        y: containerY * scaleY
-    };
+// =============================================================
+//  PLACING / REDACT DRAWING — happens in STAGE-LOCAL coords
+// =============================================================
+function getStageCoords(e) {
+    // Returns coords in stage-local (un-rotated PDF px) space, then we divide by scale to get pdf coords.
+    const point = getPoint(e);
+    const stageRect = canvasStage.getBoundingClientRect();
+    const scale = parseFloat(canvasStage.dataset.scale) || 1;
+    const pdfW  = parseFloat(canvasStage.dataset.pdfW)  || 0;
+    const pdfH  = parseFloat(canvasStage.dataset.pdfH)  || 0;
+    const rotation = (pages[currentPage].rotation || 0) % 360;
+
+    // The stage element has CSS dimensions pdfW*scale × pdfH*scale, but its
+    // bounding rect reflects the rotation. We need to map a screen point back
+    // to the un-rotated stage. Use the stage center as the rotation origin.
+    const centerX = stageRect.left + stageRect.width / 2;
+    const centerY = stageRect.top  + stageRect.height / 2;
+    const dx = point.clientX - centerX;
+    const dy = point.clientY - centerY;
+    // inverse rotation
+    const rad = -rotation * Math.PI/180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    const localDX = dx*cos - dy*sin;
+    const localDY = dx*sin + dy*cos;
+    // stage natural (un-rotated) size in CSS px
+    const stageW = pdfW * scale;
+    const stageH = pdfH * scale;
+    const localX = localDX + stageW/2;
+    const localY = localDY + stageH/2;
+    return { localX, localY, scale, pdfW, pdfH };
 }
 
-// Canvas tıklama (metin/imza yerleştirme)
-mainCanvasContainer.addEventListener('click', async (e) => {
-    if (!activeTool || (activeTool !== 'placeText' && activeTool !== 'placeImage')) return;
-    const coords = getCanvasCoords(e);
+// Use canvasStage for clicks/mouse — but stage rotates, so we listen on the wrap and translate.
+canvasWrap.addEventListener('click', async (e) => {
+    if (activeTool !== 'placeText' && activeTool !== 'placeImage') return;
+    const c = getStageCoords(e);
+    if (c.localX < 0 || c.localY < 0 || c.localX > c.pdfW * c.scale || c.localY > c.pdfH * c.scale) return;
+    const pdfX = c.localX / c.scale;
+    const pdfYTop = c.localY / c.scale;
     const pageObj = pages[currentPage];
-    const pdfPage = await pdfJsDoc.getPage(pageObj.originalIndex + 1);
-    const viewport = pdfPage.getViewport({ scale: 1 });
-    const pdfW = viewport.width, pdfH = viewport.height;
-    const scale = mainCanvas.width / pdfW;
-    const pdfX = coords.x / scale;
-    const pdfY = pdfH - (coords.y / scale);
     if (activeTool === 'placeText' && pendingAnnotation) {
         pendingAnnotation.x = pdfX;
-        pendingAnnotation.y = pdfY;    
-        pendingAnnotation.pageIndex = currentPage; // gerekli
+        pendingAnnotation.y = c.pdfH - pdfYTop; // baseline-ish (pdf-lib draws from baseline)
+        pendingAnnotation.pageIndex = currentPage;
         pageObj.annotations.push(pendingAnnotation);
     } else if (activeTool === 'placeImage' && pendingAnnotation) {
         const img = new Image();
         img.src = pendingAnnotation.dataUrl;
-        await new Promise(r => { img.onload = r; });
-        const imgWidth = 100; // points
-        const imgHeight = (img.naturalHeight / img.naturalWidth) * imgWidth;
+        await new Promise(r => { img.onload = r; img.onerror = r; });
+        const targetW = 120;
+        const targetH = (img.naturalHeight / img.naturalWidth) * targetW || targetW;
+        pendingAnnotation.width  = targetW;
+        pendingAnnotation.height = targetH;
         pendingAnnotation.x = pdfX;
-        pendingAnnotation.y = pdfY - imgHeight; // top-left
-        pendingAnnotation.width = imgWidth;
-        pendingAnnotation.height = imgHeight;
+        pendingAnnotation.y = c.pdfH - pdfYTop - targetH; // bottom-left
         pendingAnnotation.pageIndex = currentPage;
         pageObj.annotations.push(pendingAnnotation);
     }
-    // Araçları temizle ama onay kutusunu göster (pending hala mevcut)
     activeTool = null;
-    btnAddText.disabled = false;
-    btnAddSig.disabled = false;
-    btnRedact.disabled = false;
-    mainCanvasContainer.style.cursor = 'crosshair';
-    annotationConfirmBox.style.display = 'block';
-    renderMainPage();
+    setToolButtons(false);
+    canvasWrap.style.cursor = 'default';
+    annotationConfirmBox.classList.add('visible');
+    updatePlacementHint();
+    await renderMainPage();
 });
 
-// Redact çizimi
-mainCanvasContainer.addEventListener('mousedown', (e) => {
+// Redact rectangle — pointer down/move/up on canvas wrap
+let redactStart = null;
+let redactPreviewEl = null;
+function pointerDownWrap(e) {
     if (activeTool !== 'redact') return;
+    e.preventDefault();
+    const c = getStageCoords(e);
+    redactStart = c;
     isDrawing = true;
-    const coords = getCanvasCoords(e);
-    pendingAnnotation = { type: 'rect', startX: coords.x, startY: coords.y, width: 0, height: 0, x: 0, y: 0, pageIndex: currentPage, pending: true };
-});
-
-mainCanvasContainer.addEventListener('mouseup', async (e) => {
-    if (!isDrawing || activeTool !== 'redact' || !pendingAnnotation) return;
+    // create preview element inside overlay (positioned in stage-local px)
+    redactPreviewEl = document.createElement('div');
+    redactPreviewEl.style.position = 'absolute';
+    redactPreviewEl.style.background = 'rgba(0,0,0,.6)';
+    redactPreviewEl.style.outline = '2px dashed var(--accent)';
+    redactPreviewEl.style.left = c.localX + 'px';
+    redactPreviewEl.style.top  = c.localY + 'px';
+    redactPreviewEl.style.width = '0px';
+    redactPreviewEl.style.height = '0px';
+    overlay.appendChild(redactPreviewEl);
+}
+function pointerMoveWrap(e) {
+    if (!isDrawing || !redactStart || !redactPreviewEl) return;
+    e.preventDefault();
+    const c = getStageCoords(e);
+    const x = Math.min(c.localX, redactStart.localX);
+    const y = Math.min(c.localY, redactStart.localY);
+    const w = Math.abs(c.localX - redactStart.localX);
+    const h = Math.abs(c.localY - redactStart.localY);
+    redactPreviewEl.style.left = x + 'px';
+    redactPreviewEl.style.top  = y + 'px';
+    redactPreviewEl.style.width = w + 'px';
+    redactPreviewEl.style.height = h + 'px';
+}
+async function pointerUpWrap(e) {
+    if (!isDrawing || !redactStart) return;
     isDrawing = false;
-    const coords = getCanvasCoords(e);
-    const startX = pendingAnnotation.startX;
-    const startY = pendingAnnotation.startY;
-    const endX = coords.x;
-    const endY = coords.y;
-    const w = Math.abs(endX - startX);
-    const h = Math.abs(endY - startY);
-    if (w < 10 || h < 10) {
-        pendingAnnotation = null;
+    const c = getStageCoords(e);
+    const start = redactStart;
+    redactStart = null;
+    if (redactPreviewEl) { redactPreviewEl.remove(); redactPreviewEl = null; }
+
+    const w = Math.abs(c.localX - start.localX);
+    const h = Math.abs(c.localY - start.localY);
+    if (w < 8 || h < 8) {
         resetToolState();
         return;
     }
-    const rectX = Math.min(startX, endX);
-    const rectY = Math.min(startY, endY);
-    const pageObj = pages[currentPage];
-    const pdfPage = await pdfJsDoc.getPage(pageObj.originalIndex + 1);
-    const viewport = pdfPage.getViewport({ scale: 1 });
-    const pdfW = viewport.width, pdfH = viewport.height;
-    const scale = mainCanvas.width / pdfW;
-    const pdfX = rectX / scale;
-    const pdfY = pdfH - (rectY / scale) - (h / scale);
-    const pdfW_ = w / scale;
-    const pdfH_ = h / scale;
-    // Redact annotation'ı oluştur
+    const x = Math.min(c.localX, start.localX);
+    const y = Math.min(c.localY, start.localY);
+    // convert to pdf-space
+    const scale = c.scale, pdfH = c.pdfH;
+    const pdfX = x / scale;
+    const pdfY = pdfH - (y / scale) - (h / scale);
     const newAnn = {
         type: 'rect',
         x: pdfX,
         y: pdfY,
-        width: pdfW_,
-        height: pdfH_,
+        width:  w / scale,
+        height: h / scale,
         pending: true,
         pageIndex: currentPage
     };
-    pendingAnnotation = newAnn; // güncelle
-    pageObj.annotations.push(newAnn);
+    pendingAnnotation = newAnn;
+    pages[currentPage].annotations.push(newAnn);
     activeTool = null;
-    resetToolState(false);
-    annotationConfirmBox.style.display = 'block';
-    renderMainPage();
-});
+    setToolButtons(false);
+    canvasWrap.style.cursor = 'default';
+    annotationConfirmBox.classList.add('visible');
+    updatePlacementHint();
+    await renderMainPage();
+}
+canvasWrap.addEventListener('mousedown',  pointerDownWrap);
+canvasWrap.addEventListener('mousemove',  pointerMoveWrap);
+canvasWrap.addEventListener('mouseup',    pointerUpWrap);
+canvasWrap.addEventListener('touchstart', (e)=>{ if(activeTool==='redact'){ pointerDownWrap(e);} }, { passive:false });
+canvasWrap.addEventListener('touchmove',  (e)=>{ if(isDrawing){ pointerMoveWrap(e);} }, { passive:false });
+canvasWrap.addEventListener('touchend',   (e)=>{ if(isDrawing){ pointerUpWrap(e);} });
 
-// Onaylama işlemleri
-applyAnnotationBtn.addEventListener('click', () => {
-    if (!pendingAnnotation) return;
-    // pending'i kaldır
-    const pageObj = pages[pendingAnnotation.pageIndex];
-    const idx = pageObj.annotations.findIndex(a => a === pendingAnnotation);
-    if (idx !== -1) {
-        pageObj.annotations[idx].pending = false;
-    }
-    pendingAnnotation = null;
-    annotationConfirmBox.style.display = 'none';
-    renderMainPage();
-});
-
-cancelAnnotationBtn.addEventListener('click', () => {
+// Apply / cancel
+applyAnnotationBtn.addEventListener('click', async () => {
     if (!pendingAnnotation) return;
     const pageObj = pages[pendingAnnotation.pageIndex];
     const idx = pageObj.annotations.findIndex(a => a === pendingAnnotation);
-    if (idx !== -1) {
-        pageObj.annotations.splice(idx, 1);
-    }
+    if (idx !== -1) pageObj.annotations[idx].pending = false;
     pendingAnnotation = null;
-    annotationConfirmBox.style.display = 'none';
-    renderMainPage();
+    annotationConfirmBox.classList.remove('visible');
+    await renderMainPage();
+});
+cancelAnnotationBtn.addEventListener('click', async () => {
+    if (!pendingAnnotation) return;
+    const pageObj = pages[pendingAnnotation.pageIndex];
+    const idx = pageObj.annotations.findIndex(a => a === pendingAnnotation);
+    if (idx !== -1) pageObj.annotations.splice(idx, 1);
+    pendingAnnotation = null;
+    annotationConfirmBox.classList.remove('visible');
+    await renderMainPage();
 });
 
-// Sayfa sıralama sürükleme
+// Reorder
 let dragSrcIndex = null;
 function handleDragStart(e) {
     dragSrcIndex = parseInt(this.dataset.index);
     e.dataTransfer.effectAllowed = 'move';
-    this.style.opacity = '0.4';
+    this.classList.add('drag-src');
 }
-function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    this.classList.add('drag-target');
+}
 function handleDrop(e) {
     e.preventDefault();
+    this.classList.remove('drag-target');
     const destIndex = parseInt(this.dataset.index);
     if (dragSrcIndex !== null && dragSrcIndex !== destIndex) {
         const moved = pages.splice(dragSrcIndex, 1)[0];
@@ -764,59 +1270,143 @@ function handleDrop(e) {
         renderMainPage();
     }
 }
-function handleDragEnd(e) { this.style.opacity = '1'; dragSrcIndex = null; }
+function handleDragEnd(){
+    this.classList.remove('drag-src');
+    document.querySelectorAll('.drag-target').forEach(n=>n.classList.remove('drag-target'));
+    dragSrcIndex = null;
+}
 
-// ----- Download edited PDF -----
+// Download edited PDF
 downloadEditedBtn.addEventListener('click', async () => {
     if (!pdfDoc || pages.length === 0) return;
-    const newPdf = await PDFLib.PDFDocument.create();
-    let robotoFont = null;
-    if (fontBytes) {
-        try { robotoFont = await newPdf.embedFont(fontBytes); } catch(e) {}
-    }
-    const originalPdf = await PDFLib.PDFDocument.load(originalPdfBytes, { ignoreEncryption: true });
-    for (const pageObj of pages) {
-        const [copiedPage] = await newPdf.copyPages(originalPdf, [pageObj.originalIndex]);
-        if (pageObj.rotation) copiedPage.setRotation(PDFLib.degrees(pageObj.rotation));
-        newPdf.addPage(copiedPage);
-        for (const ann of pageObj.annotations) {
-            if (ann.pending) continue; // onaylanmamışları atla
-            if (ann.type === 'text') {
-                const font = robotoFont || (await newPdf.embedFont(PDFLib.StandardFonts.Helvetica));
-                copiedPage.drawText(ann.text, {
-                    x: ann.x,
-                    y: ann.y,
-                    size: ann.size,
-                    font: font,
-                    color: PDFLib.rgb(0,0,0)
-                });
-            } else if (ann.type === 'image') {
-                const imgBytes = await (await fetch(ann.dataUrl)).arrayBuffer();
-                let image;
-                if (ann.dataUrl.includes('image/png')) image = await newPdf.embedPng(imgBytes);
-                else image = await newPdf.embedJpg(imgBytes);
-                copiedPage.drawImage(image, {
-                    x: ann.x,
-                    y: ann.y,
-                    width: ann.width,
-                    height: ann.height
-                });
-            } else if (ann.type === 'rect') {
-                copiedPage.drawRectangle({
-                    x: ann.x,
-                    y: ann.y,
-                    width: ann.width,
-                    height: ann.height,
-                    color: PDFLib.rgb(0,0,0),
-                    borderWidth: 0,
-                });
+    const editStatus = document.getElementById('editStatus');
+    editStatus.textContent = 'Building edited PDF…';
+    editStatus.className='status';
+    try{
+        const newPdf = await PDFLib.PDFDocument.create();
+        let robotoFont = null;
+        if (fontBytes) {
+            try { robotoFont = await newPdf.embedFont(fontBytes); } catch {}
+        }
+        const fallbackFont = await newPdf.embedFont(PDFLib.StandardFonts.Helvetica);
+        const originalPdf = await PDFLib.PDFDocument.load(originalPdfBytes, { ignoreEncryption: true });
+        for (const pageObj of pages) {
+            const [copiedPage] = await newPdf.copyPages(originalPdf, [pageObj.originalIndex]);
+            if (pageObj.rotation) copiedPage.setRotation(PDFLib.degrees(pageObj.rotation));
+            newPdf.addPage(copiedPage);
+            for (const ann of pageObj.annotations) {
+                if (ann.pending) continue;
+                if (ann.type === 'text') {
+                    copiedPage.drawText(ann.text, {
+                        x: ann.x, y: ann.y,
+                        size: ann.size,
+                        font: robotoFont || fallbackFont,
+                        color: PDFLib.rgb(0,0,0)
+                    });
+                } else if (ann.type === 'image') {
+                    const imgBytes = await (await fetch(ann.dataUrl)).arrayBuffer();
+                    let image;
+                    if ((ann.mime||ann.dataUrl).includes('png')) image = await newPdf.embedPng(imgBytes);
+                    else image = await newPdf.embedJpg(imgBytes);
+                    copiedPage.drawImage(image, {
+                        x: ann.x, y: ann.y,
+                        width: ann.width, height: ann.height
+                    });
+                } else if (ann.type === 'rect') {
+                    copiedPage.drawRectangle({
+                        x: ann.x, y: ann.y,
+                        width: ann.width, height: ann.height,
+                        color: PDFLib.rgb(0,0,0),
+                        borderWidth: 0
+                    });
+                }
             }
         }
+        const bytes = await newPdf.save();
+        downloadBlob(bytes, 'edited.pdf', 'application/pdf');
+        editStatus.textContent = `✅ Downloaded — ${fmtBytes(bytes.byteLength)}`;
+        editStatus.className='status ok';
+    }catch(e){
+        editStatus.textContent = '❌ ' + e.message;
+        editStatus.className='status err';
     }
-    const bytes = await newPdf.save();
-    downloadBlob(bytes, 'edited.pdf', 'application/pdf');
+});
+
+// Re-render on resize so the canvas fits
+let resizeT;
+window.addEventListener('resize', ()=>{
+    clearTimeout(resizeT);
+    resizeT = setTimeout(()=>{ if (pdfJsDoc) renderMainPage(); }, 150);
+});
+
+// =============================================================
+//  4. COMPRESS PDF
+// =============================================================
+const PRESETS = {
+    high:    { dpi: 150, jpegQuality: 0.85 },
+    medium:  { dpi: 110, jpegQuality: 0.72 },
+    low:     { dpi: 85,  jpegQuality: 0.6  },
+    extreme: { dpi: 70,  jpegQuality: 0.45 },
+};
+document.getElementById('compressBtn').addEventListener('click', async () => {
+    const file = document.getElementById('compressFileInput').files[0];
+    const status = document.getElementById('compressStatus');
+    const progress = document.getElementById('compressProgress');
+    const presetName = document.getElementById('compressPreset').value;
+    const preset = PRESETS[presetName];
+    status.className='status';
+    if (!file) { status.textContent='Choose a PDF first.'; status.className='status err'; return; }
+    try{
+        status.textContent = 'Loading PDF…';
+        progress.style.display = 'block';
+        progress.value = 0;
+        const buf = await file.arrayBuffer();
+        const srcDoc = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
+        const newPdf = await PDFLib.PDFDocument.create();
+        const numPages = srcDoc.numPages;
+        progress.max = numPages;
+        for (let i = 1; i <= numPages; i++) {
+            status.textContent = `Compressing page ${i} of ${numPages}…`;
+            const page = await srcDoc.getPage(i);
+            // pdf.js viewport scale 1 = 72 DPI, so target/72 gives the scale
+            const scale = preset.dpi / 72;
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            const ctx = canvas.getContext('2d');
+            // white bg in case page has transparency
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            const jpegDataUrl = canvas.toDataURL('image/jpeg', preset.jpegQuality);
+            const jpegBytes = await (await fetch(jpegDataUrl)).arrayBuffer();
+            const jpegImg = await newPdf.embedJpg(jpegBytes);
+            // Original page size in points
+            const origViewport = page.getViewport({ scale: 1 });
+            const newPage = newPdf.addPage([origViewport.width, origViewport.height]);
+            newPage.drawImage(jpegImg, {
+                x: 0, y: 0,
+                width: origViewport.width,
+                height: origViewport.height,
+            });
+            progress.value = i;
+            // free memory
+            canvas.width = 0; canvas.height = 0;
+        }
+        status.textContent = 'Saving…';
+        const bytes = await newPdf.save();
+        const ratio = ((1 - bytes.byteLength / buf.byteLength) * 100).toFixed(1);
+        downloadBlob(bytes, file.name.replace(/\.pdf$/i,'') + '_compressed.pdf', 'application/pdf');
+        status.textContent = `✅ Done — ${fmtBytes(buf.byteLength)} → ${fmtBytes(bytes.byteLength)} (${ratio}% smaller)`;
+        status.className = 'status ' + (bytes.byteLength < buf.byteLength ? 'ok' : '');
+        progress.style.display = 'none';
+    }catch(e){
+        status.textContent = '❌ ' + e.message;
+        status.className='status err';
+        progress.style.display = 'none';
+    }
 });
 </script>
-
 </body>
 </html>
