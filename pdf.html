@@ -164,6 +164,41 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     margin-top:14px;line-height:1.5;
 }
 
+.file-preview{
+    margin-top:14px;
+    background:var(--surface-2);
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius-sm);
+    max-height:320px;overflow-y:auto;
+}
+.file-preview .preview-header{
+    padding:10px 14px;
+    background:var(--navy-700);
+    border-bottom:1px solid var(--border-soft);
+    font-size:13px;font-weight:600;color:var(--text);
+    position:sticky;top:0;
+}
+.file-preview .preview-empty{
+    padding:18px 14px;text-align:center;color:var(--text-muted);font-size:14px;
+}
+.file-preview ul{list-style:none;margin:0;padding:6px 0;}
+.file-preview li{
+    padding:7px 14px;font-size:13px;
+    color:var(--text-dim);
+    border-bottom:1px solid var(--border-soft);
+    display:flex;align-items:baseline;gap:10px;
+}
+.file-preview li:last-child{border-bottom:none;}
+.file-preview .ext{
+    flex:0 0 auto;font-size:11px;font-weight:600;
+    padding:2px 7px;border-radius:4px;
+    background:var(--navy-600);color:#fff;text-transform:uppercase;
+}
+.file-preview .ext.pdf{background:#c0392b;}
+.file-preview .ext.doc,.file-preview .ext.docx{background:#2d5fb3;}
+.file-preview .fname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
+.file-preview .fpath{font-size:11px;color:var(--text-muted);font-style:italic;}
+
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
 
 /* ===================== EDIT PDF ===================== */
@@ -246,7 +281,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 }
 .annotation-item.text-ann.pending{border-color:var(--accent);background:rgba(107,164,255,.25);color:#fff;}
 .annotation-item.rect-ann.black{background:#000;}
-.annotation-item.rect-ann.white{background:#fff;border:1px solid #888;}
+.annotation-item.rect-ann.white{background:#fff;}
 .annotation-item.rect-ann.pending{outline:2px dashed var(--accent);outline-offset:-2px;}
 .annotation-item.rect-ann.black.pending{background:rgba(0,0,0,.55);}
 .annotation-item.rect-ann.white.pending{background:rgba(255,255,255,.6);}
@@ -416,15 +451,18 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 <div id="collect" class="tabcontent visible">
     <div class="card">
         <h2>Collect PDF & Word files</h2>
-        <p class="lead">Pick a main folder. Every PDF, DOC and DOCX inside its subfolders will be copied into a new <strong>Combined</strong> folder created in that location.</p>
+        <p class="lead">Pick a main folder. Every PDF, DOC and DOCX inside its subfolders will be listed for review, then copied into a new <strong>Combined</strong> folder.</p>
         <div class="row">
             <button id="selectDirBtn" class="btn">📂 Select main folder</button>
+            <button id="confirmCollectBtn" class="btn success" style="display:none;">✔ Copy these files</button>
+            <button id="cancelCollectBtn" class="btn ghost" style="display:none;">Cancel</button>
         </div>
         <div id="progressContainer" style="display:none;">
             <progress id="progressBar" value="0" max="100"></progress>
         </div>
         <div id="collectStatus" class="status"></div>
-        <div class="note">Your browser will ask permission to write files inside the folder you choose. Requires Chrome, Edge, or Opera.</div>
+        <div id="filePreview" class="file-preview" style="display:none;"></div>
+        <div class="note">Your browser will ask permission to write files inside the folder you choose. Tip: in the picker, you can either click a folder once and press <strong>Select</strong>, or double-click to enter and then <strong>Select</strong>. Both work. Requires Chrome, Edge, or Opera.</div>
     </div>
 </div>
 
@@ -504,6 +542,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                     <div id="annotationConfirmBox" class="annotation-confirm">
                         <span class="label" id="annotationLabel">Drag corners to resize · drag center to move · then apply.</span>
                         <button id="applyAnnotation" class="btn success">✔ Apply</button>
+                        <button id="cancelAnnotation" class="btn danger">✘ Cancel</button>
                     </div>
                 </div>
             </div>
@@ -575,34 +614,116 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 });
 
 // =============================================================
-//  1. COLLECT
+//  1. COLLECT — two-step: scan + preview, then copy on confirmation
 // =============================================================
-document.getElementById('selectDirBtn').addEventListener('click', async () => {
+let collectState = null; // { dirHandle, targetFiles }
+
+const selectDirBtnEl    = document.getElementById('selectDirBtn');
+const confirmCollectBtn = document.getElementById('confirmCollectBtn');
+const cancelCollectBtn  = document.getElementById('cancelCollectBtn');
+const filePreviewEl     = document.getElementById('filePreview');
+
+function resetCollectUI() {
+    collectState = null;
+    selectDirBtnEl.style.display = '';
+    confirmCollectBtn.style.display = 'none';
+    cancelCollectBtn.style.display = 'none';
+    filePreviewEl.style.display = 'none';
+    filePreviewEl.innerHTML = '';
+    document.getElementById('progressContainer').style.display = 'none';
+}
+
+function renderFilePreview(files) {
+    filePreviewEl.innerHTML = '';
+    const header = document.createElement('div');
+    header.className = 'preview-header';
+    header.textContent = `Found ${files.length} file(s) — these will be copied:`;
+    filePreviewEl.appendChild(header);
+    if (!files.length) {
+        const empty = document.createElement('div');
+        empty.className = 'preview-empty';
+        empty.textContent = 'No PDF or Word files in this folder.';
+        filePreviewEl.appendChild(empty);
+        return;
+    }
+    const ul = document.createElement('ul');
+    files.forEach(f => {
+        const li = document.createElement('li');
+        const ext = (f.extension || '').toLowerCase();
+        const extEl = document.createElement('span');
+        extEl.className = 'ext ' + ext;
+        extEl.textContent = ext;
+        const nameEl = document.createElement('span');
+        nameEl.className = 'fname';
+        nameEl.textContent = f.name;
+        li.appendChild(extEl);
+        li.appendChild(nameEl);
+        if (f.relativePath) {
+            const pathEl = document.createElement('span');
+            pathEl.className = 'fpath';
+            pathEl.textContent = '/' + f.relativePath.replace(/\/$/, '');
+            li.appendChild(pathEl);
+        }
+        ul.appendChild(li);
+    });
+    filePreviewEl.appendChild(ul);
+    filePreviewEl.style.display = 'block';
+}
+
+selectDirBtnEl.addEventListener('click', async () => {
     if (!window.showDirectoryPicker) {
         alert('Your browser does not support the File System Access API. Please use Chrome, Edge, or Opera.');
         return;
     }
     const status = document.getElementById('collectStatus');
-    const progContainer = document.getElementById('progressContainer');
-    const progBar = document.getElementById('progressBar');
     status.className='status';
     try {
-        const dirHandle = await window.showDirectoryPicker();
+        const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
         status.textContent = 'Scanning folder…';
-        progContainer.style.display = 'block';
-        progBar.value = 0;
-        const combinedHandle = await dirHandle.getDirectoryHandle('Combined', { create: true });
         const allFiles = [];
         await scanDirectory(dirHandle, '', allFiles);
         const extensions = ['pdf', 'doc', 'docx'];
         const targetFiles = allFiles.filter(f => extensions.includes(f.extension.toLowerCase()));
-        if (targetFiles.length === 0) {
-            status.textContent = 'No PDF or Word files found.';
-            progContainer.style.display = 'none';
+        renderFilePreview(targetFiles);
+        if (!targetFiles.length) {
+            status.textContent = 'No PDF or Word files found in this folder.';
+            status.className='status err';
             return;
         }
-        status.textContent = `Found ${targetFiles.length} file(s). Copying…`;
-        progBar.max = targetFiles.length;
+        collectState = { dirHandle, targetFiles };
+        status.textContent = `Ready — review the list and click "Copy these files" to start, or cancel.`;
+        status.className='status';
+        selectDirBtnEl.style.display = 'none';
+        confirmCollectBtn.style.display = '';
+        cancelCollectBtn.style.display = '';
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            status.textContent = '';
+        } else {
+            status.textContent = '❌ ' + err.message;
+            status.className='status err';
+        }
+    }
+});
+
+cancelCollectBtn.addEventListener('click', () => {
+    resetCollectUI();
+    document.getElementById('collectStatus').textContent = '';
+});
+
+confirmCollectBtn.addEventListener('click', async () => {
+    if (!collectState) return;
+    const { dirHandle, targetFiles } = collectState;
+    const status = document.getElementById('collectStatus');
+    const progContainer = document.getElementById('progressContainer');
+    const progBar = document.getElementById('progressBar');
+    confirmCollectBtn.disabled = true;
+    cancelCollectBtn.disabled  = true;
+    progContainer.style.display = 'block';
+    progBar.value = 0;
+    progBar.max = targetFiles.length;
+    try {
+        const combinedHandle = await dirHandle.getDirectoryHandle('Combined', { create: true });
         let processed = 0;
         for (const fileInfo of targetFiles) {
             const fileData = await fileInfo.handle.getFile();
@@ -618,13 +739,21 @@ document.getElementById('selectDirBtn').addEventListener('click', async () => {
         }
         status.textContent = `✅ Done — ${targetFiles.length} file(s) copied to the "Combined" folder.`;
         status.className='status ok';
-        progContainer.style.display = 'none';
     } catch (err) {
-        status.textContent = '❌ Cancelled or error: ' + err.message;
+        status.textContent = '❌ ' + err.message;
         status.className='status err';
+    } finally {
+        confirmCollectBtn.disabled = false;
+        cancelCollectBtn.disabled  = false;
         progContainer.style.display = 'none';
+        // Keep preview visible so the user can confirm what was copied; reset buttons.
+        confirmCollectBtn.style.display = 'none';
+        cancelCollectBtn.style.display = 'none';
+        selectDirBtnEl.style.display = '';
+        collectState = null;
     }
 });
+
 async function scanDirectory(dirHandle, relativePath, accumulator) {
     for await (const [name, handle] of dirHandle.entries()) {
         if (handle.kind === 'file') {
@@ -700,12 +829,25 @@ const mainCanvas   = document.getElementById('mainCanvas');
 const overlay      = document.getElementById('overlay');
 const placementHint= document.getElementById('placementHint');
 
-// load font (best-effort) — Roboto Latin-Ext subset includes Turkish characters
+// load font (best-effort) — use a FULL Roboto TTF (subset files miss basic glyphs).
+// Try multiple sources so we degrade gracefully if one CDN is down.
 (async () => {
-    try {
-        const resp = await fetch('https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-ext-400-normal.ttf');
-        if (resp.ok) fontBytes = new Uint8Array(await resp.arrayBuffer());
-    } catch {}
+    const sources = [
+        'https://cdn.jsdelivr.net/gh/PolymerElements/font-roboto-local@master/fonts/roboto/Roboto-Regular.ttf',
+        'https://cdn.jsdelivr.net/gh/googlefonts/roboto-2@master/src/hinted/Roboto-Regular.ttf',
+    ];
+    for (const url of sources) {
+        try {
+            const resp = await fetch(url);
+            if (resp.ok) {
+                const buf = await resp.arrayBuffer();
+                if (buf.byteLength > 50000) {       // sanity check (real TTF is ~170 KB)
+                    fontBytes = new Uint8Array(buf);
+                    return;
+                }
+            }
+        } catch {}
+    }
 })();
 
 document.getElementById('loadPdfBtn').addEventListener('click', async () => {
@@ -1139,6 +1281,7 @@ const cancelSigBtn      = document.getElementById('cancelSig');
 const cancelRedactBtn   = document.getElementById('cancelRedact');
 const annotationConfirmBox = document.getElementById('annotationConfirmBox');
 const applyAnnotationBtn   = document.getElementById('applyAnnotation');
+const cancelAnnotationBtn  = document.getElementById('cancelAnnotation');
 const downloadEditedBtn    = document.getElementById('downloadEditedBtn');
 
 // =============================================================
@@ -1148,11 +1291,13 @@ const history = [];
 const HISTORY_MAX = 30;
 
 function pushHistory() {
-    // Deep snapshot of pages state
+    // Deep snapshot of pages state — but EXCLUDE annotations that are still pending,
+    // because they only become "real" once the user applies them. Otherwise Undo
+    // would resurrect a half-finished annotation as a ghost outline.
     const snapshot = pages.map(p => ({
         originalIndex: p.originalIndex,
         rotation: p.rotation,
-        annotations: p.annotations.map(a => ({...a}))
+        annotations: p.annotations.filter(a => !a.pending).map(a => ({...a}))
     }));
     history.push({
         pages: snapshot,
@@ -1455,14 +1600,25 @@ canvasWrap.addEventListener('touchstart', (e)=>{ if(activeTool==='redact'){ poin
 canvasWrap.addEventListener('touchmove',  (e)=>{ if(isDrawing){ pointerMoveWrap(e);} }, { passive:false });
 canvasWrap.addEventListener('touchend',   (e)=>{ if(isDrawing){ pointerUpWrap(e);} });
 
-// Apply — confirms the pending annotation (no longer draggable/resizable, no cancel button)
-// To undo, the user uses the Undo button in the toolbar.
+// Apply — confirms the pending annotation; pushes a snapshot before so the user
+// can roll back via the Undo toolbar button.
 applyAnnotationBtn.addEventListener('click', async () => {
     if (!pendingAnnotation) return;
     pushHistory();
     const pageObj = pages[pendingAnnotation.pageIndex];
     const idx = pageObj.annotations.findIndex(a => a === pendingAnnotation);
     if (idx !== -1) pageObj.annotations[idx].pending = false;
+    pendingAnnotation = null;
+    annotationConfirmBox.classList.remove('visible');
+    await renderMainPage();
+});
+
+// Cancel — discards the pending annotation entirely (no history snapshot).
+cancelAnnotationBtn.addEventListener('click', async () => {
+    if (!pendingAnnotation) return;
+    const pageObj = pages[pendingAnnotation.pageIndex];
+    const idx = pageObj.annotations.findIndex(a => a === pendingAnnotation);
+    if (idx !== -1) pageObj.annotations.splice(idx, 1);
     pendingAnnotation = null;
     annotationConfirmBox.classList.remove('visible');
     await renderMainPage();
@@ -1514,7 +1670,11 @@ downloadEditedBtn.addEventListener('click', async () => {
         }
         let robotoFont = null;
         if (fontBytes && window.fontkit) {
-            try { robotoFont = await newPdf.embedFont(fontBytes, { subset: true }); } catch (err) {
+            try {
+                // subset:true keeps the embedded font small (only used glyphs).
+                // We use the full Roboto TTF, so any character (Turkish etc.) maps correctly.
+                robotoFont = await newPdf.embedFont(fontBytes, { subset: true });
+            } catch (err) {
                 console.warn('Roboto embed failed, falling back to Helvetica:', err);
             }
         }
@@ -1558,11 +1718,13 @@ downloadEditedBtn.addEventListener('click', async () => {
                     });
                 } else if (ann.type === 'rect') {
                     const isWhite = ann.color === 'white';
+                    const fill = isWhite ? PDFLib.rgb(1,1,1) : PDFLib.rgb(0,0,0);
                     copiedPage.drawRectangle({
                         x: ann.x, y: ann.y,
                         width: ann.width, height: ann.height,
-                        color: isWhite ? PDFLib.rgb(1,1,1) : PDFLib.rgb(0,0,0),
-                        borderWidth: 0
+                        color: fill,
+                        borderColor: fill,
+                        borderWidth: 0,
                     });
                 }
             }
