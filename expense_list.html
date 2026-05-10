@@ -1603,6 +1603,9 @@ function toast(msg, type='') {
 /* ========== Excel Export (ExcelJS) ========== */
 async function exportExcel() {
   if (state.entries.length === 0) return toast('Dışa aktarılacak kayıt yok','error');
+  // Use the same filtered + sorted view that the table displays
+  const exportEntries = getFilteredEntries().map(x => x.entry);
+  if (exportEntries.length === 0) return toast('Filtreyle eşleşen kayıt yok','error');
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Expense Tracker';
@@ -1699,7 +1702,7 @@ async function exportExcel() {
 
   // Data rows starting at row 6
   const maxRow = 316;
-  state.entries.forEach((e, idx)=>{
+  exportEntries.forEach((e, idx)=>{
     const r = 6 + idx;
     const cDate = sh.getCell(r,1);
     if (e.date) {
@@ -1739,7 +1742,7 @@ async function exportExcel() {
   });
 
   // Add empty formula rows up to 316 (matches original template)
-  for (let r = 6 + state.entries.length; r <= maxRow; r++) {
+  for (let r = 6 + exportEntries.length; r <= maxRow; r++) {
     sh.getCell(r,14).value = { formula: `IF(M${r}="","",IF(M${r}="TRY",L${r},IF(M${r}="USD",L${r}/$T$2*$Y$2,IF(M${r}="EUR",L${r}*$Y$2,"ERROR"))))` };
     sh.getCell(r,14).numFmt = '#,##0.00';
     sh.getCell(r,15).value = { formula: `IF(N${r}="","",N${r}/$Y$2)` };
