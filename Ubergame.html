@@ -2,422 +2,842 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#04254a">
     <title>Übergame · German Flashcards</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --navy: #04254a;
+            --navy-deep: #02152e;
+            --navy-light: #063970;
+            --navy-mid: #0a4d8f;
+            --gold: #c9a961;
+            --gold-soft: #e8d9a8;
+            --ink: #1a1f2e;
+            --paper: #fafaf7;
+            --paper-warm: #f4f1ea;
+            --line: #e5e1d6;
+            --muted: #6b7280;
+            --success: #2d6a4f;
+            --success-bg: #e8f3ee;
+            --danger: #9b2226;
+            --danger-bg: #f7e8e8;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
             user-select: none;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #000000;
-            min-height: 100vh;
-            padding: 16px;
-        }
-
-        .container {
-            max-width: 550px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 32px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        html, body {
+            height: 100%;
             overflow: hidden;
         }
 
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--navy-deep);
+            background-image:
+                radial-gradient(ellipse at top, var(--navy-light) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom, var(--navy) 0%, var(--navy-deep) 70%);
+            min-height: 100vh;
+            min-height: 100dvh;
+            color: var(--ink);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(201, 169, 97, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(10, 77, 143, 0.15) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        /* ============ HEADER ============ */
         .header {
-            background: #063970;
-            color: white;
-            padding: 20px;
+            flex-shrink: 0;
+            padding: 14px 20px 12px;
             text-align: center;
+            color: white;
+            border-bottom: 1px solid rgba(201, 169, 97, 0.2);
+            background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent);
         }
 
         .header h1 {
-            font-size: 28px;
-        }
-
-        .header p {
-            font-size: 13px;
-            opacity: 0.85;
-        }
-
-        .content {
-            padding: 24px;
-        }
-
-        /* Setup / Login styles */
-        .section {
-            margin-bottom: 20px;
-        }
-
-        .section-title {
-            font-size: 13px;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 26px;
             font-weight: 600;
-            color: #063970;
-            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        select, input {
+        .header h1 .accent {
+            color: var(--gold);
+            font-style: italic;
+        }
+
+        .header .tagline {
+            font-size: 10px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold-soft);
+            margin-top: 2px;
+            opacity: 0.7;
+        }
+
+        /* ============ SCREENS ============ */
+        .screen {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ============ SETUP SCREEN ============ */
+        #setupScreen {
+            padding: 20px;
+            gap: 16px;
+        }
+
+        .setup-card {
+            background: var(--paper);
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border: 1px solid rgba(201, 169, 97, 0.15);
+        }
+
+        .field-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--navy);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .field-label::before {
+            content: '';
+            width: 16px;
+            height: 1px;
+            background: var(--gold);
+        }
+
+        select {
             width: 100%;
-            padding: 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 16px;
-            font-size: 16px;
+            padding: 14px 16px;
+            border: 1.5px solid var(--line);
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            background: white;
+            color: var(--ink);
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23063970' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            background-size: 16px;
+            padding-right: 40px;
+            font-weight: 500;
         }
 
         .radio-group {
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
 
         .radio-label {
             flex: 1;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 16px;
+            padding: 12px 8px;
+            border: 1.5px solid var(--line);
+            border-radius: 12px;
             text-align: center;
             cursor: pointer;
             font-weight: 500;
+            font-size: 14px;
+            color: var(--ink);
+            background: white;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
 
         .radio-label:has(input:checked) {
-            background: #063970;
+            background: var(--navy);
             color: white;
-            border-color: #063970;
+            border-color: var(--navy);
+            box-shadow: 0 4px 12px rgba(4, 37, 74, 0.25);
         }
 
         .radio-label input {
             display: none;
         }
 
-        .checkbox-label {
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .toggle-row label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--ink);
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 16px;
             cursor: pointer;
         }
 
-        .checkbox-label:has(input:checked) {
-            background: #f0f4ff;
-            border-color: #063970;
+        /* iOS-style toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #d1d5db;
+            border-radius: 28px;
+            transition: 0.3s;
+        }
+
+        .switch-slider::before {
+            content: '';
+            position: absolute;
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            top: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .switch input:checked + .switch-slider {
+            background-color: var(--navy);
+        }
+
+        .switch input:checked + .switch-slider::before {
+            transform: translateX(20px);
         }
 
         button {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 16px;
-            font-size: 16px;
-            font-weight: 600;
+            font-family: inherit;
             cursor: pointer;
-            margin-bottom: 10px;
+            border: none;
+            transition: all 0.2s ease;
         }
 
         .btn-primary {
-            background: #063970;
-            color: white;
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--gold) 0%, #b89248 100%);
+            color: var(--navy-deep);
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 6px 20px rgba(201, 169, 97, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
         }
 
         .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
+            padding: 12px 16px;
+            background: white;
+            color: var(--navy);
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1.5px solid var(--line);
         }
 
-        /* SWIPE CARD CONTAINER */
-        .swipe-container {
-            position: relative;
-            width: 100%;
-            min-height: 380px;
-            margin-bottom: 20px;
-            touch-action: pan-y pinch-zoom;
+        .btn-secondary:active {
+            background: var(--paper-warm);
         }
 
-        .swipe-card {
-            position: relative;
-            width: 100%;
-            background: #063970;
-            color: white;
-            border-radius: 32px;
-            padding: 32px 20px 36px;
-            text-align: center;
+        /* ============ GAME SCREEN ============ */
+        #gameScreen {
+            padding: 12px 16px 16px;
+            gap: 10px;
+        }
+
+        .stats-bar {
             display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 16px;
-            box-shadow: 0 12px 28px rgba(0,0,0,0.2);
-            cursor: grab;
-            transition: transform 0.1s linear, opacity 0.2s ease;
-            will-change: transform;
-            touch-action: none;
+            gap: 8px;
+            flex-shrink: 0;
         }
 
-        .swipe-card:active {
+        .stat-pill {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(201, 169, 97, 0.25);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 8px 12px;
+            border-radius: 12px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .stat-pill .stat-value {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gold);
+            line-height: 1;
+        }
+
+        .stat-pill .stat-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.85;
+        }
+
+        /* CARD AREA */
+        .card-area {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+            perspective: 1500px;
+            touch-action: pan-y;
+        }
+
+        .card-3d-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-height: 60vh;
+            min-height: 380px;
+            transform-style: preserve-3d;
+            transition: transform 0.55s cubic-bezier(0.4, 0.0, 0.2, 1);
+            cursor: grab;
+            will-change: transform;
+        }
+
+        .card-3d-wrapper.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-3d-wrapper:active {
             cursor: grabbing;
         }
 
-        .card-front {
-            font-size: 32px;
-            font-weight: 800;
-            word-break: break-word;
-            line-height: 1.3;
-            max-width: 100%;
-        }
-
-        .card-translation {
-            font-size: 24px;
-            background: rgba(255,255,255,0.15);
-            padding: 12px 20px;
-            border-radius: 60px;
-            word-break: break-word;
-            max-width: 100%;
-        }
-
-        .pronunciation-hint {
-            font-size: 16px;
-            opacity: 0.8;
-            font-style: italic;
-            word-break: break-word;
-            max-width: 100%;
-            padding: 0 10px;
-        }
-
-        .speak-icon {
+        .card-face {
             position: absolute;
-            top: 16px;
-            left: 16px;
-            background: rgba(0,0,0,0.4);
-            border-radius: 40px;
-            padding: 8px 12px;
-            font-size: 20px;
-            cursor: pointer;
-            backdrop-filter: blur(4px);
-            z-index: 15;
-        }
-
-        .card-badge {
-            position: absolute;
-            bottom: 12px;
-            right: 12px;
-            font-size: 11px;
-            background: rgba(0,0,0,0.5);
-            padding: 4px 10px;
-            border-radius: 30px;
-            pointer-events: none;
-        }
-
-        .swipe-instruction {
-            background: #f8f9fa;
-            text-align: center;
-            font-size: 13px;
-            padding: 8px;
-            border-radius: 40px;
-            margin: 12px 0;
-        }
-
-        .action-row {
+            inset: 0;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 24px;
+            padding: 24px 20px;
             display: flex;
-            gap: 16px;
-            margin: 16px 0;
+            flex-direction: column;
+            box-shadow:
+                0 20px 50px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(201, 169, 97, 0.2) inset,
+                0 0 30px rgba(201, 169, 97, 0.1) inset;
+            overflow: hidden;
         }
 
-        .swipe-btn {
-            flex: 1;
-            padding: 14px;
-            border-radius: 60px;
-            font-weight: 700;
-            border: none;
-            font-size: 15px;
+        .card-front {
+            background:
+                linear-gradient(135deg, var(--navy-light) 0%, var(--navy) 50%, var(--navy-deep) 100%);
+            color: white;
         }
 
-        .swipe-btn.left {
-            background: #ffe6e5;
-            color: #b91c1c;
+        .card-back {
+            background:
+                linear-gradient(135deg, var(--paper) 0%, var(--paper-warm) 100%);
+            color: var(--navy-deep);
+            transform: rotateY(180deg);
+            box-shadow:
+                0 20px 50px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(201, 169, 97, 0.4) inset;
         }
 
-        .swipe-btn.right {
-            background: #e3f7ec;
-            color: #0a6e3d;
+        /* Decorative corner ornaments */
+        .card-face::before,
+        .card-face::after {
+            content: '';
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            border: 1.5px solid var(--gold);
+            opacity: 0.5;
         }
 
-        .counter-pill {
-            background: #eef2ff;
-            padding: 6px 14px;
-            border-radius: 40px;
-            font-weight: 600;
-            color: #063970;
-            font-size: 14px;
+        .card-face::before {
+            top: 12px;
+            right: 12px;
+            border-bottom: none;
+            border-left: none;
         }
 
-        .game-stats {
+        .card-face::after {
+            bottom: 12px;
+            left: 12px;
+            border-top: none;
+            border-right: none;
+        }
+
+        .card-back::before,
+        .card-back::after {
+            opacity: 0.4;
+        }
+
+        /* Card top row: speaker + flip hint */
+        .card-top-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+            min-height: 44px;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 2;
         }
 
-        .reset-group {
-            display: flex;
-            gap: 12px;
-            margin-top: 8px;
-        }
-
-        /* Screens */
-        #setupScreen, #gameScreen, #loginScreen, #grammarScreen {
-            display: none;
-        }
-
-        .active {
-            display: block !important;
-        }
-
-        .login-btn {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 56px;
-            height: 56px;
+        .speak-btn {
+            width: 44px;
+            height: 44px;
+            background: rgba(201, 169, 97, 0.15);
+            border: 1px solid rgba(201, 169, 97, 0.4);
             border-radius: 50%;
-            background: #063970;
-            color: white;
-            font-size: 24px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--gold);
+            transition: all 0.2s;
         }
 
-        .grammar-note {
-            background: #f8f9fa;
-            border-left: 4px solid #063970;
-            padding: 16px;
-            border-radius: 16px;
-            margin-bottom: 16px;
+        .card-back .speak-btn {
+            background: rgba(4, 37, 74, 0.08);
+            border-color: rgba(4, 37, 74, 0.2);
+            color: var(--navy);
         }
 
-        .reference-table {
-            overflow-x: auto;
-            margin: 16px 0;
+        .speak-btn:active {
+            transform: scale(0.92);
         }
 
-        .reference-table table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
+        .speak-btn svg {
+            width: 22px;
+            height: 22px;
         }
 
-        .reference-table th, .reference-table td {
+        .face-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            padding: 6px 12px;
+            background: rgba(201, 169, 97, 0.1);
+            border: 1px solid rgba(201, 169, 97, 0.3);
+            border-radius: 20px;
+        }
+
+        .card-back .face-label {
+            color: var(--navy);
+            background: rgba(4, 37, 74, 0.06);
+            border-color: rgba(4, 37, 74, 0.2);
+        }
+
+        /* Card content area (centered) */
+        .card-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 18px;
+            padding: 0 8px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .word-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(28px, 8vw, 40px);
+            font-weight: 600;
+            line-height: 1.2;
+            word-break: break-word;
+            max-width: 100%;
+            letter-spacing: 0.3px;
+        }
+
+        .pronunciation {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-style: italic;
+            opacity: 0.75;
+            padding: 8px 16px;
+            border-top: 1px solid rgba(201, 169, 97, 0.3);
+            border-bottom: 1px solid rgba(201, 169, 97, 0.3);
+            letter-spacing: 0.5px;
+        }
+
+        .card-back .pronunciation {
+            border-color: rgba(4, 37, 74, 0.2);
+        }
+
+        /* Card footer (tap hint) */
+        .card-footer {
+            text-align: center;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.5;
+            margin-top: 12px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Swipe indicators (overlay during drag) */
+        .swipe-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%) rotate(-15deg);
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0;
+            transition: opacity 0.15s;
+            pointer-events: none;
+            z-index: 10;
+            border: 3px solid;
+        }
+
+        .swipe-indicator.left-ind {
+            left: 20px;
+            color: var(--danger);
+            border-color: var(--danger);
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-50%) rotate(-15deg);
+        }
+
+        .swipe-indicator.right-ind {
+            right: 20px;
+            color: var(--success);
+            border-color: var(--success);
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-50%) rotate(15deg);
+        }
+
+        /* Action buttons (only reset + back) */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .ghost-btn {
+            flex: 1;
             padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(201, 169, 97, 0.3);
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
-        @media (max-width: 500px) {
-            .card-front { font-size: 28px; }
-            .card-translation { font-size: 22px; }
-            .swipe-card { padding: 28px 16px 32px; }
-            .speak-icon { top: 12px; left: 12px; padding: 6px 10px; font-size: 18px; }
+        .ghost-btn:active {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .ghost-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Swipe hint */
+        .swipe-hint {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .swipe-hint .left-side {
+            color: rgba(155, 34, 38, 0.85);
+        }
+
+        .swipe-hint .right-side {
+            color: rgba(45, 106, 79, 0.95);
+        }
+
+        /* Empty / complete state */
+        .complete-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            gap: 16px;
+            padding: 40px 20px;
+        }
+
+        .complete-state .icon {
+            font-size: 48px;
+        }
+
+        .complete-state h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 28px;
+            color: var(--gold);
+        }
+
+        .complete-state p {
+            font-size: 14px;
+            opacity: 0.7;
+            max-width: 280px;
+            line-height: 1.5;
+        }
+
+        /* Responsive tweaks */
+        @media (max-height: 700px) {
+            .header { padding: 10px 20px 8px; }
+            .header h1 { font-size: 22px; }
+            .card-3d-wrapper { min-height: 340px; }
+            .word-text { font-size: clamp(24px, 7vw, 34px); }
+        }
+
+        @media (max-height: 600px) {
+            .card-3d-wrapper { min-height: 300px; }
+            .stat-pill { padding: 6px 10px; }
+            .stat-pill .stat-value { font-size: 16px; }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <h1>🃏 Übergame</h1>
-        <p>swipe · learn · repeat</p>
-    </div>
+<div class="app">
+    <header class="header">
+        <h1>Über<span class="accent">game</span></h1>
+        <div class="tagline">swipe · learn · master</div>
+    </header>
 
-    <!-- LOGIN SCREEN -->
-    <div id="loginScreen" class="content">
-        <div class="section">
-            <label>Username</label>
-            <input type="text" id="loginUsername" placeholder="Username">
-        </div>
-        <div class="section">
-            <label>Password</label>
-            <input type="password" id="loginPassword" placeholder="Password">
-        </div>
-        <button class="btn-primary" id="doLoginBtn">Admin Login</button>
-        <button class="btn-secondary" id="cancelLoginBtn">Cancel</button>
-        <div id="loginMsg" style="color:red; font-size:13px; margin-top:10px;"></div>
-    </div>
-
-    <!-- SETUP SCREEN -->
-    <div id="setupScreen" class="content active">
-        <div class="section">
-            <div class="section-title">📚 Word Group</div>
+    <!-- ============ SETUP SCREEN ============ -->
+    <section id="setupScreen" class="screen active">
+        <div class="setup-card">
+            <div class="field-label">Word Group</div>
             <select id="groupSelect">
-                <option value="All">All</option>
+                <option value="All">All Groups</option>
             </select>
         </div>
-        <div class="section">
-            <div class="section-title">🔄 Direction</div>
+
+        <div class="setup-card">
+            <div class="field-label">Direction</div>
             <div class="radio-group">
-                <label class="radio-label"><input type="radio" name="direction" value="de-en" checked> DE → EN</label>
-                <label class="radio-label"><input type="radio" name="direction" value="en-de"> EN → DE</label>
+                <label class="radio-label">
+                    <input type="radio" name="direction" value="de-en" checked>
+                    <span>🇩🇪 → 🇬🇧</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="direction" value="en-de">
+                    <span>🇬🇧 → 🇩🇪</span>
+                </label>
             </div>
         </div>
-        <div class="section">
-            <label class="checkbox-label"><input type="checkbox" id="showPronCheck"> 🔊 Show pronunciation</label>
-        </div>
-        <div id="adminExtra" style="display:none;">
-            <div class="section">
-                <label class="checkbox-label"><input type="checkbox" id="mixedModeCheck" checked> 🎲 Mixed mode (shuffle)</label>
-            </div>
-            <button class="btn-secondary" id="grammarNotesBtn">📖 Grammar notes</button>
-        </div>
-        <button class="btn-primary" id="startGameBtn">✨ Start Swiping</button>
-        <button id="logoutBtn" style="display:none; margin-top:12px;" class="btn-secondary">🚪 Logout</button>
-    </div>
 
-    <!-- GAME SCREEN -->
-    <div id="gameScreen" class="content">
-        <div class="game-stats">
-            <span class="counter-pill" id="remainingCount">📇 0 cards</span>
-            <span class="counter-pill" id="dirBadge">DE → EN</span>
-        </div>
-        <div class="swipe-container" id="swipeContainer">
-            <div class="swipe-card" id="swipeCard">
-                <div class="speak-icon" id="speakCard">🔊</div>
-                <div class="card-front" id="frontText">Ready?</div>
-                <div class="card-translation" id="transBlock" style="display:none;"></div>
-                <div class="pronunciation-hint" id="pronounceHint"></div>
-                <div class="card-badge">👇 tap card</div>
+        <div class="setup-card">
+            <div class="toggle-row">
+                <label for="showPronCheck">
+                    <span>🔊</span>
+                    <span>Show pronunciation</span>
+                </label>
+                <label class="switch">
+                    <input type="checkbox" id="showPronCheck">
+                    <span class="switch-slider"></span>
+                </label>
             </div>
         </div>
-        <div class="swipe-instruction">
-            ⬅️ Drag LEFT → practice again &nbsp;&nbsp;|&nbsp;&nbsp; ➡️ Drag RIGHT → learned ✓
-        </div>
-        <div class="action-row">
-            <button class="swipe-btn left" id="leftBtn">↩️ Needs practice</button>
-            <button class="swipe-btn right" id="rightBtn">✔️ Learned</button>
-        </div>
-        <div class="reset-group">
-            <button class="btn-secondary" id="backSetupBtn">📋 Back to groups</button>
-            <button class="btn-secondary" id="resetDeckBtn">🔄 Reset deck</button>
-        </div>
-    </div>
 
-    <!-- GRAMMAR SCREEN -->
-    <div id="grammarScreen" class="content">
-        <h3 style="color:#063970;">📖 Grammar & References</h3>
-        <div id="grammarContainer" style="max-height: 60vh; overflow-y:auto; margin: 16px 0;"></div>
-        <button class="btn-primary" id="backFromGrammar">← Back</button>
-    </div>
+        <button class="btn-primary" id="startGameBtn">Start Swiping</button>
+    </section>
+
+    <!-- ============ GAME SCREEN ============ -->
+    <section id="gameScreen" class="screen">
+        <div class="stats-bar">
+            <div class="stat-pill">
+                <div>
+                    <div class="stat-value" id="remainingCount">0</div>
+                    <div class="stat-label">Remaining</div>
+                </div>
+            </div>
+            <div class="stat-pill">
+                <div>
+                    <div class="stat-value" id="learnedCount">0</div>
+                    <div class="stat-label">Learned</div>
+                </div>
+            </div>
+            <div class="stat-pill">
+                <div>
+                    <div class="stat-value" id="dirBadge" style="font-size:14px;">DE→EN</div>
+                    <div class="stat-label">Mode</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-area" id="cardArea">
+            <div class="swipe-indicator left-ind" id="leftIndicator">Repeat</div>
+            <div class="swipe-indicator right-ind" id="rightIndicator">Learned</div>
+
+            <div class="card-3d-wrapper" id="cardWrapper">
+                <!-- FRONT FACE -->
+                <div class="card-face card-front">
+                    <div class="card-top-row">
+                        <button class="speak-btn" id="speakFront" aria-label="Speak">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                            </svg>
+                        </button>
+                        <div class="face-label" id="frontLabel">Deutsch</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="word-text" id="frontText">Ready?</div>
+                        <div class="pronunciation" id="frontPron" style="display:none;"></div>
+                    </div>
+                    <div class="card-footer">tap to flip</div>
+                </div>
+
+                <!-- BACK FACE -->
+                <div class="card-face card-back">
+                    <div class="card-top-row">
+                        <button class="speak-btn" id="speakBack" aria-label="Speak">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                            </svg>
+                        </button>
+                        <div class="face-label" id="backLabel">English</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="word-text" id="backText"></div>
+                        <div class="pronunciation" id="backPron" style="display:none;"></div>
+                    </div>
+                    <div class="card-footer">tap to flip back</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="swipe-hint">
+            <span class="left-side">← repeat</span>
+            <span class="right-side">learned →</span>
+        </div>
+
+        <div class="action-buttons">
+            <button class="ghost-btn" id="backSetupBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Back
+            </button>
+            <button class="ghost-btn" id="resetDeckBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                Reset
+            </button>
+        </div>
+    </section>
 </div>
-<button class="login-btn" id="floatingLoginBtn">🔐</button>
 
 <script>
-    // ----------------------------------------------
-    //  VOCABULARY DATA (expanded from original)
-    // ----------------------------------------------
+    // ============================================================
+    //  VOCABULARY DATA
+    // ============================================================
     const WORDS_DATA = [
         {"group": "Exclamations", "german": "Hilfe!", "english": "Help!", "pronunciation": "hil-fe"},
         {"group": "Exclamations", "german": "Halt!", "english": "Stop!", "pronunciation": "halt"},
@@ -430,7 +850,7 @@
         {"group": "Feelings", "german": "Ich liebe dich.", "english": "I love you.", "pronunciation": "ih lii-be dih"},
         {"group": "Daily", "german": "Was kostet das?", "english": "How much is that?", "pronunciation": "vas kos-tet das"},
         {"group": "Daily", "german": "Ich verstehe nicht.", "english": "I don't understand.", "pronunciation": "ih fer-ştee-e niht"},
-        {"group": "Time", "german": "Wie spät ist es?", "english": "What time is it?", "pronunciation": "vii şpeet ist es?"},
+        {"group": "Time", "german": "Wie spät ist es?", "english": "What time is it?", "pronunciation": "vii şpeet ist es"},
         {"group": "Time", "german": "Es ist halb elf.", "english": "It's half past ten.", "pronunciation": "es ist halp elf"},
         {"group": "Professions", "german": "Ich bin Ingenieur.", "english": "I am an engineer.", "pronunciation": "ih bin in-je-nyör"},
         {"group": "Adjectives", "german": "neu", "english": "new", "pronunciation": "noy"},
@@ -445,37 +865,37 @@
         {"group": "Numbers", "german": "zehn", "english": "ten", "pronunciation": "tseyn"},
     ];
 
-    const GRAMMAR_NOTES = [
-        { title: "Sentence Structure", content: "Verb always second position in main clauses." },
-        { title: "Nominative Pronouns", content: "ich, du, er/sie/es, wir, ihr, sie/Sie" }
-    ];
-    const REFERENCE_TABLES = [
-        { title: "Possessive Pronouns", data: [["mein","my","mayn"],["dein","your","dayn"],["sein","his","zayn"]] }
-    ];
-
-    // ----------------------------------------------
-    //  GLOBAL STATE
-    // ----------------------------------------------
+    // ============================================================
+    //  STATE
+    // ============================================================
     let currentDeck = [];
     let currentCardObj = null;
-    let showingAnswer = false;
+    let isFlipped = false;
     let showPronunciation = false;
     let direction = "de-en";
-    let isLoggedIn = false;
-    let mixedMode = true;
-    
-    // DOM elements
-    const setupDiv = document.getElementById('setupScreen');
-    const gameDiv = document.getElementById('gameScreen');
-    const loginDiv = document.getElementById('loginScreen');
-    const grammarDiv = document.getElementById('grammarScreen');
-    const frontText = document.getElementById('frontText');
-    const transBlock = document.getElementById('transBlock');
-    const pronounceHint = document.getElementById('pronounceHint');
-    const remainingSpan = document.getElementById('remainingCount');
-    const dirBadge = document.getElementById('dirBadge');
-    const swipeCardElem = document.getElementById('swipeCard');
+    let learnedCount = 0;
+    let initialDeckSize = 0;
 
+    // DOM refs
+    const setupScreen = document.getElementById('setupScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const cardWrapper = document.getElementById('cardWrapper');
+    const cardArea = document.getElementById('cardArea');
+    const frontText = document.getElementById('frontText');
+    const backText = document.getElementById('backText');
+    const frontPron = document.getElementById('frontPron');
+    const backPron = document.getElementById('backPron');
+    const frontLabel = document.getElementById('frontLabel');
+    const backLabel = document.getElementById('backLabel');
+    const remainingSpan = document.getElementById('remainingCount');
+    const learnedSpan = document.getElementById('learnedCount');
+    const dirBadge = document.getElementById('dirBadge');
+    const leftIndicator = document.getElementById('leftIndicator');
+    const rightIndicator = document.getElementById('rightIndicator');
+
+    // ============================================================
+    //  UTILITIES
+    // ============================================================
     function shuffleArray(arr) {
         for (let i = arr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -487,71 +907,199 @@
     function buildDeck() {
         const group = document.getElementById('groupSelect').value;
         let filtered = (group === 'All') ? [...WORDS_DATA] : WORDS_DATA.filter(w => w.group === group);
-        if (filtered.length === 0) return [];
-        const shouldShuffle = isLoggedIn ? mixedMode : true;
-        if (shouldShuffle) filtered = shuffleArray([...filtered]);
-        return filtered;
+        return shuffleArray(filtered);
     }
 
     function getFront(w) { return direction === 'de-en' ? w.german : w.english; }
-    function getBack(w) { return direction === 'de-en' ? w.english : w.german; }
+    function getBack(w)  { return direction === 'de-en' ? w.english : w.german; }
+    function getFrontLang() { return direction === 'de-en' ? 'Deutsch' : 'English'; }
+    function getBackLang()  { return direction === 'de-en' ? 'English' : 'Deutsch'; }
 
+    // ============================================================
+    //  CARD UI
+    // ============================================================
     function updateCardUI() {
         if (!currentCardObj) return;
-        if (!showingAnswer) {
-            frontText.style.display = 'block';
-            frontText.innerText = getFront(currentCardObj);
-            transBlock.style.display = 'none';
-        } else {
-            frontText.style.display = 'none';
-            transBlock.style.display = 'block';
-            transBlock.innerText = getBack(currentCardObj);
-        }
+        // Always re-fetch refs (DOM may have been rebuilt after complete state)
+        const fT = document.getElementById('frontText');
+        const bT = document.getElementById('backText');
+        const fP = document.getElementById('frontPron');
+        const bP = document.getElementById('backPron');
+        const fL = document.getElementById('frontLabel');
+        const bL = document.getElementById('backLabel');
+        if (!fT || !bT) return;
+
+        fT.innerText = getFront(currentCardObj);
+        bT.innerText = getBack(currentCardObj);
+        fL.innerText = getFrontLang();
+        bL.innerText = getBackLang();
+
         if (showPronunciation && currentCardObj.pronunciation) {
-            pronounceHint.innerText = `[${currentCardObj.pronunciation}]`;
-            pronounceHint.style.display = 'block';
+            const pronText = `[${currentCardObj.pronunciation}]`;
+            if (direction === 'de-en') {
+                fP.innerText = pronText;
+                fP.style.display = 'block';
+                bP.style.display = 'none';
+            } else {
+                bP.innerText = pronText;
+                bP.style.display = 'block';
+                fP.style.display = 'none';
+            }
         } else {
-            pronounceHint.innerText = '';
-            pronounceHint.style.display = 'none';
+            fP.style.display = 'none';
+            bP.style.display = 'none';
         }
-        dirBadge.innerText = direction === 'de-en' ? '🇩🇪→🇬🇧' : '🇬🇧→🇩🇪';
+
+        dirBadge.innerText = direction === 'de-en' ? 'DE→EN' : 'EN→DE';
+        remainingSpan.innerText = currentDeck.length;
+        learnedSpan.innerText = learnedCount;
+    }
+
+    function showCompleteState() {
+        cardArea.innerHTML = `
+            <div class="complete-state">
+                <div class="icon">🎓</div>
+                <h2>Fertig!</h2>
+                <p>You've mastered all ${learnedCount} card${learnedCount !== 1 ? 's' : ''} in this deck.</p>
+                <button class="btn-primary" style="max-width:240px;" onclick="resetGame()">Practice Again</button>
+            </div>
+        `;
+        remainingSpan.innerText = 0;
     }
 
     function loadNextCard() {
         if (currentDeck.length === 0) {
-            frontText.style.display = 'block';
-            frontText.innerText = '🎉✨ Fertig! ✨🎉\nAll cards mastered!';
-            transBlock.style.display = 'none';
-            pronounceHint.innerText = '';
             currentCardObj = null;
-            remainingSpan.innerText = '✅ Complete! 0 cards';
+            showCompleteState();
             return;
         }
-        showingAnswer = false;
+        // Make sure card DOM exists (may have been replaced by complete state)
+        if (!document.getElementById('cardWrapper')) {
+            rebuildCardDOM();
+        }
+        // Reset flip
+        isFlipped = false;
+        const wrapper = document.getElementById('cardWrapper');
+        if (wrapper) {
+            wrapper.classList.remove('flipped');
+            wrapper.style.transform = '';
+            wrapper.style.opacity = '1';
+        }
         currentCardObj = currentDeck[0];
         updateCardUI();
-        remainingSpan.innerText = `📚 ${currentDeck.length} card${currentDeck.length !== 1 ? 's' : ''}`;
     }
 
+    // ============================================================
+    //  SWIPE ACTIONS
+    // ============================================================
     function swipeRight() {
         if (!currentCardObj || currentDeck.length === 0) return;
         currentDeck.shift();
-        loadNextCard();
+        learnedCount++;
+        animateOut('right');
     }
 
     function swipeLeft() {
         if (!currentCardObj || currentDeck.length === 0) return;
+        // Put card back into deck at a random later position
         const card = currentDeck.shift();
-        currentDeck.push(card);
-        loadNextCard();
+        if (currentDeck.length === 0) {
+            // Only this card was left – put it back at end
+            currentDeck.push(card);
+        } else {
+            // Insert somewhere after position 1 (at least 1 card before it)
+            const minPos = Math.min(2, currentDeck.length);
+            const maxPos = currentDeck.length;
+            const insertPos = Math.floor(Math.random() * (maxPos - minPos + 1)) + minPos;
+            currentDeck.splice(insertPos, 0, card);
+        }
+        animateOut('left');
+    }
+
+    function animateOut(dir) {
+        const wrapper = document.getElementById('cardWrapper');
+        if (!wrapper) { loadNextCard(); return; }
+        const offset = dir === 'right' ? '120%' : '-120%';
+        const rotation = dir === 'right' ? '25deg' : '-25deg';
+        wrapper.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+        wrapper.style.transform = `translateX(${offset}) rotate(${rotation})`;
+        wrapper.style.opacity = '0';
+        setTimeout(() => {
+            // Hide instantly during reset to avoid flicker
+            const w = document.getElementById('cardWrapper');
+            if (w) {
+                w.style.transition = 'none';
+                w.style.transform = 'translateX(0) rotate(0)';
+                w.style.opacity = '1';
+            }
+            requestAnimationFrame(() => {
+                const w2 = document.getElementById('cardWrapper');
+                if (w2) w2.style.transition = 'transform 0.55s cubic-bezier(0.4, 0.0, 0.2, 1)';
+                loadNextCard();
+            });
+        }, 300);
+    }
+
+    // ============================================================
+    //  RESET / START / SCREEN SWITCH
+    // ============================================================
+    function rebuildCardDOM() {
+        // Restore the card DOM (used after complete state)
+        cardArea.innerHTML = `
+            <div class="swipe-indicator left-ind" id="leftIndicator">Repeat</div>
+            <div class="swipe-indicator right-ind" id="rightIndicator">Learned</div>
+            <div class="card-3d-wrapper" id="cardWrapper">
+                <div class="card-face card-front">
+                    <div class="card-top-row">
+                        <button class="speak-btn" id="speakFront" aria-label="Speak">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                            </svg>
+                        </button>
+                        <div class="face-label" id="frontLabel">Deutsch</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="word-text" id="frontText">Ready?</div>
+                        <div class="pronunciation" id="frontPron" style="display:none;"></div>
+                    </div>
+                    <div class="card-footer">tap to flip</div>
+                </div>
+                <div class="card-face card-back">
+                    <div class="card-top-row">
+                        <button class="speak-btn" id="speakBack" aria-label="Speak">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                            </svg>
+                        </button>
+                        <div class="face-label" id="backLabel">English</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="word-text" id="backText"></div>
+                        <div class="pronunciation" id="backPron" style="display:none;"></div>
+                    </div>
+                    <div class="card-footer">tap to flip back</div>
+                </div>
+            </div>
+        `;
+        attachCardEvents();
     }
 
     function resetGame() {
+        learnedCount = 0;
         currentDeck = buildDeck();
+        initialDeckSize = currentDeck.length;
         if (currentDeck.length === 0) {
-            alert("No words in this group. Change group.");
+            alert("No words in this group.");
             showScreen('setupScreen');
             return;
+        }
+        // Rebuild DOM if we're coming back from complete state
+        if (!document.getElementById('cardWrapper')) {
+            rebuildCardDOM();
         }
         loadNextCard();
     }
@@ -559,36 +1107,30 @@
     function startGame() {
         direction = document.querySelector('input[name="direction"]:checked').value;
         showPronunciation = document.getElementById('showPronCheck').checked;
-        if (isLoggedIn) mixedMode = document.getElementById('mixedModeCheck').checked;
-        else mixedMode = true;
+        learnedCount = 0;
         currentDeck = buildDeck();
-        if (currentDeck.length === 0) { alert("No words in selected group."); return; }
-        loadNextCard();
+        initialDeckSize = currentDeck.length;
+        if (currentDeck.length === 0) {
+            alert("No words in selected group.");
+            return;
+        }
+        // Make sure card DOM is fresh
+        if (!document.getElementById('cardWrapper')) {
+            rebuildCardDOM();
+        }
         showScreen('gameScreen');
+        loadNextCard();
     }
 
     function showScreen(id) {
-        [setupDiv, gameDiv, loginDiv, grammarDiv].forEach(div => div.classList.remove('active'));
+        [setupScreen, gameScreen].forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
 
-    function showGrammar() {
-        const container = document.getElementById('grammarContainer');
-        let html = '';
-        GRAMMAR_NOTES.forEach(n => { html += `<div class="grammar-note"><h4>${n.title}</h4><p>${n.content}</p></div>`; });
-        REFERENCE_TABLES.forEach(t => {
-            html += `<div class="reference-table"><h4>${t.title}</h4><table><thead><tr><th>German</th><th>English</th><th>Pron.</th></tr></thead><tbody>`;
-            t.data.forEach(row => { html += `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td>`; });
-            html += `</tbody></table></div>`;
-        });
-        container.innerHTML = html;
-        showScreen('grammarScreen');
-    }
-
-    function speakCurrent() {
+    function speakWord(useGerman) {
         if (!currentCardObj) return;
-        const text = direction === 'de-en' ? currentCardObj.german : currentCardObj.english;
-        const lang = direction === 'de-en' ? 'de-DE' : 'en-US';
+        const text = useGerman ? currentCardObj.german : currentCardObj.english;
+        const lang = useGerman ? 'de-DE' : 'en-US';
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = lang;
         utterance.rate = 0.85;
@@ -596,124 +1138,173 @@
         window.speechSynthesis.speak(utterance);
     }
 
-    // ---------------------------------------------------------
-    //  DRAG & SWIPE (touch + mouse)
-    // ---------------------------------------------------------
-    let startX = 0, currentX = 0;
+    // ============================================================
+    //  DRAG & SWIPE
+    // ============================================================
+    let startX = 0, startY = 0, currentDX = 0, currentDY = 0;
     let isDragging = false;
-    const dragThreshold = 100;
+    let dragMoved = false;
+    let touchStartTime = 0;
+    const dragThreshold = 90;
+    const tapThreshold = 8;
+    const tapMaxDuration = 300;
 
-    function onDragStart(clientX) {
+    function onDragStart(clientX, clientY) {
         if (!currentCardObj || currentDeck.length === 0) return;
         isDragging = true;
+        dragMoved = false;
         startX = clientX;
-        swipeCardElem.style.transition = 'none';
-        swipeCardElem.style.cursor = 'grabbing';
+        startY = clientY;
+        currentDX = 0;
+        currentDY = 0;
+        touchStartTime = Date.now();
+        const wrapper = document.getElementById('cardWrapper');
+        if (wrapper) wrapper.style.transition = 'none';
     }
 
-    function onDragMove(clientX) {
+    function onDragMove(clientX, clientY) {
         if (!isDragging) return;
-        const deltaX = clientX - startX;
-        currentX = deltaX;
-        swipeCardElem.style.transform = `translateX(${deltaX}px) rotate(${deltaX * 0.02}deg)`;
-        const opacity = 1 - Math.min(Math.abs(deltaX) / 300, 0.5);
-        swipeCardElem.style.opacity = opacity;
+        currentDX = clientX - startX;
+        currentDY = clientY - startY;
+        if (Math.abs(currentDX) > tapThreshold || Math.abs(currentDY) > tapThreshold) {
+            dragMoved = true;
+        }
+        const wrapper = document.getElementById('cardWrapper');
+        if (!wrapper) return;
+        // Preserve flip state while dragging
+        const flipDeg = isFlipped ? 180 : 0;
+        wrapper.style.transform = `translateX(${currentDX}px) translateY(${currentDY * 0.3}px) rotate(${currentDX * 0.05}deg) rotateY(${flipDeg}deg)`;
+
+        // Update indicators
+        const li = document.getElementById('leftIndicator');
+        const ri = document.getElementById('rightIndicator');
+        if (currentDX > 30) {
+            ri.style.opacity = Math.min(currentDX / 120, 1);
+            li.style.opacity = 0;
+        } else if (currentDX < -30) {
+            li.style.opacity = Math.min(-currentDX / 120, 1);
+            ri.style.opacity = 0;
+        } else {
+            li.style.opacity = 0;
+            ri.style.opacity = 0;
+        }
     }
 
-    function onDragEnd() {
+    function onDragEnd(clientX, clientY) {
         if (!isDragging) return;
         isDragging = false;
-        swipeCardElem.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
-        swipeCardElem.style.cursor = 'grab';
-        const absDelta = Math.abs(currentX);
-        if (absDelta > dragThreshold) {
-            if (currentX > 0) {
-                swipeCardElem.style.transform = 'translateX(400px) rotate(20deg)';
-                setTimeout(() => { swipeRight(); resetCardPosition(); }, 150);
-            } else {
-                swipeCardElem.style.transform = 'translateX(-400px) rotate(-20deg)';
-                setTimeout(() => { swipeLeft(); resetCardPosition(); }, 150);
-            }
+        const wrapper = document.getElementById('cardWrapper');
+        if (!wrapper) return;
+
+        wrapper.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+        const li = document.getElementById('leftIndicator');
+        const ri = document.getElementById('rightIndicator');
+        li.style.opacity = 0;
+        ri.style.opacity = 0;
+
+        const duration = Date.now() - touchStartTime;
+
+        // TAP detection: small movement + short duration → flip
+        if (!dragMoved && duration < tapMaxDuration) {
+            // Tap → flip card
+            flipCard();
+            wrapper.style.transform = '';
+            return;
+        }
+
+        // SWIPE
+        if (Math.abs(currentDX) > dragThreshold) {
+            if (currentDX > 0) swipeRight();
+            else swipeLeft();
         } else {
-            resetCardPosition();
+            // Snap back
+            const flipDeg = isFlipped ? 180 : 0;
+            wrapper.style.transform = `rotateY(${flipDeg}deg)`;
+            setTimeout(() => {
+                wrapper.style.transition = 'transform 0.55s cubic-bezier(0.4, 0.0, 0.2, 1)';
+            }, 300);
         }
-        currentX = 0;
+        currentDX = 0;
+        currentDY = 0;
     }
 
-    function resetCardPosition() {
-        swipeCardElem.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
-        swipeCardElem.style.transform = 'translateX(0px) rotate(0deg)';
-        swipeCardElem.style.opacity = '1';
-        setTimeout(() => { swipeCardElem.style.transition = ''; }, 250);
+    function flipCard() {
+        if (!currentCardObj) return;
+        isFlipped = !isFlipped;
+        const wrapper = document.getElementById('cardWrapper');
+        if (!wrapper) return;
+        wrapper.style.transition = 'transform 0.55s cubic-bezier(0.4, 0.0, 0.2, 1)';
+        if (isFlipped) wrapper.classList.add('flipped');
+        else wrapper.classList.remove('flipped');
     }
 
-    function initDragEvents() {
-        // Touch events
-        swipeCardElem.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            onDragStart(e.touches[0].clientX);
-        });
-        window.addEventListener('touchmove', (e) => {
+    function attachCardEvents() {
+        const wrapper = document.getElementById('cardWrapper');
+        if (!wrapper) return;
+
+        // Touch
+        wrapper.addEventListener('touchstart', (e) => {
+            // Allow speak button to receive its own click
+            if (e.target.closest('.speak-btn')) return;
+            onDragStart(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+
+        wrapper.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
-            e.preventDefault();
-            onDragMove(e.touches[0].clientX);
-        });
-        window.addEventListener('touchend', () => onDragEnd());
-        
-        // Mouse events (desktop)
-        swipeCardElem.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            onDragStart(e.clientX);
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
-        });
-        function onMouseMove(e) {
-            if (!isDragging) return;
-            e.preventDefault();
-            onDragMove(e.clientX);
-        }
-        function onMouseUp() {
-            onDragEnd();
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-        }
-    }
+            if (e.cancelable) e.preventDefault();
+            onDragMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
 
-    // ---------------------------------------------------------
-    //  LOGIN SYSTEM
-    // ---------------------------------------------------------
-    function setupLogin() {
-        const floating = document.getElementById('floatingLoginBtn');
-        const doLogin = document.getElementById('doLoginBtn');
-        const cancel = document.getElementById('cancelLoginBtn');
-        const logout = document.getElementById('logoutBtn');
-        const adminExtra = document.getElementById('adminExtra');
-        floating.addEventListener('click', () => showScreen('loginScreen'));
-        cancel.addEventListener('click', () => showScreen('setupScreen'));
-        doLogin.addEventListener('click', () => {
-            const user = document.getElementById('loginUsername').value;
-            const pwd = document.getElementById('loginPassword').value;
-            if (user === 'Patron' && pwd === '724.Uber') {
-                isLoggedIn = true;
-                document.getElementById('loginMsg').innerText = '';
-                adminExtra.style.display = 'block';
-                logout.style.display = 'block';
-                floating.style.display = 'none';
-                showScreen('setupScreen');
-                document.getElementById('mixedModeCheck').checked = true;
-            } else {
-                document.getElementById('loginMsg').innerText = 'Wrong credentials';
+        wrapper.addEventListener('touchend', (e) => {
+            const t = e.changedTouches[0];
+            onDragEnd(t.clientX, t.clientY);
+        });
+
+        wrapper.addEventListener('touchcancel', () => {
+            isDragging = false;
+            const w = document.getElementById('cardWrapper');
+            if (w) {
+                w.style.transition = 'transform 0.3s ease';
+                const flipDeg = isFlipped ? 180 : 0;
+                w.style.transform = `rotateY(${flipDeg}deg)`;
             }
         });
-        logout.addEventListener('click', () => {
-            isLoggedIn = false;
-            adminExtra.style.display = 'none';
-            logout.style.display = 'none';
-            floating.style.display = 'block';
-            showScreen('setupScreen');
+
+        // Mouse (desktop testing)
+        wrapper.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.speak-btn')) return;
+            e.preventDefault();
+            onDragStart(e.clientX, e.clientY);
+            const onMove = (ev) => onDragMove(ev.clientX, ev.clientY);
+            const onUp = (ev) => {
+                onDragEnd(ev.clientX, ev.clientY);
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+            };
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
         });
+
+        // Speaker buttons
+        const speakFront = document.getElementById('speakFront');
+        const speakBack = document.getElementById('speakBack');
+        if (speakFront) {
+            speakFront.addEventListener('click', (e) => {
+                e.stopPropagation();
+                speakWord(direction === 'de-en');
+            });
+        }
+        if (speakBack) {
+            speakBack.addEventListener('click', (e) => {
+                e.stopPropagation();
+                speakWord(direction === 'en-de');
+            });
+        }
     }
 
+    // ============================================================
+    //  GENERAL EVENTS
+    // ============================================================
     function populateGroups() {
         const select = document.getElementById('groupSelect');
         const groups = new Set();
@@ -728,41 +1319,30 @@
 
     function bindEvents() {
         document.getElementById('startGameBtn').addEventListener('click', startGame);
-        document.getElementById('leftBtn').addEventListener('click', () => { if (currentCardObj) swipeLeft(); });
-        document.getElementById('rightBtn').addEventListener('click', () => { if (currentCardObj) swipeRight(); });
         document.getElementById('backSetupBtn').addEventListener('click', () => showScreen('setupScreen'));
         document.getElementById('resetDeckBtn').addEventListener('click', resetGame);
-        document.getElementById('grammarNotesBtn').addEventListener('click', showGrammar);
-        document.getElementById('backFromGrammar').addEventListener('click', () => showScreen('setupScreen'));
-        document.getElementById('speakCard').addEventListener('click', (e) => { e.stopPropagation(); speakCurrent(); });
-        
-        // Card tap to reveal answer (anywhere on card except speaker)
-        swipeCardElem.addEventListener('click', (e) => {
-            if (e.target.classList.contains('speak-icon')) return;
-            if (!currentCardObj || currentDeck.length === 0) return;
-            showingAnswer = !showingAnswer;
-            updateCardUI();
-        });
-        
+
         document.getElementById('showPronCheck').addEventListener('change', (e) => {
             showPronunciation = e.target.checked;
             if (currentCardObj) updateCardUI();
         });
+
         document.querySelectorAll('input[name="direction"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 direction = e.target.value;
-                if (currentCardObj && gameDiv.classList.contains('active')) updateCardUI();
+                if (currentCardObj && gameScreen.classList.contains('active')) updateCardUI();
             });
         });
+
+        attachCardEvents();
     }
 
     function init() {
         populateGroups();
-        setupLogin();
         bindEvents();
-        initDragEvents();
         showScreen('setupScreen');
     }
+
     init();
 </script>
 </body>
