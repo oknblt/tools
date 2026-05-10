@@ -101,6 +101,33 @@
     .ht-export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
     .ht-export-grid .ht-btn-secondary { min-height: 48px; }
 
+    /* Pagination controls */
+    .ht-pager {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 14px; padding-top: 14px; border-top: 1px solid #3F5A7E;
+    }
+    .ht-pager-btn {
+      min-width: 38px; height: 38px; padding: 0 10px;
+      background: #253E60; color: #E9F0FF; border: 1px solid #4C6D95; border-radius: 12px;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      font-family: var(--font-sans, system-ui);
+    }
+    .ht-pager-btn:hover:not(:disabled) { background: #2F4C74; color: #FFFFFF; border-color: #89ADDB; }
+    .ht-pager-btn:active:not(:disabled) { transform: translateY(1px); }
+    .ht-pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .ht-pager-select {
+      height: 38px; padding: 0 10px;
+      background: #0D1F33; color: #FFFFFF; border: 1px solid #5E7FA3; border-radius: 12px;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      font-family: var(--font-sans, system-ui);
+      outline: none;
+      min-width: 76px;
+      text-align: center;
+    }
+    .ht-pager-select:focus { border-color: #8AB5FF; box-shadow: 0 0 0 3px rgba(138, 181, 255, 0.25); }
+
     .ht-toast {
       position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(10px);
       background: #2A6DF0; color: #FFFFFF; font-size: 14px; padding: 12px 22px; border-radius: 60px;
@@ -180,6 +207,14 @@
 
       <ul class="ht-list" id="ht-list"></ul>
       <div class="ht-empty" id="ht-empty">No entries yet. Add your first reading above.</div>
+
+      <div class="ht-pager" id="ht-pager" style="display: none;">
+        <button class="ht-pager-btn" id="ht-pg-first" title="First page" aria-label="First page">⏮</button>
+        <button class="ht-pager-btn" id="ht-pg-prev" title="Previous page" aria-label="Previous page">◀</button>
+        <select class="ht-pager-select" id="ht-pg-select" aria-label="Select page"></select>
+        <button class="ht-pager-btn" id="ht-pg-next" title="Next page" aria-label="Next page">▶</button>
+        <button class="ht-pager-btn" id="ht-pg-last" title="Last page" aria-label="Last page">⏭</button>
+      </div>
     </div>
 
     <div class="ht-card">
@@ -190,22 +225,10 @@
     <div class="ht-card">
       <p class="ht-h">Export & backup</p>
       <div class="ht-export-grid">
-        <button id="ht-pdf" class="ht-btn ht-btn-secondary">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          PDF
-        </button>
-        <button id="ht-xlsx" class="ht-btn ht-btn-secondary">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-          Excel
-        </button>
-        <button id="ht-json-save" class="ht-btn ht-btn-secondary">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Save
-        </button>
-        <button id="ht-json-load" class="ht-btn ht-btn-secondary">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Upload
-        </button>
+        <button id="ht-json-save" class="ht-btn ht-btn-secondary">Save</button>
+        <button id="ht-json-load" class="ht-btn ht-btn-secondary">Upload</button>
+        <button id="ht-pdf" class="ht-btn ht-btn-secondary">PDF</button>
+        <button id="ht-xlsx" class="ht-btn ht-btn-secondary">Excel</button>
       </div>
       <input type="file" id="ht-file" accept="application/json,.json" style="display: none;" />
     </div>
@@ -222,6 +245,8 @@
   let records = [];
   let notes = '';
   let editingId = null;
+  const PAGE_SIZE = 10;
+  let currentPage = 1;
 
   const $ = (id) => document.getElementById(id);
   const dateEl = $('ht-date'), timeEl = $('ht-time'), sysEl = $('ht-sys'), diaEl = $('ht-dia'), pulseEl = $('ht-pulse'), descEl = $('ht-desc');
@@ -231,6 +256,8 @@
   const toastEl = $('ht-toast');
   const statsEl = $('ht-stats');
   const formTitleEl = $('ht-form-title');
+  const pagerEl = $('ht-pager');
+  const pgFirst = $('ht-pg-first'), pgPrev = $('ht-pg-prev'), pgNext = $('ht-pg-next'), pgLast = $('ht-pg-last'), pgSelect = $('ht-pg-select');
 
   function pad(n){ return String(n).padStart(2,'0'); }
   function setNow(){
@@ -285,12 +312,44 @@
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>';
   }
 
+  function totalPages(){
+    return Math.max(1, Math.ceil(records.length / PAGE_SIZE));
+  }
+
+  function renderPager(){
+    const tp = totalPages();
+    if (records.length <= PAGE_SIZE) {
+      pagerEl.style.display = 'none';
+      return;
+    }
+    pagerEl.style.display = 'flex';
+    // Build select options
+    let opts = '';
+    for (let i = 1; i <= tp; i++) {
+      opts += `<option value="${i}"${i === currentPage ? ' selected' : ''}>${i} / ${tp}</option>`;
+    }
+    pgSelect.innerHTML = opts;
+    pgFirst.disabled = currentPage === 1;
+    pgPrev.disabled = currentPage === 1;
+    pgNext.disabled = currentPage === tp;
+    pgLast.disabled = currentPage === tp;
+  }
+
   function render(){
     sortRecords();
+    // Clamp currentPage to valid range after data changes
+    const tp = totalPages();
+    if (currentPage > tp) currentPage = tp;
+    if (currentPage < 1) currentPage = 1;
+
     listEl.innerHTML = '';
     countEl.textContent = records.length;
     emptyEl.style.display = records.length === 0 ? 'block' : 'none';
-    records.forEach(r => {
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageRecords = records.slice(start, start + PAGE_SIZE);
+
+    pageRecords.forEach(r => {
       const li = document.createElement('li');
       li.className = 'ht-item';
       const row = document.createElement('div'); row.className = 'ht-item-row';
@@ -326,6 +385,7 @@
       listEl.appendChild(li);
     });
     renderStats();
+    renderPager();
   }
 
   function readForm(){
@@ -383,6 +443,7 @@
       toast('Entry updated');
     } else {
       records.push({ id: uid(), ...data });
+      currentPage = 1;
       toast('Entry added');
     }
     clearForm();
@@ -395,8 +456,19 @@
     if (records.length === 0) return;
     if (!confirm('Delete all entries? This cannot be undone.')) return;
     records = [];
+    currentPage = 1;
     render();
     toast('All entries cleared');
+  });
+
+  // Pagination handlers
+  pgFirst.addEventListener('click', () => { currentPage = 1; render(); });
+  pgPrev.addEventListener('click', () => { if (currentPage > 1) { currentPage--; render(); } });
+  pgNext.addEventListener('click', () => { if (currentPage < totalPages()) { currentPage++; render(); } });
+  pgLast.addEventListener('click', () => { currentPage = totalPages(); render(); });
+  pgSelect.addEventListener('change', (e) => {
+    const v = parseInt(e.target.value, 10);
+    if (Number.isFinite(v)) { currentPage = v; render(); }
   });
 
   notesEl.addEventListener('input', () => {
@@ -577,6 +649,7 @@
         notes = typeof data.notes === 'string' ? data.notes : '';
         notesEl.value = notes;
         autosize(notesEl);
+        currentPage = 1;
         render();
         toast('Backup loaded');
       } catch (err) {
