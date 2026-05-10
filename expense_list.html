@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Expenses List - Bulut Projects</title>
+<title>Masraf Listesi — AC_TP_037</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
@@ -61,11 +61,6 @@
     font-weight: 600;
     letter-spacing: -.01em;
   }
-.brand-tag {
-  font-size: 10px; color: #7aafd4;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  margin-top: 2px;
-}
   header.top .subtitle {
     font-size: 12px;
     opacity: .85;
@@ -115,7 +110,7 @@
   /* ===== Form Grid ===== */
   .meta-grid {
     display: grid;
-    grid-template-columns: minmax(150px, 1.4fr) minmax(130px, 1fr) minmax(160px, 1.3fr) 100px 100px auto;
+    grid-template-columns: minmax(140px, 1.3fr) minmax(120px, 1fr) minmax(140px, 1.3fr) minmax(85px, 0.7fr) minmax(85px, 0.7fr) auto;
     gap: 10px;
     align-items: end;
   }
@@ -262,8 +257,6 @@
   /* ===== Table ===== */
   .table-wrap {
     overflow-x: auto;
-    max-height: 520px;
-    overflow-y: auto;
   }
   table.expenses {
     width: 100%;
@@ -285,6 +278,167 @@
     border-right: 1px solid rgba(255,255,255,.15);
   }
   table.expenses thead th:last-child { border-right: none; }
+  /* ===== Filter dropdown ===== */
+  .filter-trigger {
+    background: rgba(255,255,255,.18);
+    border: none;
+    color: #fff;
+    width: 18px;
+    height: 18px;
+    line-height: 1;
+    border-radius: 3px;
+    margin-left: 6px;
+    cursor: pointer;
+    font-size: 10px;
+    padding: 0;
+    vertical-align: middle;
+  }
+  .filter-trigger:hover { background: rgba(255,255,255,.32); }
+  .filter-trigger.active {
+    background: #fff;
+    color: var(--primary-dark);
+    font-weight: 700;
+  }
+  .filter-pop {
+    position: absolute;
+    display: none;
+    background: #fff;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 14px;
+    min-width: 240px;
+    z-index: 100;
+  }
+  .filter-pop.show { display: block; }
+  .filter-pop-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .filter-pop-body { display: flex; flex-direction: column; gap: 8px; }
+  .filter-pop-body input {
+    padding: 7px 9px;
+    font-size: 13px;
+  }
+  .filter-pop-body .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .filter-pop-body label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 3px;
+    display: block;
+  }
+  .filter-pop-foot {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+    gap: 8px;
+  }
+  .filter-pop-foot button {
+    padding: 7px 14px;
+    font-size: 12px;
+  }
+  .filter-search {
+    padding: 7px 9px;
+    font-size: 13px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    width: 100%;
+    font-family: var(--font);
+  }
+  .filter-search:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(53,103,173,.12);
+  }
+  .filter-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #fff;
+  }
+  .filter-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 13px;
+    border-bottom: 1px solid #f3f4f7;
+  }
+  .filter-list-item:last-child { border-bottom: none; }
+  .filter-list-item:hover { background: var(--primary-light); }
+  .filter-list-item input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+  }
+  .filter-list-item.section-header {
+    background: #eef2f7;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--primary-dark);
+  }
+  .filter-list-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-style: italic;
+  }
+  .filter-quick-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .filter-quick-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    flex: 1;
+  }
+  .pager-wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    background: #fafbfc;
+    padding-left: 16px;
+  }
+  .clear-filters-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+  }
+  .clear-filters-btn:hover {
+    background: #fce8e8;
+    color: var(--danger);
+  }
+
+  /* ===== Pager ===== */
+  .pager {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+    flex: 1;
+  }
   table.expenses tbody td {
     padding: 7px 10px;
     border-bottom: 1px solid #eef0f3;
@@ -292,6 +446,43 @@
   }
   table.expenses tbody tr:hover { background: #fafbfd; }
   table.expenses tbody tr.editing { background: #fff8e6; }
+
+  .pager-info {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .pager-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .pg-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-width: 34px;
+    border: 1px solid var(--border-strong);
+    background: #fff;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text);
+  }
+  .pg-btn:hover:not(:disabled) {
+    background: var(--primary-light);
+    border-color: var(--primary);
+  }
+  .pg-btn:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+  }
+  .pg-select {
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    cursor: pointer;
+    font-family: var(--font);
+  }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .row-act {
     display: flex;
@@ -348,16 +539,23 @@
     .meta-grid .session-actions { grid-column: auto; }
   }
   @media (max-width: 900px) {
-    .meta-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .meta-grid .session-actions { grid-column: span 2; }
     .entry-grid { grid-template-columns: repeat(2, 1fr); }
     .entry-grid .span-3, .entry-grid .span-2 { grid-column: span 1; }
   }
-  @media (max-width: 600px) {
-    .meta-grid { grid-template-columns: 1fr; }
-    .meta-grid .session-actions { grid-column: span 1; }
+  @media (max-width: 760px) {
+    /* Mobile / Safari iPhone: row1 = employee full width,
+       row2 = month + filename, row3 = eur/try + eur/usd, row4 = buttons */
+    .meta-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 10px;
+    }
+    .meta-grid > .field:nth-child(1) { grid-column: span 2; }     /* employee */
+    .meta-grid > .field:nth-child(2) { grid-column: span 1; }     /* month */
+    .meta-grid > .field:nth-child(3) { grid-column: span 1; }     /* filename */
+    .meta-grid > .field:nth-child(4) { grid-column: span 1; }     /* eur/try */
+    .meta-grid > .field:nth-child(5) { grid-column: span 1; }     /* eur/usd */
+    .meta-grid > .session-actions   { grid-column: span 2; justify-self: stretch; }
+    .session-actions .btn-row { justify-content: flex-start; }
   }
 </style>
 </head>
@@ -366,9 +564,8 @@
 
   <header class="top">
     <div>
-      <h1>Expenses List</h1>
-      <div class="subtitle">Expenses List · TRY / EUR</div>
-<span class="brand-tag">Bulut Projects</span>
+      <h1>Masraf Listesi</h1>
+      <div class="subtitle">AC_TP_037 · Expenses List · TRY / EUR</div>
     </div>
     <div class="totals">
       <div class="total-card">
@@ -509,20 +706,20 @@
       <table class="expenses" id="tblExpenses">
         <thead>
           <tr>
-            <th>Tarih</th>
-            <th>Fiş-Fatura</th>
-            <th>Satıcı</th>
-            <th>Müşteri</th>
-            <th>Fabrika</th>
-            <th>Şehir</th>
-            <th>Açıklama</th>
-            <th>Masraf Türü</th>
-            <th>Birim</th>
-            <th>Alt Birim</th>
-            <th class="num">Tutar</th>
-            <th>PB</th>
-            <th class="num">TRY</th>
-            <th class="num">EUR</th>
+            <th data-col="date">Tarih <button class="filter-trigger" onclick="openFilter(event, 'date', 'date')" title="Filtrele">▾</button></th>
+            <th data-col="invoiceNo">Fiş-Fatura <button class="filter-trigger" onclick="openFilter(event, 'invoiceNo', 'text')" title="Filtrele">▾</button></th>
+            <th data-col="vendor">Satıcı <button class="filter-trigger" onclick="openFilter(event, 'vendor', 'text')" title="Filtrele">▾</button></th>
+            <th data-col="customer">Müşteri <button class="filter-trigger" onclick="openFilter(event, 'customer', 'text')" title="Filtrele">▾</button></th>
+            <th data-col="factory">Fabrika <button class="filter-trigger" onclick="openFilter(event, 'factory', 'text')" title="Filtrele">▾</button></th>
+            <th data-col="city">Şehir <button class="filter-trigger" onclick="openFilter(event, 'city', 'text')" title="Filtrele">▾</button></th>
+            <th data-col="description">Açıklama <button class="filter-trigger" onclick="openFilter(event, 'description', 'text')" title="Filtrele">▾</button></th>
+            <th data-col="expenseType">Masraf Türü <button class="filter-trigger" onclick="openFilter(event, 'expenseType', 'text')" title="Filtrele">▾</button></th>
+            <th data-col="unit">Birim <button class="filter-trigger" onclick="openFilter(event, 'unit', 'text')" title="Filtrele">▾</button></th>
+            <th data-col="subUnit">Alt Birim <button class="filter-trigger" onclick="openFilter(event, 'subUnit', 'text')" title="Filtrele">▾</button></th>
+            <th data-col="amount" class="num">Tutar <button class="filter-trigger" onclick="openFilter(event, 'amount', 'number')" title="Filtrele">▾</button></th>
+            <th data-col="currency">PB <button class="filter-trigger" onclick="openFilter(event, 'currency', 'text')" title="Filtrele">▾</button></th>
+            <th data-col="totalTry" class="num">TRY <button class="filter-trigger" onclick="openFilter(event, 'totalTry', 'number')" title="Filtrele">▾</button></th>
+            <th data-col="totalEur" class="num">EUR <button class="filter-trigger" onclick="openFilter(event, 'totalEur', 'number')" title="Filtrele">▾</button></th>
             <th>İşlem</th>
           </tr>
         </thead>
@@ -530,6 +727,37 @@
           <tr><td colspan="15" class="empty-row">Henüz masraf kaydı yok. Yukarıdaki formu doldurarak ilk kaydı ekleyin.</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Filter dropdown popover (single, repositioned per column) -->
+    <div class="filter-pop" id="filterPop">
+      <div class="filter-pop-title" id="fpTitle"></div>
+      <div class="filter-pop-body" id="fpBody"></div>
+      <div class="filter-pop-foot">
+        <button onclick="filterApplyClear()" class="ghost" id="fpClearBtn">Temizle</button>
+        <button onclick="filterApplyApply()" class="primary">Uygula</button>
+      </div>
+    </div>
+
+    <div class="pager-wrap">
+      <button onclick="clearFilters()" class="clear-filters-btn" id="clearFiltersBtn" style="display:none;">✕ Filtreleri Temizle</button>
+      <div class="pager" id="pager">
+      <div class="pager-info" id="pagerInfo">Gösterilen: 0 / 0</div>
+      <div class="pager-controls">
+        <button class="pg-btn" id="pgFirst" onclick="goPage('first')" title="İlk sayfa">⏮</button>
+        <button class="pg-btn" id="pgPrev" onclick="goPage('prev')" title="Önceki">◀</button>
+        <select id="pgPage" onchange="goPage(this.value)" class="pg-select"></select>
+        <button class="pg-btn" id="pgNext" onclick="goPage('next')" title="Sonraki">▶</button>
+        <button class="pg-btn" id="pgLast" onclick="goPage('last')" title="Son sayfa">⏭</button>
+        <select id="pgSize" onchange="setPageSize(this.value)" class="pg-select">
+          <option value="10">10/sayfa</option>
+          <option value="15">15/sayfa</option>
+          <option value="25">25/sayfa</option>
+          <option value="50">50/sayfa</option>
+          <option value="999999">Tümü</option>
+        </select>
+      </div>
+      </div>
     </div>
   </div>
 
@@ -556,6 +784,14 @@ let state = {
   entries: [],
   editingIndex: -1,
   currentSessionKey: null
+};
+
+// Table view state (filters + pagination)
+let tableView = {
+  filters: {}, // { col: { text:'', dateFrom:'', dateTo:'', numFrom:'', numTo:'' } }
+  sort: null,  // { col, dir:'asc'|'desc' }
+  page: 1,
+  pageSize: 10
 };
 
 /* ========== Combobox implementation ========== */
@@ -851,35 +1087,413 @@ function fmtNum(v) {
   return Number(v).toLocaleString('tr-TR',{minimumFractionDigits:2, maximumFractionDigits:2});
 }
 
+// Build the filtered+sorted view of state.entries.
+// tableView.filters is an object: { columnKey: { text:'', dateFrom:'', dateTo:'', numFrom:'', numTo:'' } }
+// tableView.sort is { col, dir } where dir is 'asc' or 'desc'
+function getFilteredEntries() {
+  const filters = tableView.filters;
+  const matchText = (val, q) => {
+    if (!q) return true;
+    return String(val ?? '').toLocaleLowerCase('tr').includes(q.toLocaleLowerCase('tr'));
+  };
+  const matchDateRange = (dateStr, from, to) => {
+    if (!from && !to) return true;
+    if (!dateStr) return false;
+    if (from && dateStr < from) return false;
+    if (to && dateStr > to) return false;
+    return true;
+  };
+  const matchNumRange = (val, from, to) => {
+    if ((from === '' || from === undefined || from === null) && (to === '' || to === undefined || to === null)) return true;
+    if (val === null || val === undefined || val === '') return false;
+    const n = Number(val);
+    if (isNaN(n)) return false;
+    if (from !== '' && from !== undefined && from !== null && !isNaN(Number(from)) && n < Number(from)) return false;
+    if (to !== '' && to !== undefined && to !== null && !isNaN(Number(to)) && n > Number(to)) return false;
+    return true;
+  };
+
+  let out = [];
+  state.entries.forEach((e, i) => {
+    // Date range
+    const dateF = filters.date || {};
+    if (!matchDateRange(e.date, dateF.dateFrom, dateF.dateTo)) return;
+    // Text columns — match by allowed values list (Excel-style)
+    const textCols = ['invoiceNo','vendor','customer','factory','city','description','expenseType','unit','subUnit','currency'];
+    let textPass = true;
+    for (const c of textCols) {
+      const f = filters[c];
+      if (f && Array.isArray(f.values)) {
+        const val = (e[c] === null || e[c] === undefined) ? '' : String(e[c]);
+        if (!f.values.includes(val)) { textPass = false; break; }
+      }
+    }
+    if (!textPass) return;
+    // Number range columns
+    const numCols = ['amount','totalTry','totalEur'];
+    let numPass = true;
+    for (const c of numCols) {
+      const f = filters[c];
+      if (f && !matchNumRange(e[c], f.numFrom, f.numTo)) { numPass = false; break; }
+    }
+    if (!numPass) return;
+    out.push({ entry: e, originalIndex: i });
+  });
+
+  // Sort
+  const sort = tableView.sort;
+  if (sort && sort.col && sort.dir) {
+    const col = sort.col;
+    const dir = sort.dir === 'desc' ? -1 : 1;
+    const numCols = new Set(['amount','totalTry','totalEur']);
+    const isNum = numCols.has(col);
+    out.sort((a, b) => {
+      let av = a.entry[col];
+      let bv = b.entry[col];
+      if (isNum) {
+        av = (av === null || av === undefined || av === '') ? -Infinity : Number(av);
+        bv = (bv === null || bv === undefined || bv === '') ? -Infinity : Number(bv);
+        return (av - bv) * dir;
+      }
+      // Date column: ISO strings sort correctly as text
+      av = String(av ?? '');
+      bv = String(bv ?? '');
+      return av.localeCompare(bv, 'tr') * dir;
+    });
+  }
+
+  return out;
+}
+
+// ===== Filter popover handlers =====
+let _activeFilter = { col: null, type: null };
+
+function openFilter(event, col, type) {
+  event.stopPropagation();
+  const pop = document.getElementById('filterPop');
+  const trigger = event.currentTarget;
+  _activeFilter = { col, type };
+
+  // Build body based on type
+  const titles = {
+    date:'Tarih', invoiceNo:'Fiş-Fatura', vendor:'Satıcı', customer:'Müşteri',
+    factory:'Fabrika', city:'Şehir', description:'Açıklama', expenseType:'Masraf Türü',
+    unit:'Birim', subUnit:'Alt Birim', amount:'Tutar', currency:'PB',
+    totalTry:'TRY', totalEur:'EUR'
+  };
+  document.getElementById('fpTitle').textContent = titles[col] || col;
+
+  const cur = tableView.filters[col] || {};
+  const sortDir = (tableView.sort && tableView.sort.col === col) ? tableView.sort.dir : '';
+  const body = document.getElementById('fpBody');
+
+  let bodyHTML = `
+    <div class="row">
+      <button onclick="filterSort('${col}','asc')" class="${sortDir==='asc'?'primary':''}">↑ Artan</button>
+      <button onclick="filterSort('${col}','desc')" class="${sortDir==='desc'?'primary':''}">↓ Azalan</button>
+    </div>`;
+
+  if (type === 'date') {
+    bodyHTML += `
+      <div class="row">
+        <div><label>Başlangıç</label><input type="date" id="fpDateFrom" value="${cur.dateFrom || ''}"></div>
+        <div><label>Bitiş</label><input type="date" id="fpDateTo" value="${cur.dateTo || ''}"></div>
+      </div>`;
+  } else if (type === 'number') {
+    bodyHTML += `
+      <div class="row">
+        <div><label>Min</label><input type="number" step="any" id="fpNumFrom" value="${cur.numFrom ?? ''}"></div>
+        <div><label>Max</label><input type="number" step="any" id="fpNumTo" value="${cur.numTo ?? ''}"></div>
+      </div>`;
+  } else {
+    // Excel-style checklist: collect unique values from this column across all entries
+    bodyHTML += `
+      <input type="text" class="filter-search" id="fpSearch" placeholder="Ara...">
+      <div class="filter-list" id="fpList"></div>
+      <div class="filter-quick-actions">
+        <button onclick="filterSelectAll()">Tümü</button>
+        <button onclick="filterSelectNone()">Hiçbiri</button>
+      </div>`;
+  }
+  body.innerHTML = bodyHTML;
+
+  // Populate the checklist for text type after the DOM is in
+  if (type === 'text') {
+    renderFilterChecklist(col);
+    document.getElementById('fpSearch').addEventListener('input', () => {
+      renderFilterChecklist(col);
+    });
+  }
+
+  // Position pop near trigger
+  pop.classList.add('show');
+  const rect = trigger.getBoundingClientRect();
+  const popW = 260;
+  let left = window.scrollX + rect.left;
+  if (left + popW > window.scrollX + document.documentElement.clientWidth - 10) {
+    left = window.scrollX + document.documentElement.clientWidth - popW - 10;
+  }
+  pop.style.left = left + 'px';
+  pop.style.top = (window.scrollY + rect.bottom + 4) + 'px';
+
+  // Auto-focus first input
+  setTimeout(() => {
+    const firstInp = pop.querySelector('input');
+    if (firstInp) firstInp.focus();
+  }, 30);
+}
+
+function filterSort(col, dir) {
+  // Toggle off if same
+  if (tableView.sort && tableView.sort.col === col && tableView.sort.dir === dir) {
+    tableView.sort = null;
+  } else {
+    tableView.sort = { col, dir };
+  }
+  // Re-render the popover to update active button state
+  const trigger = document.querySelector(`th[data-col="${col}"] .filter-trigger`);
+  if (trigger) {
+    const fakeEvent = { stopPropagation:()=>{}, currentTarget: trigger };
+    openFilter(fakeEvent, col, _activeFilter.type);
+  }
+  renderTable();
+  updateFilterIndicators();
+}
+
+// Collect unique non-empty values for a text column from all entries (sorted, Turkish locale)
+function getUniqueColumnValues(col) {
+  const set = new Set();
+  state.entries.forEach(e => {
+    const v = e[col];
+    if (v !== null && v !== undefined && v !== '') set.add(String(v));
+  });
+  return Array.from(set).sort((a,b) => a.localeCompare(b, 'tr'));
+}
+
+// Render the checklist for the active text filter, applying the search filter
+function renderFilterChecklist(col) {
+  const list = document.getElementById('fpList');
+  if (!list) return;
+  const search = document.getElementById('fpSearch')?.value.trim().toLocaleLowerCase('tr') || '';
+  const values = getUniqueColumnValues(col);
+  if (values.length === 0) {
+    list.innerHTML = '<div class="filter-list-empty">Bu sütunda gösterilecek değer yok.</div>';
+    return;
+  }
+  // Determine current selection state — null means "all selected"
+  const cur = tableView.filters[col] || {};
+  const selected = cur.values ? new Set(cur.values) : null; // null = all
+  const filtered = search ? values.filter(v => v.toLocaleLowerCase('tr').includes(search)) : values;
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="filter-list-empty">Eşleşen değer yok.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(v => {
+    const isChecked = selected === null ? true : selected.has(v);
+    return `<label class="filter-list-item">
+      <input type="checkbox" class="fp-chk" value="${esc(v)}" ${isChecked ? 'checked' : ''}>
+      <span>${esc(v)}</span>
+    </label>`;
+  }).join('');
+}
+
+function filterSelectAll() {
+  document.querySelectorAll('#fpList .fp-chk').forEach(c => c.checked = true);
+}
+function filterSelectNone() {
+  document.querySelectorAll('#fpList .fp-chk').forEach(c => c.checked = false);
+}
+
+function filterApplyApply() {
+  const { col, type } = _activeFilter;
+  if (!col) return;
+  if (!tableView.filters[col]) tableView.filters[col] = {};
+  const f = tableView.filters[col];
+  if (type === 'date') {
+    f.dateFrom = document.getElementById('fpDateFrom').value;
+    f.dateTo = document.getElementById('fpDateTo').value;
+  } else if (type === 'number') {
+    f.numFrom = document.getElementById('fpNumFrom').value;
+    f.numTo = document.getElementById('fpNumTo').value;
+  } else {
+    // Read all unique values + which checkboxes are currently checked among the visible (search-filtered) ones.
+    // Values not currently visible due to search keep their previous selection state.
+    const allValues = getUniqueColumnValues(col);
+    const cur = tableView.filters[col] || {};
+    const prevSelected = cur.values ? new Set(cur.values) : new Set(allValues); // null cur = all
+    const visibleChecks = document.querySelectorAll('#fpList .fp-chk');
+    const visibleVals = new Set();
+    const newSelected = new Set(prevSelected);
+    visibleChecks.forEach(chk => {
+      visibleVals.add(chk.value);
+      if (chk.checked) newSelected.add(chk.value);
+      else newSelected.delete(chk.value);
+    });
+    // If selection equals all values (effectively no filter), clear it
+    const isAll = allValues.every(v => newSelected.has(v)) && newSelected.size === allValues.length;
+    if (isAll) {
+      delete f.values;
+    } else {
+      f.values = Array.from(newSelected);
+    }
+  }
+  // Clean up empty filter object
+  const isEmpty = !f.text && !f.dateFrom && !f.dateTo
+    && (f.numFrom === '' || f.numFrom == null) && (f.numTo === '' || f.numTo == null)
+    && !f.values;
+  if (isEmpty) {
+    delete tableView.filters[col];
+  }
+  tableView.page = 1;
+  document.getElementById('filterPop').classList.remove('show');
+  renderTable();
+  updateFilterIndicators();
+}
+
+function filterApplyClear() {
+  const { col } = _activeFilter;
+  if (!col) return;
+  delete tableView.filters[col];
+  document.getElementById('filterPop').classList.remove('show');
+  renderTable();
+  updateFilterIndicators();
+}
+
+function updateFilterIndicators() {
+  document.querySelectorAll('th[data-col] .filter-trigger').forEach(btn => {
+    const th = btn.closest('th');
+    const col = th.dataset.col;
+    const f = tableView.filters[col];
+    const isFiltered = !!(f && (
+      (Array.isArray(f.values) && f.values.length >= 0) ||
+      f.dateFrom || f.dateTo ||
+      (f.numFrom !== '' && f.numFrom != null) ||
+      (f.numTo !== '' && f.numTo != null)
+    ));
+    const isSorted = tableView.sort && tableView.sort.col === col;
+    btn.classList.toggle('active', isFiltered || isSorted);
+    if (isSorted) {
+      btn.textContent = tableView.sort.dir === 'asc' ? '▲' : '▼';
+    } else if (isFiltered) {
+      btn.textContent = '●';
+    } else {
+      btn.textContent = '▾';
+    }
+  });
+  // Show/hide global "clear filters" button
+  const anyActive = Object.keys(tableView.filters).length > 0 || tableView.sort;
+  const btn = document.getElementById('clearFiltersBtn');
+  if (btn) btn.style.display = anyActive ? 'inline-block' : 'none';
+}
+
 function renderTable() {
   const tbody = document.getElementById('tbodyExpenses');
   document.getElementById('entryCount').textContent = state.entries.length;
+
   if (state.entries.length === 0) {
     tbody.innerHTML = '<tr><td colspan="15" class="empty-row">Henüz masraf kaydı yok. Yukarıdaki formu doldurarak ilk kaydı ekleyin.</td></tr>';
+    renderPager(0, 0, 0);
     return;
   }
-  tbody.innerHTML = state.entries.map((e,i) => `
-    <tr class="${state.editingIndex===i?'editing':''}">
-      <td>${fmtDate(e.date)}</td>
-      <td>${esc(e.invoiceNo)}</td>
-      <td>${esc(e.vendor)}</td>
-      <td>${esc(e.customer)}</td>
-      <td>${esc(e.factory)}</td>
-      <td>${esc(e.city)}</td>
-      <td>${esc(e.description)}</td>
-      <td>${esc(e.expenseType)}</td>
-      <td>${esc(e.unit)}</td>
-      <td>${esc(e.subUnit)}</td>
-      <td class="num">${fmtNum(e.amount)}</td>
-      <td>${esc(e.currency)}</td>
-      <td class="num">${fmtNum(e.totalTry)}</td>
-      <td class="num">${fmtNum(e.totalEur)}</td>
-      <td><div class="row-act">
-        <button class="icon-btn" onclick="editEntry(${i})" title="Düzenle">✎</button>
-        <button class="icon-btn del" onclick="deleteEntry(${i})" title="Sil">🗑</button>
-      </div></td>
-    </tr>`).join('');
+
+  const filtered = getFilteredEntries();
+  const total = filtered.length;
+  const pageSize = tableView.pageSize;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (tableView.page > totalPages) tableView.page = totalPages;
+  if (tableView.page < 1) tableView.page = 1;
+
+  const startIdx = (tableView.page - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const pageItems = filtered.slice(startIdx, endIdx);
+
+  if (pageItems.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="15" class="empty-row">Filtreyle eşleşen kayıt yok.</td></tr>';
+  } else {
+    tbody.innerHTML = pageItems.map(({entry:e, originalIndex:i}) => `
+      <tr class="${state.editingIndex===i?'editing':''}">
+        <td>${fmtDate(e.date)}</td>
+        <td>${esc(e.invoiceNo)}</td>
+        <td>${esc(e.vendor)}</td>
+        <td>${esc(e.customer)}</td>
+        <td>${esc(e.factory)}</td>
+        <td>${esc(e.city)}</td>
+        <td>${esc(e.description)}</td>
+        <td>${esc(e.expenseType)}</td>
+        <td>${esc(e.unit)}</td>
+        <td>${esc(e.subUnit)}</td>
+        <td class="num">${fmtNum(e.amount)}</td>
+        <td>${esc(e.currency)}</td>
+        <td class="num">${fmtNum(e.totalTry)}</td>
+        <td class="num">${fmtNum(e.totalEur)}</td>
+        <td><div class="row-act">
+          <button class="icon-btn" onclick="editEntry(${i})" title="Düzenle">✎</button>
+          <button class="icon-btn del" onclick="deleteEntry(${i})" title="Sil">🗑</button>
+        </div></td>
+      </tr>`).join('');
+  }
+
+  renderPager(total, startIdx, endIdx);
 }
+
+function renderPager(total, startIdx, endIdx) {
+  const pageSize = tableView.pageSize;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const info = document.getElementById('pagerInfo');
+  if (total === 0) {
+    info.textContent = 'Gösterilen: 0 / 0';
+  } else {
+    info.textContent = `Gösterilen: ${startIdx + 1}–${endIdx} / ${total}`;
+  }
+
+  // Page selector
+  const sel = document.getElementById('pgPage');
+  sel.innerHTML = '';
+  for (let p = 1; p <= totalPages; p++) {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = `${p} / ${totalPages}`;
+    if (p === tableView.page) opt.selected = true;
+    sel.appendChild(opt);
+  }
+
+  document.getElementById('pgFirst').disabled = tableView.page <= 1;
+  document.getElementById('pgPrev').disabled = tableView.page <= 1;
+  document.getElementById('pgNext').disabled = tableView.page >= totalPages;
+  document.getElementById('pgLast').disabled = tableView.page >= totalPages;
+}
+
+function goPage(target) {
+  const filtered = getFilteredEntries();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / tableView.pageSize));
+  if (target === 'first') tableView.page = 1;
+  else if (target === 'prev')  tableView.page = Math.max(1, tableView.page - 1);
+  else if (target === 'next')  tableView.page = Math.min(totalPages, tableView.page + 1);
+  else if (target === 'last')  tableView.page = totalPages;
+  else {
+    const n = parseInt(target, 10);
+    if (!isNaN(n)) tableView.page = Math.min(totalPages, Math.max(1, n));
+  }
+  renderTable();
+}
+
+function setPageSize(v) {
+  const n = parseInt(v, 10);
+  if (!isNaN(n) && n > 0) {
+    tableView.pageSize = n;
+    tableView.page = 1;
+    renderTable();
+  }
+}
+
+function clearFilters() {
+  tableView.filters = {};
+  tableView.sort = null;
+  tableView.page = 1;
+  renderTable();
+  updateFilterIndicators();
+}
+
 function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function renderTotals() {
@@ -1146,6 +1760,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   refreshMetaInputs();
   renderTable();
   renderTotals();
+  updateFilterIndicators();
 
   // Apply entry-form defaults (date=today, unit=Audit-Social, sub=Turkey, currency=TRY)
   clearEntryForm();
@@ -1157,6 +1772,14 @@ window.addEventListener('DOMContentLoaded', ()=>{
     document.getElementById('inpMonth').value = mm;
     state.meta.month = mm;
   }
+
+  // Close filter popover when clicking outside
+  document.addEventListener('click', e => {
+    const pop = document.getElementById('filterPop');
+    if (!pop.classList.contains('show')) return;
+    if (e.target.closest('#filterPop') || e.target.closest('.filter-trigger')) return;
+    pop.classList.remove('show');
+  });
 });
 </script>
 </body>
