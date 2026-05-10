@@ -1637,7 +1637,7 @@ async function exportExcel() {
   sh.getCell('A2').value = 'Masraf Ayı';
   if (state.meta.month) {
     const [y,m,d] = state.meta.month.split('-').map(Number);
-    sh.getCell('B2').value = new Date(y, m-1, d);
+    sh.getCell('B2').value = new Date(Date.UTC(y, m-1, d));
     sh.getCell('B2').numFmt = 'dd.mm.yyyy';
   }
 
@@ -1680,7 +1680,7 @@ async function exportExcel() {
   sh.getCell('Y1').value = '€/TRY';
   if (state.meta.month) {
     const [y,m,d] = state.meta.month.split('-').map(Number);
-    sh.getCell('Q2').value = new Date(y, m-1, 1);
+    sh.getCell('Q2').value = new Date(Date.UTC(y, m-1, 1));
     sh.getCell('Q2').numFmt = 'mmm-yyyy';
   }
   sh.getCell('S2').value = 1;
@@ -1707,7 +1707,7 @@ async function exportExcel() {
     const cDate = sh.getCell(r,1);
     if (e.date) {
       const [y,m,d] = e.date.split('-').map(Number);
-      cDate.value = new Date(y, m-1, d);
+      cDate.value = new Date(Date.UTC(y, m-1, d));
       cDate.numFmt = 'dd.mm.yyyy';
     }
     sh.getCell(r,2).value = e.invoiceNo || '';
