@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#04254a">
-    <title>Übergame · German Flashcards</title>
+    <title>Wortspiel · German Flashcards</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -139,19 +139,12 @@
 
         .header h1 {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 600;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            line-height: 1;
-        }
-
-        .header h1 .accent {
-            color: var(--gold);
             font-style: italic;
+            letter-spacing: 1px;
+            line-height: 1;
+            color: white;
         }
 
         .header .tagline {
@@ -364,13 +357,13 @@
 
         /* ============ GAME SCREEN ============ */
         #gameScreen {
-            padding: 12px 16px 16px;
-            gap: 10px;
+            padding: 10px 14px 14px;
+            gap: 8px;
         }
 
         .stats-bar {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
         }
 
@@ -380,27 +373,27 @@
             border: 1px solid rgba(201, 169, 97, 0.25);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            padding: 8px 12px;
-            border-radius: 12px;
+            padding: 6px 10px;
+            border-radius: 10px;
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
         }
 
         .stat-pill .stat-value {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 700;
             color: var(--gold);
             line-height: 1;
         }
 
         .stat-pill .stat-label {
-            font-size: 9px;
+            font-size: 8px;
             text-transform: uppercase;
             letter-spacing: 1px;
             opacity: 0.85;
@@ -668,38 +661,63 @@
             transform: translateY(-50%) rotate(15deg);
         }
 
-        /* Action buttons (only reset + back) */
+        /* Action buttons row */
         .action-buttons {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
         }
 
         .ghost-btn {
             flex: 1;
-            padding: 10px;
+            padding: 9px 6px;
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(201, 169, 97, 0.3);
             color: white;
-            border-radius: 12px;
-            font-size: 12px;
+            border-radius: 10px;
+            font-size: 11px;
             font-weight: 600;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 5px;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
         }
 
         .ghost-btn:active {
             background: rgba(255, 255, 255, 0.12);
+            transform: scale(0.97);
         }
 
         .ghost-btn svg {
-            width: 14px;
-            height: 14px;
+            width: 13px;
+            height: 13px;
+        }
+
+        /* Save/Load variants */
+        .ghost-btn.load-btn {
+            background: rgba(201, 169, 97, 0.12);
+            border-color: rgba(201, 169, 97, 0.45);
+            color: var(--gold-soft);
+        }
+
+        .ghost-btn.load-btn:active {
+            background: rgba(201, 169, 97, 0.22);
+        }
+
+        .ghost-btn.save-btn {
+            background: rgba(45, 106, 79, 0.18);
+            border-color: rgba(109, 212, 154, 0.4);
+            color: #9be8b8;
+        }
+
+        .ghost-btn.save-btn:active {
+            background: rgba(45, 106, 79, 0.3);
         }
 
         /* Swipe hint */
@@ -707,11 +725,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
-            letter-spacing: 1.5px;
+            letter-spacing: 1.2px;
             text-transform: uppercase;
-            padding: 4px 6px;
+            padding: 2px 4px;
             flex-shrink: 0;
         }
 
@@ -752,6 +770,182 @@
             line-height: 1.5;
         }
 
+        /* ============ TOAST ============ */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--navy-deep);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(201, 169, 97, 0.4);
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            max-width: 90%;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            border-color: rgba(109, 212, 154, 0.5);
+        }
+
+        .toast.error {
+            border-color: rgba(232, 126, 126, 0.5);
+        }
+
+        .toast .icon {
+            font-size: 16px;
+        }
+
+        /* ============ MODAL ============ */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 1500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-backdrop.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--paper);
+            color: var(--ink);
+            border-radius: 20px;
+            padding: 22px;
+            max-width: 360px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            border: 1px solid rgba(201, 169, 97, 0.3);
+            text-align: center;
+        }
+
+        .modal h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 22px;
+            color: var(--navy-deep);
+            margin-bottom: 8px;
+        }
+
+        .modal p {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.5;
+            margin-bottom: 18px;
+        }
+
+        .modal .modal-stats {
+            background: var(--paper-warm);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 18px;
+            font-size: 12px;
+            color: var(--navy);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-around;
+            gap: 8px;
+        }
+
+        .modal .modal-stat-val {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 22px;
+            color: var(--gold);
+            display: block;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            font-family: inherit;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-cancel {
+            background: var(--line);
+            color: var(--muted);
+        }
+
+        .modal-btn-cancel:active {
+            background: #d6d2c5;
+        }
+
+        .modal-btn-confirm {
+            background: var(--navy);
+            color: white;
+        }
+
+        .modal-btn-confirm:active {
+            background: var(--navy-deep);
+        }
+
+        /* Setup screen load link */
+        .load-link {
+            text-align: center;
+            margin-top: 4px;
+            padding: 12px;
+            cursor: pointer;
+            color: var(--gold-soft);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-radius: 10px;
+            border: 1px dashed rgba(201, 169, 97, 0.3);
+            background: rgba(255, 255, 255, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .load-link:active {
+            background: rgba(201, 169, 97, 0.1);
+            border-color: rgba(201, 169, 97, 0.5);
+        }
+
+        .load-link svg {
+            width: 14px;
+            height: 14px;
+        }
+
         /* Responsive tweaks */
         @media (max-height: 740px) {
             .header { padding: 10px 20px 8px; }
@@ -780,7 +974,7 @@
 <div class="app">
     <header class="header">
         <div class="brand-mark">Bulut Projects</div>
-        <h1>Über<span class="accent">game</span></h1>
+        <h1>Wortspiel</h1>
         <div class="tagline">swipe · learn · master</div>
     </header>
 
@@ -821,6 +1015,15 @@
         </div>
 
         <button class="btn-primary" id="startGameBtn">Start Swiping</button>
+
+        <div class="load-link" id="setupLoadBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Load Previous Session
+        </div>
     </section>
 
     <!-- ============ GAME SCREEN ============ -->
@@ -912,7 +1115,62 @@
                 Reset
             </button>
         </div>
-    </section>
+        <div class="action-buttons">
+            <button class="ghost-btn load-btn" id="gameLoadBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Load
+            </button>
+            <button class="ghost-btn save-btn" id="gameSaveBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                Save
+            </button>
+        </div>
+    <!-- ============ MODAL (Save confirm) ============ -->
+    <div class="modal-backdrop" id="saveModal">
+        <div class="modal">
+            <h3>Save Session?</h3>
+            <p>Export your learned words from <strong id="modalGroupName">this group</strong> as a JSON file.</p>
+            <div class="modal-stats">
+                <div>
+                    <span class="modal-stat-val" id="modalLearnedCount">0</span>
+                    <span>Learned words</span>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn-cancel" id="saveModalCancel">Cancel</button>
+                <button class="modal-btn-confirm" id="saveModalConfirm">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODAL (Back confirm with unsaved) ============ -->
+    <div class="modal-backdrop" id="backModal">
+        <div class="modal">
+            <h3>Save before leaving?</h3>
+            <p>You have <strong id="modalUnsavedCount">0</strong> learned word(s) in this session. Save them as a JSON file?</p>
+            <div class="modal-buttons">
+                <button class="modal-btn-cancel" id="backModalDiscard">Discard</button>
+                <button class="modal-btn-confirm" id="backModalSave">Save & Exit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ TOAST ============ -->
+    <div class="toast" id="toast">
+        <span class="icon" id="toastIcon">✓</span>
+        <span id="toastMsg">Saved</span>
+    </div>
+
+    <!-- ============ HIDDEN FILE INPUT ============ -->
+    <input type="file" id="loadFileInput" accept=".json,application/json" style="display:none;">
 </div>
 
 <script>
@@ -921,29 +1179,563 @@
     // ============================================================
     const WORDS_DATA = [
         {"group": "Exclamations", "german": "Hilfe!", "english": "Help!", "pronunciation": "hil-fe"},
-        {"group": "Exclamations", "german": "Halt!", "english": "Stop!", "pronunciation": "halt"},
-        {"group": "Exclamations", "german": "Vorsicht!", "english": "Careful!", "pronunciation": "for-ziht"},
-        {"group": "Greetings", "german": "Guten Morgen!", "english": "Good morning!", "pronunciation": "gu-tın mor-gen"},
-        {"group": "Greetings", "german": "Guten Tag!", "english": "Good afternoon!", "pronunciation": "gu-tın taag"},
-        {"group": "Greetings", "german": "Ich heiße _.", "english": "My name is _.", "pronunciation": "ih hay-se"},
-        {"group": "Greetings", "german": "Wie geht es dir?", "english": "How are you? (informal)", "pronunciation": "vii geyt es diir"},
-        {"group": "Feelings", "german": "Ich habe Hunger.", "english": "I'm hungry.", "pronunciation": "ih haa-be hun-ger"},
-        {"group": "Feelings", "german": "Ich liebe dich.", "english": "I love you.", "pronunciation": "ih lii-be dih"},
-        {"group": "Daily", "german": "Was kostet das?", "english": "How much is that?", "pronunciation": "vas kos-tet das"},
-        {"group": "Daily", "german": "Ich verstehe nicht.", "english": "I don't understand.", "pronunciation": "ih fer-ştee-e niht"},
-        {"group": "Time", "german": "Wie spät ist es?", "english": "What time is it?", "pronunciation": "vii şpeet ist es"},
-        {"group": "Time", "german": "Es ist halb elf.", "english": "It's half past ten.", "pronunciation": "es ist halp elf"},
-        {"group": "Professions", "german": "Ich bin Ingenieur.", "english": "I am an engineer.", "pronunciation": "ih bin in-je-nyör"},
-        {"group": "Adjectives", "german": "neu", "english": "new", "pronunciation": "noy"},
-        {"group": "Adjectives", "german": "wichtig", "english": "important", "pronunciation": "vih-tig"},
-        {"group": "Nouns", "german": "der Hund", "english": "the dog", "pronunciation": "deyr hunt"},
-        {"group": "Nouns", "german": "die Katze", "english": "the cat", "pronunciation": "dii kat-se"},
-        {"group": "Verbs", "german": "sein", "english": "to be", "pronunciation": "zayn"},
-        {"group": "Verbs", "german": "kommen", "english": "to come", "pronunciation": "kom-mın"},
-        {"group": "Adverbs", "german": "heute", "english": "today", "pronunciation": "hoy-te"},
-        {"group": "Days", "german": "der Montag", "english": "Monday", "pronunciation": "mo:n-tag"},
-        {"group": "Numbers", "german": "eins", "english": "one", "pronunciation": "aynts"},
-        {"group": "Numbers", "german": "zehn", "english": "ten", "pronunciation": "tseyn"},
+{"group": "Exclamations", "german": "Halt!", "english": "Stop!", "pronunciation": "halt"},
+{"group": "Exclamations", "german": "Feuer!", "english": "Fire!", "pronunciation": "foy-er"},
+{"group": "Exclamations", "german": "Vorsicht!", "english": "Careful!", "pronunciation": "for-ziht"},
+{"group": "Exclamations", "german": "Viel Spaß!", "english": "Have fun!", "pronunciation": "fiil şpas"},
+{"group": "Exclamations", "german": "Herzlich willkommen", "english": "Warm welcome / Welcome", "pronunciation": "herts-lih vil-kom-mın"},
+{"group": "Exclamations", "german": "Entschuldigung!", "english": "Excuse me!", "pronunciation": "ent-şul-di-gung"},
+{"group": "Exclamations", "german": "Einen Augenblick, bitte.", "english": "One moment, please.", "pronunciation": "ay-nın au-gen-blik bi-te"},
+{"group": "Exclamations", "german": "Gesundheit!", "english": "Bless you!", "pronunciation": "ge-zunt-hayt"},
+{"group": "Exclamations", "german": "Gute Besserung!", "english": "Get well soon!", "pronunciation": "gu-te be-se-rung"},
+{"group": "Exclamations", "german": "Viel Glück!", "english": "Good luck!", "pronunciation": "fiil glük"},
+{"group": "Exclamations", "german": "Viel Erfolg!", "english": "Much success!", "pronunciation": "fiil er-folk"},
+{"group": "Exclamations", "german": "Gute Reise!", "english": "Have a good trip!", "pronunciation": "guu-te ray-ze"},
+{"group": "Expressions", "german": "nach und nach", "english": "bit by bit", "pronunciation": "naah unt naah"},
+{"group": "Expressions", "german": "Schritt für Schritt", "english": "step by step", "pronunciation": "şrit für şrit"},
+{"group": "Greetings", "german": "Guten Morgen!", "english": "Good morning!", "pronunciation": "gu-tın mor-gen"},
+{"group": "Greetings", "german": "Guten Tag!", "english": "Good afternoon!", "pronunciation": "gu-tın taag"},
+{"group": "Greetings", "german": "Guten Abend!", "english": "Good evening!", "pronunciation": "gu-tın a-bent"},
+{"group": "Greetings", "german": "Gute Nacht!", "english": "Good night!", "pronunciation": "gu-te naht"},
+{"group": "Greetings", "german": "Ich bin _.", "english": "I am _.", "pronunciation": "ih bin"},
+{"group": "Greetings", "german": "Mein name ist _.", "english": "My name is _.", "pronunciation": "mayn naa-me ist"},
+{"group": "Greetings", "german": "Ich heiße _.", "english": "My name is _.", "pronunciation": "ih hay-se"},
+{"group": "Greetings", "german": "Wer bist du?", "english": "Who are you?", "pronunciation": "ver bist du"},
+{"group": "Greetings", "german": "Wie ist dein Name?", "english": "What is your name? (informal)", "pronunciation": "vii ist dayn naa-me"},
+{"group": "Greetings", "german": "Wie ist Ihr Name?", "english": "What is your name? (formal)", "pronunciation": "vii ist iir naa-me"},
+{"group": "Greetings", "german": "Wie heißt du?", "english": "What's your name?", "pronunciation": "vii hayst du"},
+{"group": "Greetings", "german": "Freut mich.", "english": "Nice to meet you. / I am pleased.", "pronunciation": "froyt mih"},
+{"group": "Greetings", "german": "Bist du Hans?", "english": "Are you Hans?", "pronunciation": "bist du hans?"},
+{"group": "Greetings", "german": "Ist dein Name Hans?", "english": "Is your name Hans?", "pronunciation": "ist dayn naa-me hans?"},
+{"group": "Greetings", "german": "Ich bin Ausländer.", "english": "I am a foreigner.", "pronunciation": "ih bin aus-len-der"},
+{"group": "Greetings", "german": "Wie geht es Ihnen?", "english": "How are you? (formal)", "pronunciation": "vii geyt es ii-nın"},
+{"group": "Greetings", "german": "Wie geht es dir?", "english": "How are you? (informal)", "pronunciation": "vii geyt es diir"},
+{"group": "Greetings", "german": "Wie geht's?", "english": "How are you? (informal)", "pronunciation": "vii geets"},
+{"group": "Greetings", "german": "Gut, danke! Und dir?", "english": "Fine, thanks! And you?", "pronunciation": "guut dan-ke! unt diir?"},
+{"group": "Greetings", "german": "Mir geht es gut.", "english": "I'm fine.", "pronunciation": "miir geet es guut"},
+{"group": "Greetings", "german": "Mir geht es schlecht.", "english": "I'm not so good.", "pronunciation": "miir geet es şleht"},
+{"group": "Greetings", "german": "Wo kommst du her?", "english": "Where do you come from?", "pronunciation": "vo komst du heer"},
+{"group": "Greetings", "german": "Woher kommst du?", "english": "Where are you from?", "pronunciation": "vo-heer komst du"},
+{"group": "Greetings", "german": "Ich komme aus der Türkei.", "english": "I come from Turkey.", "pronunciation": "ih kom-me aus der tür-kay"},
+{"group": "Greetings", "german": "Ich komme nicht aus Deutschland.", "english": "I don't come from Germany.", "pronunciation": "ih kom-me niht aus doytç-lant"},
+{"group": "Greetings", "german": "Ich komme aus Frankreich.", "english": "I come from France.", "pronunciation": "ih kom-me aus frank-rayh"},
+{"group": "Greetings", "german": "Ich komme aus den Niederlanden.", "english": "I come from the Netherlands.", "pronunciation": "ih kom-me aus deen ni-der-lan-den"},
+{"group": "Greetings", "german": "Ich komme aus der Schweiz.", "english": "I come from Switzerland.", "pronunciation": "ih kom-me aus der şvayts"},
+{"group": "Greetings", "german": "Wo wohnst du?", "english": "Where do you live?", "pronunciation": "vo vonst du"},
+{"group": "Greetings", "german": "Ich wohne in Istanbul.", "english": "I live in Istanbul.", "pronunciation": "ih voo-ne in is-tan-bul"},
+{"group": "Greetings", "german": "Ich wohne nicht in Berlin.", "english": "I don't live in Berlin.", "pronunciation": "ih voo-ne niht in ber-liin"},
+{"group": "Greetings", "german": "Was ist dein Beruf?", "english": "What is your profession?", "pronunciation": "vas ist dayn be-ruuf"},
+{"group": "Greetings", "german": "Was bist du von Beruf?", "english": "What are you by profession?", "pronunciation": "vas bist du fon be-ruuf"},
+{"group": "Greetings", "german": "Was machst du beruflich?", "english": "What do you do professionally?", "pronunciation": "vas mahst du be-ruuf-lih"},
+{"group": "Greetings", "german": "Wie alt bist du?", "english": "How old are you?", "pronunciation": "vii alt bist du"},
+{"group": "Greetings", "german": "Ich bin 25 Jahre alt.", "english": "I am 25 years old.", "pronunciation": "ih bin fünüf-unt-tsvan-tsih yaa-re alt"},
+{"group": "Greetings", "german": "Wo bist du geboren?", "english": "Where were you born?", "pronunciation": "vo bist du ge-bo-ren"},
+{"group": "Greetings", "german": "Welche Sprachen sprechen Sie?", "english": "Which languages do you speak? (formal)", "pronunciation": "vel-he şp-raa-hın şp-re-hın zii"},
+{"group": "Greetings", "german": "Ich spreche ein bisschen Deutsch.", "english": "I speak a little German.", "pronunciation": "ih şpre-he ayn bis-hın doytç"},
+{"group": "Greetings", "german": "Wie viele Kinder hast du?", "english": "How many children do you have?", "pronunciation": "vii fii-le kin-der hast du"},
+{"group": "Greetings", "german": "Wie viele Bücher hast du?", "english": "How many books do you have?", "pronunciation": "vii fii-le bü-her hast du"},
+{"group": "Greetings", "german": "danke", "english": "thank you", "pronunciation": "dan-ke"},
+{"group": "Greetings", "german": "bitte", "english": "please / you’re welcome", "pronunciation": "bit-te"},
+{"group": "Greetings", "german": "Bis bald", "english": "see you soon", "pronunciation": "bis balt"},
+{"group": "Greetings", "german": "Bis später", "english": "see you later", "pronunciation": "bis şpee-tır"},
+{"group": "Greetings", "german": "Auf Wiedersehen", "english": "goodbye", "pronunciation": "auf vii-dır-zey-hın"},
+{"group": "Greetings", "german": "Tschüss", "english": "bye", "pronunciation": "tşüüs"},
+{"group": "Feelings & States", "german": "Ich habe Hunger.", "english": "I'm hungry.", "pronunciation": "ih haa-be hun-ger"},
+{"group": "Feelings & States", "german": "Ich habe Durst.", "english": "I am thirsty. ", "pronunciation": "ih haa-be durst"},
+{"group": "Feelings & States", "german": "Ich bin müde.", "english": "I am tired.", "pronunciation": "ih bin mü-de"},
+{"group": "Feelings & States", "german": "Mir ist kalt.", "english": "I am cold. ", "pronunciation": "miir ist kalt"},
+{"group": "Feelings & States", "german": "Mir ist warm.", "english": "I am warm.", "pronunciation": "miir ist varm"},
+{"group": "Feelings & States", "german": "Tut mir Leid.", "english": "I'm sorry.", "pronunciation": "tuut miir layd"},
+{"group": "Feelings & States", "german": "Ich mag dich.", "english": "I like you.", "pronunciation": "ih maag dih"},
+{"group": "Feelings & States", "german": "Ich liebe dich.", "english": "I love you.", "pronunciation": "ih lii-be dih"},
+{"group": "Feelings & States", "german": "Ich wache um sechs Uhr auf.", "english": "I wake up at six o'clock.", "pronunciation": "ih va-he um zeks uur auf"},
+{"group": "Feelings & States", "german": "Ich stehe um sieben Uhr auf.", "english": "I get up at seven o'clock.", "pronunciation": "ih şte-he um zii-bın uur auf"},
+{"group": "Feelings & States", "german": "Der Kurs beginnt um halb elf.", "english": "The course starts at ten thirty.", "pronunciation": "der kurs be-gin-nın um halp elf"},
+{"group": "Daily conversation", "german": "Was machst du?", "english": "What are you doing?", "pronunciation": "vas mahst du"},
+{"group": "Daily conversation", "german": "Wann kommst du?", "english": "When are you coming?", "pronunciation": "van komst du"},
+{"group": "Daily conversation", "german": "Wie viel kostet das?", "english": "How much does that cost?", "pronunciation": "vii fiil kos-tet das"},
+{"group": "Daily conversation", "german": "Wie viel Zeit hast du?", "english": "How much time do you have?", "pronunciation": "vii fiil tsayt hast du"},
+{"group": "Daily conversation", "german": "Wie viele Hunde sind da?", "english": "How many dogs are there?", "pronunciation": "vii fii-le hun-de zint daa"},
+{"group": "Daily conversation", "german": "Ist das richtig?", "english": "Ist ist right?", "pronunciation": "ist das rih-tih"},
+{"group": "Daily conversation", "german": "Ich spreche kein Deutsch.", "english": "I do not speak German.", "pronunciation": "ih şpre-he kayn doyç"},
+{"group": "Daily conversation", "german": "Ich verstehe gar nichts.", "english": "I don't understand anything.", "pronunciation": "ih fer-ştee-e gar nihts"},
+{"group": "Daily conversation", "german": "Ich verstehe dich nicht.", "english": "I don't understand you.", "pronunciation": "ih fer-ştee-e dih niht"},
+{"group": "Daily conversation", "german": "Ich verstehe dich gut.", "english": "I understand you well.", "pronunciation": "ih fer-ştee-e dih guut"},
+{"group": "Daily conversation", "german": "Ich weiß es nicht.", "english": "I don't know (it).", "pronunciation": "ih vays es niht"},
+{"group": "Daily conversation", "german": "Ich habe keine Ahnung.", "english": "I have no idea.", "pronunciation": "ih haa-be kay-ne aa-nung"},
+{"group": "Daily conversation", "german": "Können Sie langsamer sprechen, bitte?", "english": "Could you speak more slowly, please?", "pronunciation": "kö-nen zii lang-za-mer şpre-hen bi-te"},
+{"group": "Daily conversation", "german": "Ich kenne das nicht.", "english": "I don't know/am not familiar with that.", "pronunciation": "ih ken-ne das niht"},
+{"group": "Daily conversation", "german": "Ich kenne ihn/sie nicht.", "english": "I don't know him/her.", "pronunciation": "ih ken-ne iin/zii niht"},
+{"group": "Daily conversation", "german": "Sprich bitte langsamer.", "english": "Please speak slower.", "pronunciation": "şprih bi-te lang-za-mer"},
+{"group": "Daily conversation", "german": "Sprich bitte lauter.", "english": "Please speak louder.", "pronunciation": "şprih bi-te lau-ter"},
+{"group": "Daily conversation", "german": "Was heißt das?", "english": "What does it mean?", "pronunciation": "vas hayst das"},
+{"group": "Daily conversation", "german": "Können Sie mir helfen?", "english": "Can you help me? (formal)", "pronunciation": "kö-nen zii miir hel-fen"},
+{"group": "Daily conversation", "german": "Kannst du mir helfen?", "english": "Can you help me? (informal)", "pronunciation": "kanst du miir hel-fen"},
+{"group": "Daily conversation", "german": "Ich antworte ihm.", "english": "I answer him.", "pronunciation": "ih ant-vor-te iim"},
+{"group": "Daily conversation", "german": "Ich glaube dir.", "english": "I believe you.", "pronunciation": "ih glau-be diir"},
+{"group": "Daily conversation", "german": "Ich habe kein Geld.", "english": "I have no money.", "pronunciation": "ih haa-be kayn gelt"},
+{"group": "Daily conversation", "german": "Ich habe keine Zeit.", "english": "I don't have any time.", "pronunciation": "ih haa-be kay-ne tsayt"},
+{"group": "Daily conversation", "german": "Das ist nicht gut.", "english": "That is not good.", "pronunciation": "das ist niht guut"},
+{"group": "Daily conversation", "german": "Ich muss zur Toilette.", "english": "I have to go to the toilet.", "pronunciation": "ih mus tsur to-a-let-te"},
+{"group": "Daily conversation", "german": "Ich brauche eine Pause.", "english": "I need a break.", "pronunciation": "ih brau-he ay-ne pau-ze"},
+{"group": "Daily conversation", "german": "Können Sie das bitte aufschreiben?", "english": "Could you please write that down?", "pronunciation": "kö-nen zii das bi-te auf-şray-ben"},
+{"group": "Daily conversation", "german": "Schön dich zu sehen.", "english": "Nice to see you.", "pronunciation": "şön dih tsu ze-en"},
+{"group": "Daily conversation", "german": "Ich würde gerne ein/e ...  kaufen/bestellen.", "english": "I'd like to buy/order a …", "pronunciation": "ih vür-de ger-ne ayn/ay-ne kau-fen/be-ştel-len"},
+{"group": "Daily conversation", "german": "Ich würde gerne einen Porsche kaufen.", "english": "I'd like to buy a Porsche.", "pronunciation": "ih vür-de ger-ne ay-nen por-şe kau-fen"},
+{"group": "Daily conversation", "german": "Ich würde gerne ein Brötchen bestellen.", "english": "I'd like to order a bun.", "pronunciation": "ih vür-de ger-ne ayn bröt-hen be-ştel-len"},
+{"group": "Daily conversation", "german": "Kannst du mir sagen wo ich den Domplatz finde?", "english": "Can you tell me where I can find Domplatz?", "pronunciation": "kanst du miir zaa-gen voo ih den dom-plats fin-de"},
+{"group": "Daily conversation", "german": "Was hast du heute gemacht?", "english": "What have you done today?", "pronunciation": "vas hast du hoy-te ge-maht"},
+{"group": "Daily conversation", "german": "Ich würde mich gerne mit dir treffen.", "english": "I would like to meet up with you.", "pronunciation": "ih vür-de mih ger-ne mit diir tre-fen"},
+{"group": "Daily conversation", "german": "Ich würde gerne duschen.", "english": "I'd like to have a shower.", "pronunciation": "ih vür-de ger-ne du-şen"},
+{"group": "Daily conversation", "german": "Gibst du mir deine Handynummer?", "english": "Will you give me your mobile number?", "pronunciation": "gipst du miir day-ne hen-di-num-mer"},
+{"group": "Daily conversation", "german": "Was sind deine Träume?", "english": "What are your dreams?", "pronunciation": "vas zint day-ne troy-me"},
+{"group": "Daily conversation", "german": "Was hast du für Hobbies?", "english": "What are your hobbies?", "pronunciation": "vas hast du für ho-biis"},
+{"group": "Daily conversation", "german": "Ich kann gut kochen.", "english": "I can cook well.", "pronunciation": "ih kan guut ko-hen"},
+{"group": "Daily conversation", "german": "Fühlst du dich gut?", "english": "Do you feel OK?", "pronunciation": "fühlst du dih guut"},
+{"group": "Daily conversation", "german": "Ich habe keine Lust mehr.", "english": "I can't be bothered any more.", "pronunciation": "ih haa-be kay-ne lust meer"},
+{"group": "Daily conversation", "german": "Was macht du am Wochenende?", "english": "What are you doing at the weekend?", "pronunciation": "vas mahst du am vo-hen-en-de"},
+{"group": "Daily conversation", "german": "Ich mag das nicht.", "english": "I don't like that.", "pronunciation": "ih maag das niht"},
+{"group": "Daily conversation", "german": "Wie viel kostet das?", "english": "How much does … cost?", "pronunciation": "vii fiil kos-tet das"},
+{"group": "Daily conversation", "german": "Ich würde gerne bezahlen", "english": "I would like to pay.", "pronunciation": "ih vür-de ger-ne be-tsaa-len"},
+{"group": "Daily conversation", "german": "Könnte ich um die Rechnung bitten?", "english": "Could I have the bill please?", "pronunciation": "kön-te ih um dii reh-nung bi-ten"},
+{"group": "Daily conversation", "german": "Was für Musik hörst du?", "english": "What type of music do you listen to?", "pronunciation": "vas für mü-zik hörst du"},
+{"group": "Daily conversation", "german": "Die Sonne scheint.", "english": "The sun is shining.", "pronunciation": "dii zon-ne şaynt"},
+{"group": "Daily conversation", "german": "Es regnet heute.", "english": "It's raining today.", "pronunciation": "es reeg-net hoy-te"},
+{"group": "Daily conversation", "german": "Wo willst du hin (hingehen)?", "english": "Where do you want to go?", "pronunciation": "vo vilst du hin"},
+{"group": "Daily conversation", "german": "Ich gehe heute hin.", "english": "I'm going there today.", "pronunciation": "ih gee-e hoy-te hin"},
+{"group": "Daily conversation", "german": "Ich muss weg (weggehen).", "english": "I have to leave.", "pronunciation": "ih mus veg"},
+{"group": "Daily conversation", "german": "Ich will nach Hause.", "english": "I want to go home.", "pronunciation": "ih vil naah hau-ze"},
+{"group": "Daily conversation", "german": "Es ist sehr weit.", "english": "It's a long way.", "pronunciation": "es ist zeer vayt"},
+{"group": "Daily conversation", "german": "Muss ich links oder rechts abbiegen?", "english": "Do I have to turn left or right?", "pronunciation": "mus ih links oo-der rehts ab-bii-gen"},
+{"group": "Daily conversation", "german": "Geh nach rechts.", "english": "Go right.", "pronunciation": "gee naah rehts"},
+{"group": "Daily conversation", "german": "Geh nach links.", "english": "Go left.", "pronunciation": "gee naah links"},
+{"group": "Daily conversation", "german": "Geh geradeaus.", "english": "Go straight on.", "pronunciation": "gee ge-raa-de-aus"},
+{"group": "Daily conversation", "german": "Bitte warte auch mich.", "english": "Please wait for me. ", "pronunciation": "bi-te var-te auf mih"},
+{"group": "Daily conversation", "german": "Ich hätte gerne eine Brezel.", "english": "I would like a pretzel.", "pronunciation": "ih he-te ger-ne ay-ne bret-sel"},
+{"group": "Daily conversation", "german": "Ich hätte gerne einen Saft.", "english": "I would like some juice.", "pronunciation": "ih he-te ger-ne ay-nen zaft"},
+{"group": "Daily conversation", "german": "Haben Sie Kartoffeln?", "english": "Do you have potatoes?", "pronunciation": "haa-ben zii kar-tof-feln"},
+{"group": "Daily conversation", "german": "Ich bin bereit.", "english": "I am ready.", "pronunciation": "ih bin be-rayt"},
+{"group": "Daily conversation", "german": "Los geht's!", "english": "Let's go!", "pronunciation": "los geets"},
+{"group": "Daily conversation", "german": "Macht nichts.", "english": "It doesn't matter.", "pronunciation": "maht nihts"},
+{"group": "Daily conversation", "german": "Ich fahre.", "english": "I drive/go.", "pronunciation": "ih faa-re"},
+{"group": "Daily conversation", "german": "Ich bin gefahren.", "english": "I have driven/gone.", "pronunciation": "ih bin ge-faa-ren"},
+{"group": "Daily conversation", "german": "Ich fahre nach Spanien.", "english": "I am going to Spain.", "pronunciation": "ih faa-re naah şpaa-ni-yen"},
+{"group": "Daily conversation", "german": "Ich bin zum Flughafen gefahren.", "english": "I went to the airport.", "pronunciation": "ih bin tsum fluug-haa-fen ge-faa-ren"},
+{"group": "Daily conversation", "german": "Mein Buch ist neu.", "english": "My book is new.", "pronunciation": "mayn buuh ist noy"},
+{"group": "Daily conversation", "german": "Ist dein Buch neu?", "english": "Is your book neu?", "pronunciation": "ist dayn buuh noy?"},
+{"group": "Daily conversation", "german": "Nein, mein Buch ist nicht neu.", "english": "No, my book is not new.", "pronunciation": "nayn mayn buuh ist niht noy"},
+{"group": "Daily conversation", "german": "Ich beginne um 09:00.", "english": "I start at 09:00.", "pronunciation": "ih be-gin-ne um noin uur"},
+{"group": "Daily conversation", "german": "Um 09:00 beginne ich.", "english": "At 09:00 I start.", "pronunciation": "um noin uur be-gin-ne ih"},
+{"group": "Daily conversation", "german": "Ich beende die Arbeit.", "english": "I finish the work.", "pronunciation": "ih be-en-de dii ar-bayt"},
+{"group": "Daily conversation", "german": "Dann beende ich die Arbeit.", "english": "Then I finish the work.", "pronunciation": "dan be-en-de ih dii ar-bayt"},
+{"group": "Time", "german": "Wie spät ist es?", "english": "What time is it?", "pronunciation": "vii şpeet ist es?"},
+{"group": "Time", "german": "Wie viel Uhr ist es?", "english": "What time is it?", "pronunciation": "vii fiil uur ist es?"},
+{"group": "Time", "german": "Es ist zehn Uhr.", "english": "It is ten o'clock.", "pronunciation": "es ist tseen uur"},
+{"group": "Time", "german": "Es ist zwölf nach elf.", "english": "It is twelve past eleven.", "pronunciation": "es ist tsvölf nah elf"},
+{"group": "Time", "german": "Es ist Viertel nach zehn.", "english": "It is quarter past ten.", "pronunciation": "es ist fiir-tıl nah tseen"},
+{"group": "Time", "german": "Es ist zwölf nach elf.", "english": "It is twelve past eleven.", "pronunciation": "es ist tsvölf nah elf"},
+{"group": "Time", "german": "Es ist halb elf.", "english": "It is half past ten.", "pronunciation": "es ist halp elf"},
+{"group": "Time", "german": "Es ist zehn Uhr vierzig.", "english": "It is ten forty.", "pronunciation": "es ist tseen uur fiir-tsih"},
+{"group": "Time", "german": "Es ist zwanzig vor elf.", "english": "It is twenty to eleven.", "pronunciation": "es ist tsvan-tsih foor elf"},
+{"group": "Time", "german": "Es ist Viertel vor elf.", "english": "It is quarter to eleven.", "pronunciation": "es ist fiir-tıl foor elf"},
+{"group": "Time", "german": "die Uhr", "english": "the clock / watch", "pronunciation": "dii uur"},
+{"group": "Time", "german": "die Stunde", "english": "the hour (duration)", "pronunciation": "dii ştun-de"},
+{"group": "Time", "german": "nach", "english": "after / past", "pronunciation": "nah"},
+{"group": "Time", "german": "vor", "english": "before / to", "pronunciation": "foor"},
+{"group": "Time", "german": "halb", "english": "half", "pronunciation": "halp"},
+{"group": "Time", "german": "Viertel", "english": "quarter", "pronunciation": "fiir-tıl"},
+{"group": "Time", "german": "die Minute", "english": "the minute", "pronunciation": "dii mi-nuu-te"},
+{"group": "Time", "german": "die Sekunde", "english": "the second", "pronunciation": "dii ze-kun-de"},
+{"group": "Time", "german": "jetzt", "english": "now", "pronunciation": "yetst"},
+{"group": "Time", "german": "spät", "english": "late", "pronunciation": "şpeet"},
+{"group": "Time", "german": "früh", "english": "early", "pronunciation": "früü"},
+{"group": "Time", "german": "zuerst", "english": "first / firstly", "pronunciation": "tsu-eerst"},
+{"group": "Time", "german": "dann", "english": "then", "pronunciation": "dan"},
+{"group": "Time", "german": "danach", "english": "after that", "pronunciation": "da-nah"},
+{"group": "Professions", "german": "Ich bin kein Student.", "english": "I am not student.", "pronunciation": "ih bin kayn ştu-dent"},
+{"group": "Professions", "german": "Ich bin Ingenieur.", "english": "I am an engineer.", "pronunciation": "ih bin in-je-nyör"},
+{"group": "Professions", "german": "Ich bin Chemiker.", "english": "I am a chemist.", "pronunciation": "ih bin he-mi-ker"},
+{"group": "Professions", "german": "Ich bin Auditor.", "english": "I am an auditor.", "pronunciation": "ih bin au-di-tor"},
+{"group": "Professions", "german": "Ich arbeite als auditor.", "english": "I work as an auditor.", "pronunciation": "ih ar-bay-te als au-di-tor"},
+{"group": "the adjective", "german": "ledig", "english": "single", "pronunciation": "ley-dih"},
+{"group": "the adjective", "german": "verheiratet", "english": "married", "pronunciation": "fer-hay-ra-tet"},
+{"group": "the adjective", "german": "krank", "english": "sick / ill", "pronunciation": "krank"},
+{"group": "the adjective", "german": "schlect", "english": "bad", "pronunciation": "şleht"},
+{"group": "the adjective", "german": "bereit", "english": "ready", "pronunciation": "be-rayt"},
+{"group": "the adjective", "german": "müde", "english": "tired", "pronunciation": "mü-de"},
+{"group": "the adjective", "german": "neu", "english": "new", "pronunciation": "noy"},
+{"group": "the adjective", "german": "alt", "english": "old", "pronunciation": "alt"},
+{"group": "the adjective", "german": "ein bisschen", "english": "a little bit", "pronunciation": "ayn bis-hın"},
+{"group": "the adjective", "german": "groß", "english": "big / tall", "pronunciation": "groos"},
+{"group": "the adjective", "german": "klein", "english": "small", "pronunciation": "klayn"},
+{"group": "the adjective", "german": "arbeitslos", "english": "unemployed", "pronunciation": "ar-bayts-los"},
+{"group": "the adjective", "german": "wichtige", "english": "important", "pronunciation": "vih-ti-ge"},
+{"group": "the adjective", "german": "schwer", "english": "difficult", "pronunciation": "şveer"},
+{"group": "the adjective", "german": "wunderschön", "english": "wonderful / beautiful", "pronunciation": "vun-der-şön"},
+{"group": "the adjective", "german": "teuer", "english": "expensive", "pronunciation": "toy-er"},
+{"group": "the adjective", "german": "laut", "english": "loud / noisy", "pronunciation": "laut"},
+{"group": "the adjective", "german": "voll", "english": "full / crowded", "pronunciation": "fol"},
+{"group": "the adjective", "german": "richtig", "english": "correct / right", "pronunciation": "rih-tih"},
+{"group": "the adjective", "german": "falsch", "english": "false / wrong", "pronunciation": "falş"},
+{"group": "the adjective", "german": "korrekt", "english": "correct", "pronunciation": "kor-rekt"},
+{"group": "the adjective", "german": "kompakt", "english": "compact", "pronunciation": "kom-pakt"},
+{"group": "the adjective", "german": "einige", "english": "some", "pronunciation": "ay-ni-ge"},
+{"group": "the adjective", "german": "wenige", "english": "few", "pronunciation": "vee-ni-ge"},
+{"group": "the adjective", "german": "alle", "english": "all", "pronunciation": "al-le"},
+{"group": "the adjective", "german": "unregelmäßige", "english": "irregular", "pronunciation": "un-ree-gıl-mes-si-ge"},
+{"group": "the adjective", "german": "sehr", "english": "very", "pronunciation": "zeer"},
+{"group": "the noun", "german": "der Vorname", "english": "the first name", "pronunciation": "der foor-naa-me"},
+{"group": "the noun", "german": "der Familienname", "english": "the last name / surname", "pronunciation": "der fa-mii-li-yen-naa-me"},
+{"group": "the noun", "german": "die Frau", "english": "the woman / Mrs.", "pronunciation": "dii frau"},
+{"group": "the noun", "german": "der Herr", "english": "the man / Mr.", "pronunciation": "der her"},
+{"group": "the noun", "german": "der Kollege", "english": "the colleague (male)", "pronunciation": "der kol-ley-ge"},
+{"group": "the noun", "german": "der Freund", "english": "the friend (male)", "pronunciation": "der froynt"},
+{"group": "the noun", "german": "die Adresse", "english": "the address", "pronunciation": "dii ad-res-se"},
+{"group": "the noun", "german": "die Handynummer", "english": "the mobile number", "pronunciation": "dii hen-di-num-mır"},
+{"group": "the noun", "german": "Die Rechnung", "english": "The bill", "pronunciation": "reeg-nung"},
+{"group": "the noun", "german": "der Student", "english": "student (male)", "pronunciation": "deyr ştuu-dent"},
+{"group": "the noun", "german": "die Studentin", "english": "student (female)", "pronunciation": "dii ştuu-den-tin"},
+{"group": "the noun", "german": "das Jahr", "english": "the year", "pronunciation": "das yaar"},
+{"group": "the noun", "german": "die Jahreszahl", "english": "the year (date)", "pronunciation": "dii yaa-res-tsaal"},
+{"group": "the noun", "german": "das Morgen", "english": "the morning", "pronunciation": "das mor-gen"},
+{"group": "the noun", "german": "Technische Universität Yıldız", "english": "Yıldız Technical University", "pronunciation": "teh-nii-şe ü-ni-ver-zi-tet yıl-dız"},
+{"group": "the noun", "german": "das Geld", "english": "the money", "pronunciation": "das gelt"},
+{"group": "the noun", "german": "die Zeit", "english": "the time", "pronunciation": "dii tsayt"},
+{"group": "the noun", "german": "die Anzahl", "english": "the quantity / number", "pronunciation": "dii an-tsaal"},
+{"group": "the noun", "german": "das Flugzeug", "english": "the airplane", "pronunciation": "das fluug-tsoyk"},
+{"group": "the noun", "german": "der Flughafen", "english": "the airport", "pronunciation": "deyr fluug-haa-fen"},
+{"group": "the noun", "german": "der Student", "english": "the student", "pronunciation": "deyr ştuu-dent"},
+{"group": "the noun", "german": "der Beruf", "english": "the job / profession", "pronunciation": "deyr be-ruuf"},
+{"group": "the noun", "german": "die Stadt", "english": "the city", "pronunciation": "dii ştat"},
+{"group": "the noun", "german": "die Hauptstadt", "english": "the capital city", "pronunciation": "dii haupt-ştat"},
+{"group": "the noun", "german": "der Arbeiter", "english": "the worker", "pronunciation": "deyr ar-bay-ter"},
+{"group": "the noun", "german": "die Arbeit", "english": "the work / job", "pronunciation": "dii ar-bayt"},
+{"group": "the noun", "german": "das Studium", "english": "the studies / degree", "pronunciation": "das ştuu-di-um"},
+{"group": "the noun", "german": "die Universität", "english": "the university", "pronunciation": "dii ü-ni-ver-zi-tet"},
+{"group": "the noun", "german": "der Schüler", "english": "Student (primary/high school)", "pronunciation": "deyr şüü-ler"},
+{"group": "the noun", "german": "der Ingenieur", "english": "the engineer (male)", "pronunciation": "deyr in-je-nyör"},
+{"group": "the noun", "german": "die Ingenieurin", "english": "the engineer (female)", "pronunciation": "dii in-je-nyö-rin"},
+{"group": "the noun", "german": "der Arzt", "english": "the doctor (male)", "pronunciation": "deyr artst"},
+{"group": "the noun", "german": "die Ärztin", "english": "the doctor (female)", "pronunciation": "dii erts-tin"},
+{"group": "the noun", "german": "der Lehrer", "english": "the teacher (male)", "pronunciation": "deyr ley-rer"},
+{"group": "the noun", "german": "die Lehrerin", "english": "the teacher (female)", "pronunciation": "dii ley-re-rin"},
+{"group": "the noun", "german": "die Türkei", "english": "Turkey", "pronunciation": "dii tür-kay"},
+{"group": "the noun", "german": "Deutschland", "english": "Germany", "pronunciation": "doytş-lant"},
+{"group": "the noun", "german": "die Schweiz", "english": "Switzerland", "pronunciation": "dii şvayts"},
+{"group": "the noun", "german": "Österreich", "english": "Austria", "pronunciation": "ös-ter-rayh"},
+{"group": "the noun", "german": "Frankreich", "english": "France", "pronunciation": "frank-rayh"},
+{"group": "the noun", "german": "die Niederlande", "english": "Netherlands", "pronunciation": "dii nii-der-lan-de"},
+{"group": "the noun", "german": "Europa", "english": "Europe", "pronunciation": "oy-ro-pa"},
+{"group": "the noun", "german": "die Grenze", "english": "the border", "pronunciation": "dii gren-tse"},
+{"group": "the noun", "german": "die Sprache", "english": "the language", "pronunciation": "dii şp-raa-he"},
+{"group": "the noun", "german": "Französisch", "english": "French (language)", "pronunciation": "fran-tsö-ziş"},
+{"group": "the noun", "german": "Holländisch", "english": "Dutch (language)", "pronunciation": "hol-len-diş"},
+{"group": "the noun", "german": "Spanien", "english": "Spain", "pronunciation": "şpaa-ni-yen"},
+{"group": "the noun", "german": "Spanisch", "english": "Spanish", "pronunciation": "şpaa-niş"},
+{"group": "the noun", "german": "Polen", "english": "Poland", "pronunciation": "po-len"},
+{"group": "the noun", "german": "Polnisch", "english": "Polish", "pronunciation": "pol-niş"},
+{"group": "the noun", "german": "Tschechien", "english": "Czechia", "pronunciation": "tşe-hi-yen"},
+{"group": "the noun", "german": "Tschechisch", "english": "Czech", "pronunciation": "tşe-hiş"},
+{"group": "the noun", "german": "Türkisch", "english": "Turkish", "pronunciation": "tür-kiş"},
+{"group": "the noun", "german": "die Stadt", "english": "the city", "pronunciation": "dii ştat"},
+{"group": "the noun", "german": "das Land", "english": "the country", "pronunciation": "das lant"},
+{"group": "the noun", "german": "die Großstadt", "english": "the big city / metropolis", "pronunciation": "dii groos-ştat"},
+{"group": "the noun", "german": "das Richtig", "english": "the right (thing)", "pronunciation": "das rih-ti-ge"},
+{"group": "the noun", "german": "das Falsch", "english": "the wrong (thing)", "pronunciation": "das fal-şe"},
+{"group": "the noun", "german": "die Fremdsprache", "english": "the foreign language", "pronunciation": "dii fremt-şpraa-he"},
+{"group": "the noun", "german": "die Ahnung", "english": "the idea / inkling", "pronunciation": "dii aa-nung"},
+{"group": "the noun", "german": "die Zahl", "english": "the number", "pronunciation": "dii tsaal"},
+{"group": "the noun", "german": "das Verb", "english": "the verb", "pronunciation": "das verb"},
+{"group": "the noun", "german": "die Person", "english": "the person", "pronunciation": "dii per-zoon"},
+{"group": "the noun", "german": "die Tabelle", "english": "the table / chart", "pronunciation": "dii ta-bel-le"},
+{"group": "the noun", "german": "der Name", "english": "the name", "pronunciation": "deyr naa-me"},
+{"group": "the noun", "german": "die Frau", "english": "the woman", "pronunciation": "dii frau"},
+{"group": "the noun", "german": "der Mann", "english": "the man", "pronunciation": "deyr man"},
+{"group": "the noun", "german": "die Tasche", "english": "the bag", "pronunciation": "dii ta-şe"},
+{"group": "the noun", "german": "das Buch", "english": "the book", "pronunciation": "das buuh"},
+{"group": "the noun", "german": "das Geschlecht", "english": "the gender", "pronunciation": "das ge-şleht"},
+{"group": "the noun", "german": "männlich", "english": "masculine", "pronunciation": "men-lih"},
+{"group": "the noun", "german": "weiblich", "english": "feminine", "pronunciation": "vayp-lih"},
+{"group": "the noun", "german": "sächlich", "english": "neuter", "pronunciation": "zeh-lih"},
+{"group": "the noun", "german": "der Hund", "english": "the dog", "pronunciation": "deyr hunt"},
+{"group": "the noun", "german": "die Katze", "english": "the cat", "pronunciation": "dii kat-se"},
+{"group": "the noun", "german": "das Auto", "english": "the car", "pronunciation": "das au-to"},
+{"group": "the noun", "german": "das Kind", "english": "the kid", "pronunciation": "das kind"},
+{"group": "the noun", "german": "der Apfel", "english": "the apple", "pronunciation": "deyr ap-fel"},
+{"group": "the noun", "german": "das Haustier", "english": "the pet", "pronunciation": "das haus-tiir"},
+{"group": "the noun", "german": "die Frage", "english": "the question", "pronunciation": "dii fraa-ge"},
+{"group": "the noun", "german": "die Antwort", "english": "the answer", "pronunciation": "dii ant-vort"},
+{"group": "the noun", "german": "der Singular", "english": "the singular", "pronunciation": "deyr zin-gu-lar"},
+{"group": "the noun", "german": "der Plural", "english": "the plural", "pronunciation": "deyr plu-ral"},
+{"group": "the noun", "german": "die Einzahl", "english": "the singular (Germanic term)", "pronunciation": "dii ayn-tsaal"},
+{"group": "the noun", "german": "die Mehrzahl", "english": "the plural (Germanic term)", "pronunciation": "dii meer-tsaal"},
+{"group": "the noun", "german": "die Kategorie", "english": "the category", "pronunciation": "dii ka-te-go-rii"},
+{"group": "the noun", "german": "die Liste", "english": "the list", "pronunciation": "dii lis-te"},
+{"group": "the noun", "german": "das Beispiel", "english": "the example", "pronunciation": "das bay-şpiil"},
+{"group": "the noun", "german": "die Form", "english": "the form", "pronunciation": "dii form"},
+{"group": "the noun", "german": "der Schritt", "english": "the step", "pronunciation": "deyr şrit"},
+{"group": "the noun", "german": "die Aussprache", "english": "the pronunciation", "pronunciation": "dii aus-şp-raa-he"},
+{"group": "the noun", "german": "die Ausdrücke", "english": "the expressions", "pronunciation": "dii aus-drük-ke"},
+{"group": "the noun", "german": "die Arbeit", "english": "the work / job", "pronunciation": "arbait"},
+{"group": "the noun", "german": "die Sprache", "english": "the language", "pronunciation": "şprahı"},
+{"group": "the noun", "german": "die Telefonnummer", "english": "the phone number", "pronunciation": "dii te-le-foon-num-mır"},
+{"group": "the noun", "german": "die E-Mail-Adresse", "english": "the email address", "pronunciation": "dii ii-meyl-ad-res-se"},
+{"group": "the noun", "german": "das Übungsbuch", "english": "the workbook / exercise book", "pronunciation": "das üü-bunks-buuh"},
+{"group": "the noun", "german": "das Tafelbild", "english": "the board image / board work", "pronunciation": "das taa-fıl-bilt"},
+{"group": "plural nouns", "german": "die Zahlen", "english": "the numbers", "pronunciation": "dii tsaa-lın"},
+{"group": "plural nouns", "german": "die Sprachen", "english": "the languages", "pronunciation": "dii şp-raa-hın"},
+{"group": "plural nouns", "german": "die Antworten", "english": "the answers", "pronunciation": "antvortın"},
+{"group": "plural nouns", "german": "die Berufe", "english": "the professions", "pronunciation": "dii be-ruu-fe"},
+{"group": "plural nouns", "german": "die Arbeitszeiten", "english": "the working hours", "pronunciation": "dii ar-bayts-tsay-tın"},
+{"group": "plural nouns", "german": "die Sätze", "english": "the sentences", "pronunciation": "dii zet-se"},
+{"group": "plural nouns", "german": "die Studenten", "english": "the students", "pronunciation": "dii ştuu-den-ten"},
+{"group": "plural nouns", "german": "die Ingenieure", "english": "the engineers", "pronunciation": "dii in-je-nyö-re"},
+{"group": "plural nouns", "german": "die Ärzte", "english": "the doctors", "pronunciation": "dii erts-te"},
+{"group": "plural nouns", "german": "die Lehrer", "english": "the teachers", "pronunciation": "dii ley-rer"},
+{"group": "plural nouns", "german": "die Namen", "english": "the names", "pronunciation": "dii naa-men"},
+{"group": "plural nouns", "german": "die Bücher", "english": "the books", "pronunciation": "dii bü-her"},
+{"group": "plural nouns", "german": "die Hunde", "english": "the dogs", "pronunciation": "dii hun-de"},
+{"group": "plural nouns", "german": "die Katzen", "english": "the cats", "pronunciation": "dii kat-sen"},
+{"group": "plural nouns", "german": "die Autos", "english": "the cars", "pronunciation": "dii au-tos"},
+{"group": "plural nouns", "german": "die Kinder", "english": "the kids", "pronunciation": "dii kin-der"},
+{"group": "plural nouns", "german": "die Äpfel", "english": "the apples", "pronunciation": "dii ep-fel"},
+{"group": "the noun - days", "german": "der Montag", "english": "Monday", "pronunciation": "deyr mo:n-tag"},
+{"group": "the noun - days", "german": "der Dienstag", "english": "Tuesday", "pronunciation": "deyr di:ns-tag"},
+{"group": "the noun - days", "german": "der Mittwoch", "english": "Wednesday", "pronunciation": "deyr mit-voh"},
+{"group": "the noun - days", "german": "der Donnerstag", "english": "Thursday", "pronunciation": "deyr do-ners-tag"},
+{"group": "the noun - days", "german": "der Freitag", "english": "Friday", "pronunciation": "deyr frai-tag"},
+{"group": "the noun - days", "german": "der Samstag", "english": "Saturday", "pronunciation": "deyr zams-tag"},
+{"group": "the noun - days", "german": "der Sonntag", "english": "Sunday", "pronunciation": "deyr zon-tag"},
+{"group": "the noun - days", "german": "die Woche", "english": "the week", "pronunciation": "vo-he"},
+{"group": "the noun - days", "german": "die Wochentage", "english": "the weekdays", "pronunciation": "vo-hen-ta-ge"},
+{"group": "the noun - days", "german": "das Wochenende", "english": "the weekend", "pronunciation": "vo-hen-en-de"},
+{"group": "the noun - days", "german": "der Tag", "english": "the day", "pronunciation": "ta:k"},
+{"group": "the noun - days", "german": "die Tage", "english": "the days", "pronunciation": "ta:-ge"},
+{"group": "the noun - months", "german": "der Januar", "english": "January", "pronunciation": "ya-nu-ar"},
+{"group": "the noun - months", "german": "der Februar", "english": "February", "pronunciation": "fe-bu-ar"},
+{"group": "the noun - months", "german": "der März", "english": "March", "pronunciation": "merts"},
+{"group": "the noun - months", "german": "der April", "english": "April", "pronunciation": "ap-ril"},
+{"group": "the noun - months", "german": "der Mai", "english": "May", "pronunciation": "may"},
+{"group": "the noun - months", "german": "der Juni", "english": "June", "pronunciation": "yu-ni"},
+{"group": "the noun - months", "german": "der Juli", "english": "July", "pronunciation": "yu-li"},
+{"group": "the noun - months", "german": "der August", "english": "August", "pronunciation": "au-gust"},
+{"group": "the noun - months", "german": "der September", "english": "September", "pronunciation": "sep-tem-ber"},
+{"group": "the noun - months", "german": "der Oktober", "english": "October", "pronunciation": "ok-to-ber"},
+{"group": "the noun - months", "german": "der November", "english": "November", "pronunciation": "no-vem-ber"},
+{"group": "the noun - months", "german": "der Dezember", "english": "December", "pronunciation": "de-tsem-ber"},
+{"group": "the noun - months", "german": "der Monat", "english": "the month", "pronunciation": "mo-nat"},
+{"group": "the noun - months", "german": "die Monate", "english": "the months", "pronunciation": "mo-na-te"},
+{"group": "the noun - seasons", "german": "der Frühling", "english": "spring", "pronunciation": "fri-ling"},
+{"group": "the noun - seasons", "german": "der Sommer", "english": "summer", "pronunciation": "zo-mer"},
+{"group": "the noun - seasons", "german": "der Herbst", "english": "autumn", "pronunciation": "herpst"},
+{"group": "the noun - seasons", "german": "der Winter", "english": "winter", "pronunciation": "vin-ter"},
+{"group": "the noun - seasons", "german": "die Jahreszeit", "english": "the season", "pronunciation": "ya-res-tsayt"},
+{"group": "the noun - seasons", "german": "die Jahreszeiten", "english": "the seasons", "pronunciation": "ya-res-tsay-ten"},
+{"group": "the verb", "german": "hingehen", "english": "to go there / to a specific place", "pronunciation": "hin-gey-en"},
+{"group": "the verb", "german": "beginnen", "english": "to start / begin", "pronunciation": "be-gin-nın"},
+{"group": "the verb", "german": "beenden", "english": "to finish / to end", "pronunciation": "be-en-dın"},
+{"group": "the verb", "german": "aufstehen", "english": "to get up", "pronunciation": "auf-şte-hın"},
+{"group": "the verb", "german": "schlafen", "english": "to sleep", "pronunciation": "şlaa-fın"},
+{"group": "the verb", "german": "fertig sein", "english": "to be finished / ready", "pronunciation": "fer-tih zayn"},
+{"group": "the verb", "german": "aufwachen", "english": "to wake up", "pronunciation": "auf-va-hın"},
+{"group": "the verb", "german": "aufstehen", "english": "to get up", "pronunciation": "auf-şte-hın"},
+{"group": "the verb", "german": "kosten", "english": "to cost", "pronunciation": "kos-ten"},
+{"group": "the verb", "german": "studieren", "english": "to study (at university)", "pronunciation": "ştu-di-ren"},
+{"group": "the verb", "german": "lernen", "english": "to study / to learn", "pronunciation": "ler-nın"},
+{"group": "the verb", "german": "arbeiten", "english": "to work", "pronunciation": "ar-bay-ten"},
+{"group": "the verb", "german": "wohnen", "english": "to live / to reside", "pronunciation": "vo-nen"},
+{"group": "the verb", "german": "leben", "english": "to live (life)", "pronunciation": "ley-ben"},
+{"group": "the verb", "german": "haben", "english": "to have", "pronunciation": "haa-ben"},
+{"group": "the verb", "german": "sprechen", "english": "to speak", "pronunciation": "şpre-hen"},
+{"group": "the verb", "german": "wissen", "english": "to know (a fact)", "pronunciation": "vis-sen"},
+{"group": "the verb", "german": "kennen", "english": "to know (be familiar)", "pronunciation": "ken-nen"},
+{"group": "the verb", "german": "heißen", "english": "to be called / named", "pronunciation": "hay-sen"},
+{"group": "the verb", "german": "zählen", "english": "to count", "pronunciation": "tse-len"},
+{"group": "the verb", "german": "kopieren", "english": "to copy", "pronunciation": "ko-pi-ren"},
+{"group": "the verb", "german": "einfügen", "english": "to paste / to insert", "pronunciation": "ayn-fü-gen"},
+{"group": "the verb", "german": "ausschneiden", "english": "to cut", "pronunciation": "aus-şnay-den"},
+{"group": "the verb", "german": "speichern", "english": "to save", "pronunciation": "şpay-chern"},
+{"group": "the verb", "german": "löschen", "english": "to delete", "pronunciation": "lö-şen"},
+{"group": "the verb", "german": "hören", "english": "to hear / to listen", "pronunciation": "höö-rın"},
+{"group": "the verb", "german": "sehen", "english": "to see", "pronunciation": "zey-hın"},
+{"group": "the verb", "german": "üben", "english": "to practice", "pronunciation": "üü-bın"},
+{"group": "the verb", "german": "schreiben", "english": "to write", "pronunciation": "şray-bın"},
+{"group": "the verb", "german": "lösen", "english": "to solve", "pronunciation": "löö-zın"},
+{"group": "the verb", "german": "finden", "english": "to find", "pronunciation": "fin-dın"},
+{"group": "the verb", "german": "sagen", "english": "to say", "pronunciation": "zaa-gın"},
+{"group": "the verb", "german": "vergleichen", "english": "to compare", "pronunciation": "fer-glay-hın"},
+{"group": "the verb", "german": "ausfüllen", "english": "to fill in", "pronunciation": "aus-fül-lın"},
+{"group": "the verb", "german": "schreiben", "english": "to write", "pronunciation": "şraybın"},
+{"group": "the verb", "german": "buchstabieren", "english": "to spell", "pronunciation": "buh-şta-bii-rın"},
+{"group": "the verb", "german": "recherchieren", "english": "to research", "pronunciation": "re-şer-şii-rın"},
+{"group": "the verb", "german": "bekommen", "english": "to get / receive", "pronunciation": "be-kom-mın"},
+{"group": "the verb", "german": "vorstellen", "english": "to introduce", "pronunciation": "foor-ştel-lın"},
+{"group": "the verb", "german": "grüßen", "english": "to greet", "pronunciation": "grüü-sın"},
+{"group": "the verb", "german": "verabschieden", "english": "to say goodbye", "pronunciation": "fer-ap-şii-dın"},
+{"group": "the verb", "german": "ordnen", "english": "to arrange / to sort", "pronunciation": "ord-nın"},
+{"group": "the verb", "german": "besitzen", "english": "to possess / to own", "pronunciation": "be-zit-sen"},
+{"group": "the verb", "german": "gehören", "english": "to belong to", "pronunciation": "ge-hö-ren"},
+{"group": "the verb", "german": "fragen", "english": "to ask", "pronunciation": "fraa-gen"},
+{"group": "the verb", "german": "antworten", "english": "to answer", "pronunciation": "ant-vor-tın"},
+{"group": "the verb", "german": "lesen", "english": "to read", "pronunciation": "ley-zen"},
+{"group": "the verb", "german": "sortieren", "english": "to sort / to organize", "pronunciation": "zor-ti-ren"},
+{"group": "the verb", "german": "gehen", "english": "to walk / go on foot", "pronunciation": "gey-en"},
+{"group": "the verb", "german": "fahren", "english": "to drive / go by vehicle", "pronunciation": "faa-ren"},
+{"group": "the verb", "german": "fliegen", "english": "to fly", "pronunciation": "flii-gen"},
+{"group": "the verb", "german": "machen", "english": "to make/done", "pronunciation": "ma-hen"},
+{"group": "the adverb", "german": "bis", "english": "until / to", "pronunciation": "bis"},
+{"group": "the adverb", "german": "auch", "english": "also / too", "pronunciation": "auh"},
+{"group": "the adverb", "german": "ganz", "english": "quite/ whole", "pronunciation": "gants"},
+{"group": "the adverb", "german": "heute", "english": "today", "pronunciation": "hoy-te"},
+{"group": "the adverb", "german": "morgen", "english": "tomorrow", "pronunciation": "mor-gen"},
+{"group": "the adverb", "german": "gestern", "english": "yesterday", "pronunciation": "ges-tern"},
+{"group": "the adverb", "german": "jetzt", "english": "now", "pronunciation": "yetst"},
+{"group": "the adverb", "german": "sofort", "english": "immediately", "pronunciation": "zo-fort"},
+{"group": "the adverb", "german": "früh", "english": "early", "pronunciation": "früü"},
+{"group": "the adverb", "german": "viel", "english": "much / a lot", "pronunciation": "fiil"},
+{"group": "the adverb", "german": "dort", "english": "there", "pronunciation": "dort"},
+{"group": "the adverb", "german": "hier", "english": "here", "pronunciation": "hiir"},
+{"group": "the adverb", "german": "da", "english": "there / here", "pronunciation": "daa"},
+{"group": "the adverb", "german": "draußen", "english": "outside", "pronunciation": "drau-sen"},
+{"group": "the adverb", "german": "drinnen", "english": "inside", "pronunciation": "drin-nen"},
+{"group": "the adverb", "german": "viele", "english": "many", "pronunciation": "fii-le"},
+{"group": "the adverb", "german": "mehr", "english": "more", "pronunciation": "meyr"},
+{"group": "the adverb", "german": "beide", "english": "both", "pronunciation": "bay-de"},
+{"group": "the adverb", "german": "langsam", "english": "slowly", "pronunciation": "lang-zam"},
+{"group": "the adverb", "german": "zum", "english": "to the (masc/neut)", "pronunciation": "tsum"},
+{"group": "the adverb", "german": "zur", "english": "to the (fem)", "pronunciation": "tsur"},
+{"group": "the adverb", "german": "zusammen", "english": "together", "pronunciation": "tsu-zam-mın"},
+{"group": "the adverb", "german": "anderen", "english": "other / others", "pronunciation": "an-de-rın"},
+{"group": "the conjunction", "german": "und", "english": "and", "pronunciation": "unt"},
+{"group": "the conjunction", "german": "aber", "english": "but", "pronunciation": "aa-ber"},
+{"group": "the conjunction", "german": "oder", "english": "or", "pronunciation": "oo-der"},
+{"group": "the preposition", "german": "nach", "english": "to (towards a country/city)", "pronunciation": "naah"},
+{"group": "the preposition", "german": "mit", "english": "with", "pronunciation": "mit"},
+{"group": "the preposition", "german": "von", "english": "of / from / by", "pronunciation": "fon"},
+{"group": "the preposition", "german": "aus", "english": "from", "pronunciation": "aus"},
+{"group": "the preposition", "german": "um", "english": "at", "pronunciation": "um"},
+{"group": "the preposition", "german": "in", "english": "in", "pronunciation": "in"},
+{"group": "", "german": "", "english": "", "pronunciation": ""},
+{"group": "the noun", "german": "der Buchstabe", "english": "the letter (alphabet)", "pronunciation": "der buuh-şta-be"},
+{"group": "the letter (alphabet)", "german": "A a", "english": "A a", "pronunciation": "aa"},
+{"group": "the letter (alphabet)", "german": "B b", "english": "B b", "pronunciation": "be"},
+{"group": "the letter (alphabet)", "german": "C c", "english": "C c", "pronunciation": "tse"},
+{"group": "the letter (alphabet)", "german": "D d", "english": "D d", "pronunciation": "de"},
+{"group": "the letter (alphabet)", "german": "E e", "english": "E e", "pronunciation": "ee"},
+{"group": "the letter (alphabet)", "german": "F f", "english": "F f", "pronunciation": "ef"},
+{"group": "the letter (alphabet)", "german": "G g", "english": "G g", "pronunciation": "ge"},
+{"group": "the letter (alphabet)", "german": "H h", "english": "H h", "pronunciation": "ha"},
+{"group": "the letter (alphabet)", "german": "I i", "english": "I i", "pronunciation": "ii"},
+{"group": "the letter (alphabet)", "german": "J j", "english": "J j", "pronunciation": "yot"},
+{"group": "the letter (alphabet)", "german": "K k", "english": "K k", "pronunciation": "ka"},
+{"group": "the letter (alphabet)", "german": "L l", "english": "L l", "pronunciation": "el"},
+{"group": "the letter (alphabet)", "german": "M m", "english": "M m", "pronunciation": "em"},
+{"group": "the letter (alphabet)", "german": "N n", "english": "N n", "pronunciation": "en"},
+{"group": "the letter (alphabet)", "german": "O o", "english": "O o", "pronunciation": "oo"},
+{"group": "the letter (alphabet)", "german": "P p", "english": "P p", "pronunciation": "pe"},
+{"group": "the letter (alphabet)", "german": "Q q", "english": "Q q", "pronunciation": "ku"},
+{"group": "the letter (alphabet)", "german": "R r", "english": "R r", "pronunciation": "er"},
+{"group": "the letter (alphabet)", "german": "S s", "english": "S s", "pronunciation": "es"},
+{"group": "the letter (alphabet)", "german": "T t", "english": "T t", "pronunciation": "te"},
+{"group": "the letter (alphabet)", "german": "U u", "english": "U u", "pronunciation": "uu"},
+{"group": "the letter (alphabet)", "german": "V v", "english": "V v", "pronunciation": "fau"},
+{"group": "the letter (alphabet)", "german": "W w", "english": "W w", "pronunciation": "ve"},
+{"group": "the letter (alphabet)", "german": "X x", "english": "X x", "pronunciation": "iks"},
+{"group": "the letter (alphabet)", "german": "Y y", "english": "Y y", "pronunciation": "üpsilon"},
+{"group": "the letter (alphabet)", "german": "Z z", "english": "Z z", "pronunciation": "tset"},
+{"group": "the letter (alphabet)", "german": "Ä ä", "english": "A-Umlaut", "pronunciation": "e"},
+{"group": "the letter (alphabet)", "german": "Ö ö", "english": "O-Umlaut", "pronunciation": "ö"},
+{"group": "the letter (alphabet)", "german": "Ü ü", "english": "U-Umlaut", "pronunciation": "ü"},
+{"group": "the letter (alphabet)", "german": "ß", "english": "Eszett", "pronunciation": "es-tset"},
+{"group": "", "german": "", "english": "", "pronunciation": ""},
+{"group": "the noun", "german": "Die Zahl", "english": "The number", "pronunciation": "dii tsaal"},
+{"group": "The number", "german": "null", "english": "zero", "pronunciation": "nul"},
+{"group": "The number", "german": "eins", "english": "one", "pronunciation": "aynts"},
+{"group": "The number", "german": "zwei", "english": "two", "pronunciation": "tsvay"},
+{"group": "The number", "german": "drei", "english": "three", "pronunciation": "dray"},
+{"group": "The number", "german": "vier", "english": "four", "pronunciation": "fiir"},
+{"group": "The number", "german": "fünf", "english": "five", "pronunciation": "fünüf"},
+{"group": "The number", "german": "sechs", "english": "six", "pronunciation": "zeks"},
+{"group": "The number", "german": "sieben", "english": "seven", "pronunciation": "ziibın"},
+{"group": "The number", "german": "acht", "english": "eight", "pronunciation": "aht"},
+{"group": "The number", "german": "neun", "english": "nine", "pronunciation": "noyn"},
+{"group": "The number", "german": "zehn", "english": "ten", "pronunciation": "tseyn"},
+{"group": "The number", "german": "elf", "english": "eleven", "pronunciation": "elf"},
+{"group": "The number", "german": "zwölf", "english": "twelve", "pronunciation": "tsvölf"},
+{"group": "The number", "german": "dreizehn", "english": "thirteen", "pronunciation": "dray-tseyn"},
+{"group": "The number", "german": "vierzehn", "english": "fourteen", "pronunciation": "fiir-tseyn"},
+{"group": "The number", "german": "fünfzehn", "english": "fifteen", "pronunciation": "fünf-tseyn"},
+{"group": "The number", "german": "sechzehn", "english": "sixteen", "pronunciation": "zeh-tseyn"},
+{"group": "The number", "german": "siebzehn", "english": "seventeen", "pronunciation": "ziib-tseyn"},
+{"group": "The number", "german": "achtzehn", "english": "eighteen", "pronunciation": "aht-tseyn"},
+{"group": "The number", "german": "neunzehn", "english": "nineteen", "pronunciation": "noyn-tseyn"},
+{"group": "The number", "german": "zwanzig", "english": "twenty", "pronunciation": "tsvan-tsih"},
+{"group": "The number", "german": "einundzwanzig", "english": "twenty-one", "pronunciation": "ayn-und-tsvantsig"},
+{"group": "The number", "german": "zweiundzwanzig", "english": "twenty-two", "pronunciation": "tsvay-und-tsvantsig"},
+{"group": "The number", "german": "dreiundzwanzig", "english": "twenty-three", "pronunciation": "dray-und-tsvantsig"},
+{"group": "The number", "german": "vierundzwanzig", "english": "twenty-four", "pronunciation": "fiir-und-tsvantsig"},
+{"group": "The number", "german": "fünfundzwanzig", "english": "twenty-five", "pronunciation": "fünf-und-tsvantsig"},
+{"group": "The number", "german": "sechsundzwanzig", "english": "twenty-six", "pronunciation": "zeks-und-tsvantsig"},
+{"group": "The number", "german": "siebenundzwanzig", "english": "twenty-seven", "pronunciation": "ziibın-und-tsvantsig"},
+{"group": "The number", "german": "achtundzwanzig", "english": "twenty-eight", "pronunciation": "aht-und-tsvantsig"},
+{"group": "The number", "german": "neunundzwanzig", "english": "twenty-nine", "pronunciation": "noyn-und-tsvantsig"},
+{"group": "The number", "german": "dreißig", "english": "thirty", "pronunciation": "dray-sih"},
+{"group": "The number", "german": "vierzig", "english": "forty", "pronunciation": "fiir-tsih"},
+{"group": "The number", "german": "fünfzig", "english": "fifty", "pronunciation": "fünf-tsih"},
+{"group": "The number", "german": "sechzig", "english": "sixty", "pronunciation": "zeh-tsih"},
+{"group": "The number", "german": "siebzig", "english": "seventy", "pronunciation": "ziib-tsih"},
+{"group": "The number", "german": "achtzig", "english": "eighty", "pronunciation": "aht-tsih"},
+{"group": "The number", "german": "neunzig", "english": "ninety", "pronunciation": "noyn-tsih"},
+{"group": "The number", "german": "hundert", "english": "hundred", "pronunciation": "hun-dert"},
+{"group": "The number", "german": "zweihundert", "english": "two hundred", "pronunciation": "tsvay-hun-dert"},
+{"group": "The number", "german": "dreihundert", "english": "three hundred", "pronunciation": "dray-hun-dert"},
+{"group": "The number", "german": "fünfhundert", "english": "five hundred", "pronunciation": "fünf-hun-dert"},
+{"group": "The number", "german": "einhunderttausend", "english": "one hundred thousand", "pronunciation": "ayn-hun-dert-tau-zınt"},
+{"group": "The number", "german": "eine Million", "english": "one million", "pronunciation": "ay-ne mil-yoon"},
+{"group": "The number", "german": "neunzehnhundertneunundachtzig", "english": "nineteen eighty-nine", "pronunciation": "noyn-tseyn-hun-dert-noyn-unt-aht-tsih"},
+{"group": "The number", "german": "zweitausendvier", "english": "two thousand and four", "pronunciation": "tsvay-tau-zınt-fiir"},
+{"group": "The number", "german": "zweitausendfünfzehn", "english": "two thousand and fifteen", "pronunciation": "tsvay-tau-zınt-fünf-tseyn"},
+{"group": "The number", "german": "zweitausendsechsundzwanzig", "english": "two thousand and twenty-six", "pronunciation": "tsvay-tau-zınt-zeks-unt-tsvantsig"},
+{"group": "", "german": "", "english": "", "pronunciation": ""},
+{"group": "the verb", "german": "Sein", "english": "To be", "pronunciation": "Zein"},
+{"group": "the pronoun", "german": "Ich bin", "english": "I am", "pronunciation": "ih bin"},
+{"group": "the pronoun", "german": "Du bist", "english": "You are", "pronunciation": "du bist"},
+{"group": "the pronoun", "german": "Er/Sie/Es ist", "english": "He/She/It is", "pronunciation": "er/zii/es ist"},
+{"group": "the pronoun", "german": "Wir sind", "english": "We are", "pronunciation": "viir zint"},
+{"group": "the pronoun", "german": "Ihr seid", "english": "You (all) are", "pronunciation": "iir zayt"},
+{"group": "the pronoun", "german": "Sie/sie sind", "english": "You (form.) / They are", "pronunciation": "zii zint"},
+{"group": "", "german": "", "english": "", "pronunciation": ""},
+{"group": "the verb", "german": "kommen", "english": "come", "pronunciation": "komın"},
+{"group": "Verb Conjugations", "german": "Ich komme", "english": "I come", "pronunciation": "ih kom-me"},
+{"group": "Verb Conjugations", "german": "Du kommst", "english": "You come", "pronunciation": "du komst"},
+{"group": "Verb Conjugations", "german": "Er/Sie/Es kommt", "english": "He/She/It comes", "pronunciation": "er/zii/es komt"},
+{"group": "Verb Conjugations", "german": "Wir kommen", "english": "We come", "pronunciation": "viir kom-mın"},
+{"group": "Verb Conjugations", "german": "Ihr kommt", "english": "You (all) come", "pronunciation": "iir komt"},
+{"group": "Verb Conjugations", "german": "Sie/sie kommen", "english": "You (form.)/They come", "pronunciation": "zii kom-mın"},
+{"group": "", "german": "", "english": "", "pronunciation": ""},
+{"group": "the verb", "german": "arbeiten", "english": "to work", "pronunciation": ""},
+{"group": "Verb Conjugations", "german": "Ich arbeite", "english": "I work", "pronunciation": "ih ar-bay-te"},
+{"group": "Verb Conjugations", "german": "Du arbeitest", "english": "You work (informal)", "pronunciation": "du ar-bay-test"},
+{"group": "Verb Conjugations", "german": "Er/Sie/Es arbeitet", "english": "He/She/It works", "pronunciation": "er/zii/es ar-bay-tet"},
+{"group": "Verb Conjugations", "german": "Wir arbeiten", "english": "We work", "pronunciation": "viir ar-bay-tın"},
+{"group": "Verb Conjugations", "german": "Ihr arbeitet", "english": "You (all) work", "pronunciation": "iir ar-bay-tet"},
+{"group": "Verb Conjugations", "german": "Sie/sie arbeiten", "english": "You (form.)/They work", "pronunciation": "zii ar-bay-tın"},
+{"group": "", "german": "", "english": "", "pronunciation": ""},
+{"group": "the noun", "german": "Possessivpronomen", "english": "Possessive pronouns", "pronunciation": "possesivpronomın"},
+{"group": "Possessive pronouns", "german": "mein", "english": "my", "pronunciation": "mayn"},
+{"group": "Possessive pronouns", "german": "dein", "english": "your", "pronunciation": "dayn"},
+{"group": "Possessive pronouns", "german": "sein", "english": "his", "pronunciation": "zayn"},
+{"group": "Possessive pronouns", "german": "ihr", "english": "her", "pronunciation": "iir"},
+{"group": "Possessive pronouns", "german": "sein", "english": "its", "pronunciation": "zayn"},
+{"group": "Possessive pronouns", "german": "unser", "english": "our", "pronunciation": "un-zer"},
+{"group": "Possessive pronouns", "german": "euer / eure*", "english": "your (You all)", "pronunciation": "oy-er / oy-re"},
+{"group": "Possessive pronouns", "german": "ihr", "english": "their", "pronunciation": "iir"},
+{"group": "Possessive pronouns", "german": "Ihr", "english": "your (formal)", "pronunciation": "iir"},
+{"group": "", "german": "", "english": "", "pronunciation": ""},
+{"group": "the noun", "german": "W-Fragen", "english": "W-Questions", "pronunciation": "Vi fragın"},
+{"group": "W-Questions", "german": "Wer?", "english": "Who?", "pronunciation": "ver"},
+{"group": "W-Questions", "german": "Was?", "english": "What?", "pronunciation": "vas"},
+{"group": "W-Questions", "german": "Wo?", "english": "Where?", "pronunciation": "vo"},
     ];
 
     // ============================================================
@@ -956,6 +1748,9 @@
     let direction = "de-en";
     let learnedCount = 0;
     let initialDeckSize = 0;
+    let learnedWords = []; // list of German words learned in this session
+    let currentGroup = "All";
+    let preloadedLearned = null; // learned words loaded from file before Start
 
     // DOM refs
     const setupScreen = document.getElementById('setupScreen');
@@ -987,7 +1782,13 @@
 
     function buildDeck() {
         const group = document.getElementById('groupSelect').value;
+        currentGroup = group;
         let filtered = (group === 'All') ? [...WORDS_DATA] : WORDS_DATA.filter(w => w.group === group);
+        // If a session was preloaded, exclude already-learned words
+        if (preloadedLearned && preloadedLearned.length > 0) {
+            const learnedSet = new Set(preloadedLearned);
+            filtered = filtered.filter(w => !learnedSet.has(w.german));
+        }
         return shuffleArray(filtered);
     }
 
@@ -1075,6 +1876,10 @@
     // ============================================================
     function swipeRight() {
         if (!currentCardObj || currentDeck.length === 0) return;
+        // Track the learned word (German is the canonical key)
+        if (currentCardObj.german && !learnedWords.includes(currentCardObj.german)) {
+            learnedWords.push(currentCardObj.german);
+        }
         currentDeck.shift();
         learnedCount++;
         animateOut('right');
@@ -1171,10 +1976,11 @@
 
     function resetGame() {
         learnedCount = 0;
+        learnedWords = [];
         currentDeck = buildDeck();
         initialDeckSize = currentDeck.length;
         if (currentDeck.length === 0) {
-            alert("No words in this group.");
+            showToast('No words remain in this group.', 'error');
             showScreen('setupScreen');
             return;
         }
@@ -1189,10 +1995,11 @@
         direction = document.querySelector('input[name="direction"]:checked').value;
         showPronunciation = document.getElementById('showPronCheck').checked;
         learnedCount = 0;
+        learnedWords = [];
         currentDeck = buildDeck();
         initialDeckSize = currentDeck.length;
         if (currentDeck.length === 0) {
-            alert("No words in selected group.");
+            showToast('No new words in this group. All learned!', 'error');
             return;
         }
         // Make sure card DOM is fresh
@@ -1392,7 +2199,149 @@
     }
 
     // ============================================================
-    //  GENERAL EVENTS
+    //  TOAST
+    // ============================================================
+    let toastTimer = null;
+    function showToast(msg, type = 'success') {
+        const toast = document.getElementById('toast');
+        const icon = document.getElementById('toastIcon');
+        const msgEl = document.getElementById('toastMsg');
+        msgEl.innerText = msg;
+        toast.classList.remove('success', 'error');
+        if (type === 'success') {
+            toast.classList.add('success');
+            icon.innerText = '✓';
+        } else {
+            toast.classList.add('error');
+            icon.innerText = '⚠';
+        }
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+
+    // ============================================================
+    //  SAVE / LOAD SESSION
+    // ============================================================
+    function saveSession() {
+        if (learnedWords.length === 0) {
+            showToast('No learned words to save yet.', 'error');
+            return;
+        }
+        const now = new Date();
+        const payload = {
+            app: 'Wortspiel',
+            version: 1,
+            savedAt: now.toISOString(),
+            group: currentGroup,
+            learned: [...learnedWords]
+        };
+        const dateStr = now.toISOString().slice(0, 10);
+        const groupSlug = (currentGroup || 'All').replace(/[^a-zA-Z0-9]/g, '_');
+        const filename = `wortspiel_${groupSlug}_${dateStr}.json`;
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 200);
+        showToast(`Saved ${learnedWords.length} word${learnedWords.length !== 1 ? 's' : ''}`, 'success');
+    }
+
+    function openLoadDialog() {
+        document.getElementById('loadFileInput').click();
+    }
+
+    function handleLoadFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (!data || !Array.isArray(data.learned)) {
+                    showToast('Invalid file format.', 'error');
+                    return;
+                }
+                // If user is mid-game with unsaved progress, ask first
+                if (gameScreen.classList.contains('active') && learnedWords.length > 0) {
+                    const ok = confirm(`You have ${learnedWords.length} unsaved learned word(s). Loading will replace them. Continue?`);
+                    if (!ok) return;
+                }
+                preloadedLearned = data.learned;
+                // If a group was saved, try to select it in the setup dropdown
+                const groupSelect = document.getElementById('groupSelect');
+                if (data.group && groupSelect) {
+                    const opt = Array.from(groupSelect.options).find(o => o.value === data.group);
+                    if (opt) groupSelect.value = data.group;
+                }
+                // If we're already in game, restart deck excluding learned
+                if (gameScreen.classList.contains('active')) {
+                    learnedCount = 0;
+                    learnedWords = [];
+                    currentDeck = buildDeck();
+                    if (currentDeck.length === 0) {
+                        showToast(`Loaded — all ${data.learned.length} words already learned!`, 'success');
+                        showCompleteState();
+                    } else {
+                        if (!document.getElementById('cardWrapper')) rebuildCardDOM();
+                        loadNextCard();
+                        showToast(`Loaded ${data.learned.length} learned — ${currentDeck.length} remaining`, 'success');
+                    }
+                } else {
+                    // On setup screen — just note that a session is preloaded
+                    showToast(`Loaded ${data.learned.length} learned word${data.learned.length !== 1 ? 's' : ''}. Press Start.`, 'success');
+                }
+            } catch (err) {
+                showToast('Could not read file.', 'error');
+            }
+        };
+        reader.onerror = () => showToast('Error reading file.', 'error');
+        reader.readAsText(file);
+    }
+
+    // ============================================================
+    //  MODALS
+    // ============================================================
+    function openSaveModal() {
+        if (learnedWords.length === 0) {
+            showToast('No learned words to save yet.', 'error');
+            return;
+        }
+        document.getElementById('modalGroupName').innerText = currentGroup === 'All' ? 'all groups' : currentGroup;
+        document.getElementById('modalLearnedCount').innerText = learnedWords.length;
+        document.getElementById('saveModal').classList.add('show');
+    }
+
+    function closeSaveModal() {
+        document.getElementById('saveModal').classList.remove('show');
+    }
+
+    function openBackModal() {
+        // Only prompt if there are unsaved learned words
+        if (learnedWords.length === 0) {
+            goBackToSetup();
+            return;
+        }
+        document.getElementById('modalUnsavedCount').innerText = learnedWords.length;
+        document.getElementById('backModal').classList.add('show');
+    }
+
+    function closeBackModal() {
+        document.getElementById('backModal').classList.remove('show');
+    }
+
+    function goBackToSetup() {
+        learnedWords = [];
+        learnedCount = 0;
+        preloadedLearned = null;
+        showScreen('setupScreen');
+    }
+
+    // ============================================================
+    //  EVENT BINDING
     // ============================================================
     function populateGroups() {
         const select = document.getElementById('groupSelect');
@@ -1408,8 +2357,47 @@
 
     function bindEvents() {
         document.getElementById('startGameBtn').addEventListener('click', startGame);
-        document.getElementById('backSetupBtn').addEventListener('click', () => showScreen('setupScreen'));
+        document.getElementById('backSetupBtn').addEventListener('click', openBackModal);
         document.getElementById('resetDeckBtn').addEventListener('click', resetGame);
+
+        // Save / Load
+        document.getElementById('gameSaveBtn').addEventListener('click', openSaveModal);
+        document.getElementById('gameLoadBtn').addEventListener('click', openLoadDialog);
+        document.getElementById('setupLoadBtn').addEventListener('click', openLoadDialog);
+
+        // Modal: Save
+        document.getElementById('saveModalCancel').addEventListener('click', closeSaveModal);
+        document.getElementById('saveModalConfirm').addEventListener('click', () => {
+            closeSaveModal();
+            saveSession();
+        });
+
+        // Modal: Back with unsaved
+        document.getElementById('backModalDiscard').addEventListener('click', () => {
+            closeBackModal();
+            goBackToSetup();
+        });
+        document.getElementById('backModalSave').addEventListener('click', () => {
+            closeBackModal();
+            saveSession();
+            // Slight delay so user sees the save toast before screen switch
+            setTimeout(goBackToSetup, 400);
+        });
+
+        // Close modals on backdrop tap
+        document.getElementById('saveModal').addEventListener('click', (e) => {
+            if (e.target.id === 'saveModal') closeSaveModal();
+        });
+        document.getElementById('backModal').addEventListener('click', (e) => {
+            if (e.target.id === 'backModal') closeBackModal();
+        });
+
+        // File input
+        document.getElementById('loadFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleLoadFile(file);
+            e.target.value = ''; // allow same file to be reloaded
+        });
 
         document.getElementById('showPronCheck').addEventListener('change', (e) => {
             showPronunciation = e.target.checked;
