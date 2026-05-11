@@ -35,12 +35,35 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
             user-select: none;
+        }
+
+        /* Extra-strong selection prevention for word text */
+        .word-text, .pronunciation, .face-label, .card-footer,
+        .stat-value, .stat-label, .field-label, .header h1, .header .tagline {
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            -khtml-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            user-select: none !important;
+            pointer-events: none;
+        }
+
+        /* Re-enable pointer events only on container so taps still register */
+        .card-3d-wrapper, .card-face, .card-content, .card-top-row,
+        .speak-btn, .speak-btn svg, button {
+            pointer-events: auto;
         }
 
         html, body {
             height: 100%;
             overflow: hidden;
+            touch-action: manipulation;
+            overscroll-behavior: none;
         }
 
         body {
@@ -83,22 +106,47 @@
         /* ============ HEADER ============ */
         .header {
             flex-shrink: 0;
-            padding: 14px 20px 12px;
+            padding: 12px 20px 10px;
             text-align: center;
             color: white;
             border-bottom: 1px solid rgba(201, 169, 97, 0.2);
             background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent);
+            position: relative;
+        }
+
+        .brand-mark {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--gold);
+            opacity: 0.85;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .brand-mark::before,
+        .brand-mark::after {
+            content: '';
+            width: 18px;
+            height: 1px;
+            background: var(--gold);
+            opacity: 0.5;
         }
 
         .header h1 {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 600;
             letter-spacing: 0.5px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            line-height: 1;
         }
 
         .header h1 .accent {
@@ -107,11 +155,11 @@
         }
 
         .header .tagline {
-            font-size: 10px;
+            font-size: 9px;
             letter-spacing: 3px;
             text-transform: uppercase;
             color: var(--gold-soft);
-            margin-top: 2px;
+            margin-top: 4px;
             opacity: 0.7;
         }
 
@@ -395,6 +443,7 @@
             inset: 0;
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
+            -moz-backface-visibility: hidden;
             border-radius: 24px;
             padding: 24px 20px;
             display: flex;
@@ -404,6 +453,28 @@
                 0 0 0 1px rgba(201, 169, 97, 0.2) inset,
                 0 0 30px rgba(201, 169, 97, 0.1) inset;
             overflow: hidden;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            transition: opacity 0.15s ease;
+        }
+
+        /* Bulletproof face hiding: only the front face is visible when not flipped */
+        .card-3d-wrapper:not(.flipped) .card-back {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .card-3d-wrapper.flipped .card-front {
+            opacity: 0;
+            visibility: hidden;
+        }
+        /* Delay the visibility swap so it happens at the mid-point of the flip */
+        .card-3d-wrapper:not(.flipped) .card-back,
+        .card-3d-wrapper.flipped .card-front {
+            transition: opacity 0.15s ease 0.2s, visibility 0s linear 0.275s;
+        }
+        .card-3d-wrapper:not(.flipped) .card-front,
+        .card-3d-wrapper.flipped .card-back {
+            transition: opacity 0.15s ease 0.275s, visibility 0s linear 0.275s;
         }
 
         .card-front {
@@ -636,20 +707,20 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 10px;
-            color: rgba(255, 255, 255, 0.5);
-            letter-spacing: 1px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
-            padding: 0 4px;
+            padding: 4px 6px;
             flex-shrink: 0;
         }
 
         .swipe-hint .left-side {
-            color: rgba(155, 34, 38, 0.85);
+            color: #e87e7e;
         }
 
         .swipe-hint .right-side {
-            color: rgba(45, 106, 79, 0.95);
+            color: #6dd49a;
         }
 
         /* Empty / complete state */
@@ -682,23 +753,33 @@
         }
 
         /* Responsive tweaks */
-        @media (max-height: 700px) {
+        @media (max-height: 740px) {
             .header { padding: 10px 20px 8px; }
             .header h1 { font-size: 22px; }
-            .card-3d-wrapper { min-height: 340px; }
+            .brand-mark { font-size: 8px; letter-spacing: 3px; }
+            .card-3d-wrapper { min-height: 360px; }
             .word-text { font-size: clamp(24px, 7vw, 34px); }
         }
 
-        @media (max-height: 600px) {
-            .card-3d-wrapper { min-height: 300px; }
+        @media (max-height: 640px) {
+            .header { padding: 8px 20px 6px; }
+            .header h1 { font-size: 20px; }
+            .header .tagline { font-size: 8px; margin-top: 2px; }
+            .card-3d-wrapper { min-height: 320px; }
             .stat-pill { padding: 6px 10px; }
             .stat-pill .stat-value { font-size: 16px; }
+        }
+
+        @media (max-height: 560px) {
+            .header .tagline { display: none; }
+            .card-3d-wrapper { min-height: 280px; }
         }
     </style>
 </head>
 <body>
 <div class="app">
     <header class="header">
+        <div class="brand-mark">Bulut Projects</div>
         <h1>Über<span class="accent">game</span></h1>
         <div class="tagline">swipe · learn · master</div>
     </header>
@@ -1242,9 +1323,12 @@
         const wrapper = document.getElementById('cardWrapper');
         if (!wrapper) return;
 
+        let hasTouched = false;
+
         // Touch
         wrapper.addEventListener('touchstart', (e) => {
-            // Allow speak button to receive its own click
+            hasTouched = true;
+            // Allow speak button to receive its own touchend
             if (e.target.closest('.speak-btn')) return;
             onDragStart(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: true });
@@ -1256,9 +1340,12 @@
         }, { passive: false });
 
         wrapper.addEventListener('touchend', (e) => {
+            if (e.target.closest('.speak-btn')) return;
             const t = e.changedTouches[0];
+            // Prevent the synthetic mouse events that follow touchend on iOS
+            if (e.cancelable) e.preventDefault();
             onDragEnd(t.clientX, t.clientY);
-        });
+        }, { passive: false });
 
         wrapper.addEventListener('touchcancel', () => {
             isDragging = false;
@@ -1270,8 +1357,9 @@
             }
         });
 
-        // Mouse (desktop testing)
+        // Mouse (desktop testing) — ignored on touch devices
         wrapper.addEventListener('mousedown', (e) => {
+            if (hasTouched) return;
             if (e.target.closest('.speak-btn')) return;
             e.preventDefault();
             onDragStart(e.clientX, e.clientY);
@@ -1285,21 +1373,22 @@
             window.addEventListener('mouseup', onUp);
         });
 
-        // Speaker buttons
+        // Speaker buttons — bind both touchend and click for reliability
         const speakFront = document.getElementById('speakFront');
         const speakBack = document.getElementById('speakBack');
-        if (speakFront) {
-            speakFront.addEventListener('click', (e) => {
+        const bindSpeak = (btn, isFrontFace) => {
+            if (!btn) return;
+            const handler = (e) => {
                 e.stopPropagation();
-                speakWord(direction === 'de-en');
-            });
-        }
-        if (speakBack) {
-            speakBack.addEventListener('click', (e) => {
-                e.stopPropagation();
-                speakWord(direction === 'en-de');
-            });
-        }
+                if (e.cancelable) e.preventDefault();
+                const speakGerman = isFrontFace ? (direction === 'de-en') : (direction === 'en-de');
+                speakWord(speakGerman);
+            };
+            btn.addEventListener('click', handler);
+            btn.addEventListener('touchend', handler, { passive: false });
+        };
+        bindSpeak(speakFront, true);
+        bindSpeak(speakBack, false);
     }
 
     // ============================================================
