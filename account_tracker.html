@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bütçe Takip - Bulut Projects</title>
+<title>Bütçe Takip</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -70,11 +70,6 @@
     margin-top: 2px;
     font-weight: 400;
   }
-.brand-tag {
-  font-size: 10px; color: #7aafd4;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  margin-top: 2px;
-}
   header.top .totals {
     display: flex;
     gap: 14px;
@@ -508,6 +503,79 @@
     margin-left: 4px;
     font-variant-numeric: tabular-nums;
   }
+  /* Vade tarihi rozeti + tooltip */
+  .acc-maturity-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+    background: var(--primary-light);
+    border: 1px solid #cfdcee;
+    border-radius: 50%;
+    margin-left: 6px;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    transition: transform .12s, background .12s;
+    vertical-align: middle;
+  }
+  .acc-maturity-badge:hover,
+  .acc-maturity-badge:focus,
+  .acc-maturity-badge:active {
+    background: var(--primary);
+    transform: scale(1.1);
+    outline: none;
+  }
+  /* Custom tooltip - hover ve focus'ta gösterir */
+  .acc-maturity-badge::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: var(--text);
+    color: #fff;
+    padding: 7px 11px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: pre-line;
+    box-shadow: 0 4px 12px rgba(0,0,0,.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s, transform .15s;
+    z-index: 100;
+    min-width: 140px;
+    text-align: center;
+  }
+  .acc-maturity-badge::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(2px);
+    border: 5px solid transparent;
+    border-top-color: var(--text);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s;
+  }
+  .acc-maturity-badge:hover::after,
+  .acc-maturity-badge:focus::after,
+  .acc-maturity-badge:active::after,
+  .acc-maturity-badge.show-tooltip::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .acc-maturity-badge:hover::before,
+  .acc-maturity-badge:focus::before,
+  .acc-maturity-badge:active::before,
+  .acc-maturity-badge.show-tooltip::before {
+    opacity: 1;
+  }
   .bank-row .count-chip {
     display: inline-block;
     font-size: 9.5px;
@@ -748,10 +816,10 @@
       grid-column: span 1 !important;
     }
     .rate-grid {
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-.rate-grid .rate-actions { grid-column: span 2; justify-content: flex-start; }
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .rate-grid .rate-actions { grid-column: span 2; justify-content: flex-start; }
     .btn-row { flex-wrap: wrap; }
     .actions { justify-content: stretch; }
     .actions button { flex: 1; justify-content: center; }
@@ -793,7 +861,6 @@
     <div>
       <h1>Bütçe Takip</h1>
       <div class="subtitle">Banka Hesapları ve Faturalar</div>
-<span class="brand-tag">Bulut Projects</span>
     </div>
     <div class="totals">
       <div class="total-card">
@@ -858,6 +925,29 @@
     </div>
     <div class="card-body">
       <div class="bank-summary" id="bankSummary"></div>
+    </div>
+  </div>
+
+  <!-- Yaklaşan Ödemeler -->
+  <div class="card">
+    <div class="card-head">
+      <h2>⏰ Yaklaşan Ödemeler</h2>
+      <span class="session-info">Son 5 gün veya geciken faturalar</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data" id="upcomingTable">
+        <thead>
+          <tr>
+            <th>Tür</th>
+            <th>Dönem</th>
+            <th class="num" style="text-align:right;">Tutar (₺)</th>
+            <th>Son Ödeme</th>
+            <th>Durum</th>
+            <th>Açıklama</th>
+          </tr>
+        </thead>
+        <tbody id="upcomingTbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -1554,7 +1644,8 @@ function syncLatestRates() {
   const latestByKey = {};
   for (const e of state.accounts) {
     if (!isCurrencyType(e.type) && !isMetalType(e.type)) continue;
-    const key = `${norm(e.bank)}||${norm(e.type)}||${norm(e.desc)}`;
+    // Hesap eşleştirmesi: banka + hesap türü (notlar/açıklama dahil DEĞİL)
+    const key = `${norm(e.bank)}||${norm(e.type)}`;
     if (!latestByKey[key] || e.date > latestByKey[key].date) latestByKey[key] = e;
   }
   let count = 0;
@@ -1804,15 +1895,15 @@ function applyHideMode() {
       delete el.dataset.original;
     }
   });
-document.querySelectorAll('.bank-card .total, .bank-row .acc-val, .bank-row .acc-try').forEach(el => {
-  if (hide) {
-    if (!el.dataset.original) el.dataset.original = el.innerHTML;
-    el.innerHTML = '••••';
-  } else if (el.dataset.original) {
-    el.innerHTML = el.dataset.original;
-    delete el.dataset.original;
-  }
-});
+  document.querySelectorAll('.bank-card .total, .bank-row .acc-val, .bank-row .acc-try').forEach(el => {
+    if (hide) {
+      if (!el.dataset.original) el.dataset.original = el.textContent;
+      el.textContent = '••••';
+    } else if (el.dataset.original) {
+      el.textContent = el.dataset.original;
+      delete el.dataset.original;
+    }
+  });
   document.querySelectorAll('.sensitive').forEach(el => {
     if (hide) {
       if (!el.dataset.original) el.dataset.original = el.innerHTML;
@@ -1822,24 +1913,6 @@ document.querySelectorAll('.bank-card .total, .bank-row .acc-val, .bank-row .acc
       delete el.dataset.original;
     }
   });
-
-// Notlar alanı
-  const notesEl = document.getElementById('notesArea');
-  if (notesEl) {
-    if (hide) {
-      if (notesEl.dataset.original === undefined) {
-        notesEl.dataset.original = notesEl.value;
-      }
-      notesEl.value = '••••••••';
-      notesEl.disabled = true;
-    } else if (notesEl.dataset.original !== undefined) {
-      notesEl.value = notesEl.dataset.original;
-      delete notesEl.dataset.original;
-      notesEl.disabled = false;
-      autoResizeNotes();
-    }
-  }
-
 }
 
 /* ===================== Bill CRUD ===================== */
@@ -2358,9 +2431,10 @@ function passesFilter(entry, filters) {
 /* ===================== Account table ===================== */
 function computeDelta(entry) {
   const norm = s => (s == null ? '' : String(s).trim());
-  const eBank = norm(entry.bank), eType = norm(entry.type), eDesc = norm(entry.desc);
+  const eBank = norm(entry.bank), eType = norm(entry.type);
+  // Hesap eşleştirmesi: banka + hesap türü (notlar/açıklama dahil DEĞİL)
   const prev = state.accounts
-    .filter(e => norm(e.bank) === eBank && norm(e.type) === eType && norm(e.desc) === eDesc && e.date < entry.date)
+    .filter(e => norm(e.bank) === eBank && norm(e.type) === eType && e.date < entry.date)
     .sort((a,b) => b.date.localeCompare(a.date))[0];
   if (!prev) return null;
   return entry.amount - prev.amount;
@@ -2608,22 +2682,27 @@ function sortInc(key) {
 
 /* ===================== Bank summary ===================== */
 function computeBankSnapshot() {
-  // Anahtar normalleştirme: desc undefined/null/whitespace → boş string olarak kabul et
   const norm = s => (s == null ? '' : String(s).trim());
   const latestByKey = {};
   for (const e of state.accounts) {
-    const key = `${norm(e.bank)}||${norm(e.type)}||${norm(e.desc)}`;
+    // Hesap eşleştirmesi: banka + hesap türü (notlar/açıklama dahil DEĞİL)
+    const key = `${norm(e.bank)}||${norm(e.type)}`;
     if (!latestByKey[key] || e.date > latestByKey[key].date) latestByKey[key] = e;
   }
   const summary = {};
   for (const key in latestByKey) {
     const e = latestByKey[key];
     if (!summary[e.bank]) summary[e.bank] = {};
-    if (!summary[e.bank][e.type]) summary[e.bank][e.type] = { amount: 0, tryVal: 0, count: 0 };
+    if (!summary[e.bank][e.type]) summary[e.bank][e.type] = { amount: 0, tryVal: 0, count: 0, maturity: '', maturityValue: null };
     summary[e.bank][e.type].amount += Number(e.amount) || 0;
     // Banka özetinde her zaman güncel kuru kullan
     summary[e.bank][e.type].tryVal += entryToTryLive(e);
     summary[e.bank][e.type].count += 1;
+    // Vade bilgisi varsa sakla (tooltip için)
+    if (e.maturity && !summary[e.bank][e.type].maturity) {
+      summary[e.bank][e.type].maturity = e.maturity;
+      summary[e.bank][e.type].maturityValue = e.maturityValue;
+    }
   }
   return summary;
 }
@@ -2671,8 +2750,17 @@ function renderBankSummary() {
       const countChip = d.count > 1 ? `<span class="count-chip">${d.count} hesap</span>` : '';
       const pct = grandTotalTry > 0 ? (d.tryVal / grandTotalTry) * 100 : 0;
       const pctStr = pct >= 0.01 ? `<span class="acc-pct">%${fmt(pct, 1)}</span>` : '';
+      // Vade tarihi tooltip'i (yalnızca vadeli hesaplarda + tarih varsa)
+      let maturityBadge = '';
+      if (d.maturity) {
+        const matValStr = d.maturityValue != null
+          ? `\nVade sonu: ${fmt(d.maturityValue, 2)}`
+          : '';
+        const tooltipText = `Vade: ${fmtDate(d.maturity)}${matValStr}`;
+        maturityBadge = `<span class="acc-maturity-badge" data-tooltip="${escapeHtml(tooltipText)}" title="${escapeHtml(tooltipText)}" tabindex="0">📅</span>`;
+      }
       return `<div class="bank-row">
-        <div class="acc-name">${escapeHtml(t)}${countChip}</div>
+        <div class="acc-name">${escapeHtml(t)}${maturityBadge}${countChip}</div>
         <div class="acc-val">${fmt(d.amount, 2)}${unit}</div>
         <div class="acc-try">${fmtTry(d.tryVal)} ${pctStr}</div>
       </div>`;
@@ -2702,11 +2790,61 @@ function renderTotals() {
   document.getElementById('netAssets').textContent = fmtTry(total - debt);
 }
 
+/* ===================== Yaklaşan Ödemeler ===================== */
+function renderUpcomingPayments() {
+  const tbody = document.getElementById('upcomingTbody');
+  if (!tbody) return;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().slice(0, 10);
+
+  // Ödenmemiş faturaları al, son ödeme tarihine göre fark hesapla
+  const upcoming = state.bills
+    .filter(b => b.paid !== 'Ödendi' && b.due)
+    .map(b => {
+      const due = new Date(b.due + 'T00:00:00');
+      const diffMs = due - today;
+      const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000));
+      return { ...b, diffDays };
+    })
+    // Sadece son 5 gün içinde (0-5) VEYA gecikmiş (<0)
+    .filter(b => b.diffDays <= 5)
+    // Önce gecikmişler (en eski gecikenden başla), sonra yaklaşanlar
+    .sort((a, b) => a.diffDays - b.diffDays);
+
+  if (upcoming.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-row">Yakın zamanda ödeme bekleyen fatura yok ✓</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = upcoming.map(b => {
+    let statusHtml;
+    if (b.diffDays < 0) {
+      const days = Math.abs(b.diffDays);
+      statusHtml = `<span class="badge" style="background:#fcdede;color:#9c2f2f;font-weight:600;">⚠ ${days} gün gecikme</span>`;
+    } else if (b.diffDays === 0) {
+      statusHtml = `<span class="badge" style="background:#fde9c8;color:#8a5a14;font-weight:600;">⏰ Bugün son gün</span>`;
+    } else {
+      // Son güne kalan gün sayısı (1-5)
+      statusHtml = `<span class="badge bill" style="font-weight:600;">📅 Son ${b.diffDays} gün</span>`;
+    }
+    return `<tr>
+      <td><span class="badge bill">${escapeHtml(b.type)}</span></td>
+      <td>${escapeHtml(b.month || '')}</td>
+      <td class="num">${fmtTry(b.amount)}</td>
+      <td>${fmtDate(b.due)}</td>
+      <td>${statusHtml}</td>
+      <td>${escapeHtml(b.desc || '')}</td>
+    </tr>`;
+  }).join('');
+}
+
 function renderAll() {
   renderAccountTable();
   renderBillTable();
   renderIncomeTable();
   renderBankSummary();
+  renderUpcomingPayments();
   renderTotals();
   applyHideMode();
 }
@@ -3399,6 +3537,25 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('iDate').value = today;
   renderAll();
   autoResizeNotes();
+
+  // Vade tooltip'i için dokunma/tıklama davranışı (mobil dahil)
+  document.addEventListener('click', (ev) => {
+    const badge = ev.target.closest('.acc-maturity-badge');
+    if (badge) {
+      // Tıklanan badge dışındaki tüm açık tooltip'leri kapat
+      document.querySelectorAll('.acc-maturity-badge.show-tooltip').forEach(b => {
+        if (b !== badge) b.classList.remove('show-tooltip');
+      });
+      // Bu badge'in tooltip'ini toggle et
+      badge.classList.toggle('show-tooltip');
+      ev.stopPropagation();
+    } else {
+      // Başka yere tıklandı → açık tooltip'leri kapat
+      document.querySelectorAll('.acc-maturity-badge.show-tooltip').forEach(b => {
+        b.classList.remove('show-tooltip');
+      });
+    }
+  });
 });
 </script>
 </body>
