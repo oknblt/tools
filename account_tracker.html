@@ -516,25 +516,20 @@
     border-radius: 50%;
     margin-left: 6px;
     cursor: pointer;
-    position: relative;
     user-select: none;
     transition: transform .12s, background .12s;
     vertical-align: middle;
   }
   .acc-maturity-badge:hover,
   .acc-maturity-badge:focus,
-  .acc-maturity-badge:active {
+  .acc-maturity-badge.show-tooltip {
     background: var(--primary);
     transform: scale(1.1);
     outline: none;
   }
-  /* Custom tooltip - hover ve focus'ta gösterir */
-  .acc-maturity-badge::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%) translateY(4px);
+  /* Tooltip element - dinamik konumlandırılır */
+  .maturity-tooltip {
+    position: fixed;
     background: var(--text);
     color: #fff;
     padding: 7px 11px;
@@ -544,37 +539,31 @@
     line-height: 1.4;
     white-space: pre-line;
     box-shadow: 0 4px 12px rgba(0,0,0,.18);
-    opacity: 0;
+    z-index: 2000;
+    max-width: 220px;
     pointer-events: none;
-    transition: opacity .15s, transform .15s;
-    z-index: 100;
-    min-width: 140px;
+    opacity: 0;
+    transition: opacity .15s;
     text-align: center;
   }
-  .acc-maturity-badge::before {
+  .maturity-tooltip.show { opacity: 1; }
+  .maturity-tooltip::after {
     content: '';
     position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%) translateY(2px);
     border: 5px solid transparent;
-    border-top-color: var(--text);
-    opacity: 0;
     pointer-events: none;
-    transition: opacity .15s;
   }
-  .acc-maturity-badge:hover::after,
-  .acc-maturity-badge:focus::after,
-  .acc-maturity-badge:active::after,
-  .acc-maturity-badge.show-tooltip::after {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
+  .maturity-tooltip.arrow-down::after {
+    top: 100%;
+    left: var(--arrow-x, 50%);
+    transform: translateX(-50%);
+    border-top-color: var(--text);
   }
-  .acc-maturity-badge:hover::before,
-  .acc-maturity-badge:focus::before,
-  .acc-maturity-badge:active::before,
-  .acc-maturity-badge.show-tooltip::before {
-    opacity: 1;
+  .maturity-tooltip.arrow-up::after {
+    bottom: 100%;
+    left: var(--arrow-x, 50%);
+    transform: translateX(-50%);
+    border-bottom-color: var(--text);
   }
   .bank-row .count-chip {
     display: inline-block;
@@ -1897,10 +1886,10 @@ function applyHideMode() {
   });
   document.querySelectorAll('.bank-card .total, .bank-row .acc-val, .bank-row .acc-try').forEach(el => {
     if (hide) {
-      if (!el.dataset.original) el.dataset.original = el.textContent;
-      el.textContent = '••••';
+      if (!el.dataset.original) el.dataset.original = el.innerHTML;
+      el.innerHTML = '••••';
     } else if (el.dataset.original) {
-      el.textContent = el.dataset.original;
+      el.innerHTML = el.dataset.original;
       delete el.dataset.original;
     }
   });
@@ -1911,6 +1900,38 @@ function applyHideMode() {
     } else if (el.dataset.original) {
       el.innerHTML = el.dataset.original;
       delete el.dataset.original;
+    }
+  });
+  // Notlar alanı
+  const notesEl = document.getElementById('notesArea');
+  if (notesEl) {
+    if (hide) {
+      if (notesEl.dataset.original === undefined) {
+        notesEl.dataset.original = notesEl.value;
+      }
+      notesEl.value = '••••••••';
+      notesEl.disabled = true;
+    } else if (notesEl.dataset.original !== undefined) {
+      notesEl.value = notesEl.dataset.original;
+      delete notesEl.dataset.original;
+      notesEl.disabled = false;
+      autoResizeNotes();
+    }
+  }
+  // Vade rozeti (takvim ikonu) tooltip'leri
+  document.querySelectorAll('.acc-maturity-badge').forEach(badge => {
+    if (hide) {
+      if (badge.dataset.originalTooltip === undefined) {
+        badge.dataset.originalTooltip = badge.getAttribute('data-tooltip') || '';
+        badge.dataset.originalTitle = badge.getAttribute('title') || '';
+      }
+      badge.setAttribute('data-tooltip', '••••••');
+      badge.setAttribute('title', '••••••');
+    } else if (badge.dataset.originalTooltip !== undefined) {
+      badge.setAttribute('data-tooltip', badge.dataset.originalTooltip);
+      badge.setAttribute('title', badge.dataset.originalTitle);
+      delete badge.dataset.originalTooltip;
+      delete badge.dataset.originalTitle;
     }
   });
 }
@@ -2760,9 +2781,9 @@ function renderBankSummary() {
         maturityBadge = `<span class="acc-maturity-badge" data-tooltip="${escapeHtml(tooltipText)}" title="${escapeHtml(tooltipText)}" tabindex="0">📅</span>`;
       }
       return `<div class="bank-row">
-        <div class="acc-name">${escapeHtml(t)}${maturityBadge}${countChip}</div>
+        <div class="acc-name">${escapeHtml(t)}${pctStr}${maturityBadge}${countChip}</div>
         <div class="acc-val">${fmt(d.amount, 2)}${unit}</div>
-        <div class="acc-try">${fmtTry(d.tryVal)} ${pctStr}</div>
+        <div class="acc-try">${fmtTry(d.tryVal)}</div>
       </div>`;
     }).join('');
     return `<div class="bank-card">
@@ -3538,24 +3559,98 @@ window.addEventListener('DOMContentLoaded', () => {
   renderAll();
   autoResizeNotes();
 
-  // Vade tooltip'i için dokunma/tıklama davranışı (mobil dahil)
+  // Tek bir tooltip elementi oluştur, body'e ekle
+  const tooltipEl = document.createElement('div');
+  tooltipEl.className = 'maturity-tooltip';
+  tooltipEl.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(tooltipEl);
+  let activeBadge = null;
+
+  // Tooltip'i bir badge için göster ve konumlandır (viewport sınırlarına saygı duy)
+  function showMaturityTooltip(badge) {
+    const text = badge.getAttribute('data-tooltip') || '';
+    tooltipEl.textContent = text;
+    tooltipEl.classList.remove('arrow-down', 'arrow-up');
+    tooltipEl.classList.add('show');
+    activeBadge = badge;
+    badge.classList.add('show-tooltip');
+
+    // Konumlandırma
+    const margin = 8;
+    const gap = 8;
+    const badgeRect = badge.getBoundingClientRect();
+    // İlk önce boyutunu öğrenmek için görünmez yerleştir
+    tooltipEl.style.left = '0px';
+    tooltipEl.style.top = '0px';
+    const tipRect = tooltipEl.getBoundingClientRect();
+    const tipW = tipRect.width;
+    const tipH = tipRect.height;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Dikey: badge'in üstünde mi altında mı? Üstte yeterli yer varsa üstte, yoksa altta
+    let top, arrowDir;
+    if (badgeRect.top - tipH - gap >= margin) {
+      // Üste
+      top = badgeRect.top - tipH - gap;
+      arrowDir = 'arrow-down'; // ok aşağı bakar (tooltip üstte)
+    } else {
+      // Alta
+      top = badgeRect.bottom + gap;
+      arrowDir = 'arrow-up';
+    }
+
+    // Yatay: ortala, sonra ekran kenarına göre düzelt
+    const badgeCenterX = badgeRect.left + badgeRect.width / 2;
+    let left = badgeCenterX - tipW / 2;
+    if (left < margin) left = margin;
+    if (left + tipW > vw - margin) left = vw - margin - tipW;
+
+    // Ok pozisyonu: badge merkezine göre tooltip'in sol kenarından farkı
+    const arrowX = badgeCenterX - left;
+    tooltipEl.style.setProperty('--arrow-x', arrowX + 'px');
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = top + 'px';
+    tooltipEl.classList.add(arrowDir);
+  }
+
+  function hideMaturityTooltip() {
+    tooltipEl.classList.remove('show', 'arrow-down', 'arrow-up');
+    if (activeBadge) activeBadge.classList.remove('show-tooltip');
+    activeBadge = null;
+  }
+
+  // Tıklama / dokunma davranışı
   document.addEventListener('click', (ev) => {
     const badge = ev.target.closest('.acc-maturity-badge');
     if (badge) {
-      // Tıklanan badge dışındaki tüm açık tooltip'leri kapat
-      document.querySelectorAll('.acc-maturity-badge.show-tooltip').forEach(b => {
-        if (b !== badge) b.classList.remove('show-tooltip');
-      });
-      // Bu badge'in tooltip'ini toggle et
-      badge.classList.toggle('show-tooltip');
+      if (activeBadge === badge) {
+        hideMaturityTooltip();
+      } else {
+        showMaturityTooltip(badge);
+      }
       ev.stopPropagation();
     } else {
-      // Başka yere tıklandı → açık tooltip'leri kapat
-      document.querySelectorAll('.acc-maturity-badge.show-tooltip').forEach(b => {
-        b.classList.remove('show-tooltip');
-      });
+      // Başka yere tıklandı → kapat
+      hideMaturityTooltip();
     }
   });
+  // Masaüstünde hover desteği (mouseenter/mouseleave)
+  document.addEventListener('mouseover', (ev) => {
+    const badge = ev.target.closest('.acc-maturity-badge');
+    if (badge && activeBadge !== badge) showMaturityTooltip(badge);
+  });
+  document.addEventListener('mouseout', (ev) => {
+    const badge = ev.target.closest('.acc-maturity-badge');
+    if (badge) {
+      // Sadece mouse gerçekten badge'den çıktıysa kapat (alt element'e geçmedi)
+      const to = ev.relatedTarget;
+      if (!badge.contains(to)) hideMaturityTooltip();
+    }
+  });
+  // Scroll/resize'da tooltip kapansın
+  window.addEventListener('scroll', () => { if (activeBadge) hideMaturityTooltip(); }, true);
+  window.addEventListener('resize', () => { if (activeBadge) hideMaturityTooltip(); });
 });
 </script>
 </body>
