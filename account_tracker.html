@@ -921,7 +921,7 @@
   <div class="card">
     <div class="card-head">
       <h2>⏰ Yaklaşan Ödemeler</h2>
-      <span class="session-info">Son 5 gün veya geciken faturalar</span>
+      <span class="session-info">Son 5 günü kalan ve geciken ödemeler</span>
     </div>
     <div class="table-wrap">
       <table class="data" id="upcomingTable">
@@ -1803,7 +1803,7 @@ function renderIncTotals(arr) {
   c.innerHTML = `
     <div class="tot-group">
       <span class="tot-label">Toplam Gelir:</span>
-      <span class="tot-val">${fmtTry(total)}</span>
+      <span class="tot-val sensitive">${fmtTry(total)}</span>
     </div>
   `;
 }
@@ -2770,7 +2770,7 @@ function renderBankSummary() {
                    t === 'Euro' ? ' €' : ' ₺';
       const countChip = d.count > 1 ? `<span class="count-chip">${d.count} hesap</span>` : '';
       const pct = grandTotalTry > 0 ? (d.tryVal / grandTotalTry) * 100 : 0;
-      const pctStr = pct >= 0.01 ? `<span class="acc-pct">%${fmt(pct, 1)}</span>` : '';
+      const pctStr = pct >= 0.01 ? `<span class="acc-pct sensitive">%${fmt(pct, 1)}</span>` : '';
       // Vade tarihi tooltip'i (yalnızca vadeli hesaplarda + tarih varsa)
       let maturityBadge = '';
       if (d.maturity) {
