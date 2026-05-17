@@ -1,0 +1,2444 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAP — Audit Notes</title>
+<style>
+  /* ============================================================
+     CAP Audit Notes — bir denetçinin uzun süre kullanacağı,
+     bilgi yoğun, sakin ama profesyonel bir araç.
+     ============================================================ */
+
+  :root {
+    /* Renk paleti — kağıt + mürekkep + tek bir vurgu */
+    --bg: #f6f4ef;            /* sıcak kağıt tonu */
+    --surface: #ffffff;
+    --surface-alt: #faf8f3;
+    --ink: #1c1c1a;           /* ana metin — saf siyah değil */
+    --ink-soft: #4a4a47;
+    --ink-mute: #87867f;
+    --line: #d9d6cc;
+    --line-soft: #e8e5db;
+    --accent: #8b3a2a;        /* terra / brick — bordo değil, sıcak kahve-kırmızı */
+    --accent-soft: #f0e6e1;
+    --good: #4a6b3a;
+    --warn: #b87333;
+    --error: #a83232;
+    --shadow: 0 1px 2px rgba(28,28,26,0.04), 0 0 0 1px rgba(28,28,26,0.06);
+    --shadow-lift: 0 4px 12px rgba(28,28,26,0.08), 0 0 0 1px rgba(28,28,26,0.06);
+
+    /* Tipografi */
+    --font-display: 'Fraunces', 'Source Serif Pro', Georgia, serif;
+    --font-body: 'Inter Tight', 'Helvetica Neue', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    /* Ölçü */
+    --radius: 4px;
+    --radius-lg: 8px;
+    --gap: 1rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1917;
+      --surface: #232220;
+      --surface-alt: #1f1e1c;
+      --ink: #ece9e0;
+      --ink-soft: #b8b5ab;
+      --ink-mute: #76746c;
+      --line: #38362f;
+      --line-soft: #2c2a25;
+      --accent: #d18a76;
+      --accent-soft: #2e2520;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04);
+      --shadow-lift: 0 4px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+    }
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============================================================
+     ÜST BAR
+     ============================================================ */
+  header.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(8px);
+  }
+  .topbar-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.35rem;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .brand-mark {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-right: 0.25rem;
+    transform: translateY(-2px);
+  }
+  .brand small {
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--ink-mute);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+  }
+  .topbar-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  button.btn {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  button.btn:hover {
+    border-color: var(--ink-soft);
+    background: var(--surface-alt);
+  }
+  button.btn.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  button.btn.primary:hover {
+    filter: brightness(0.92);
+  }
+  button.btn.ghost {
+    border-color: transparent;
+    background: transparent;
+  }
+  button.btn.ghost:hover {
+    background: var(--surface-alt);
+    border-color: var(--line);
+  }
+
+  /* ============================================================
+     SEKMELER
+     ============================================================ */
+  nav.tabs {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  nav.tabs button {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0.85rem 1.25rem;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+    margin-bottom: -1px;
+  }
+  nav.tabs button:hover {
+    color: var(--ink);
+  }
+  nav.tabs button.active {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ============================================================
+     ANA İÇERİK
+     ============================================================ */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Bölüm başlıkları */
+  section.group {
+    margin-bottom: 2.5rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  section.group > header {
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--surface-alt);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 720px) {
+    section.group > header { padding: 0.85rem 1rem; gap: 0.5rem; }
+    section.group > .group-body { padding: 1rem; }
+    section.group > header p.group-desc {
+      flex-basis: 100%;
+      margin-left: 0;
+      margin-top: 0.25rem;
+    }
+    main { padding: 1rem 0.75rem 3rem; }
+    .topbar-inner { padding: 0.6rem 1rem; }
+    nav.tabs { padding: 0 1rem; }
+  }
+  section.group > header h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  section.group > header .group-num {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-mute);
+    padding: 0.15rem 0.45rem;
+    background: var(--bg);
+    border-radius: 3px;
+    border: 1px solid var(--line);
+  }
+  section.group > header p.group-desc {
+    margin: 0;
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--ink-mute);
+    font-style: italic;
+  }
+  section.group > .group-body {
+    padding: 1.25rem 1.5rem;
+  }
+
+  /* Form alanları — yatay grid */
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem 1.5rem;
+  }
+  .field-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .field-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .field-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 720px) {
+    .field-grid, .field-grid.cols-2, .field-grid.cols-3, .field-grid.cols-4 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .field.span-2 { grid-column: span 2; }
+  .field.span-3 { grid-column: span 3; }
+  .field.span-full { grid-column: 1 / -1; }
+  @media (max-width: 720px) {
+    .field.span-2, .field.span-3, .field.span-full { grid-column: 1; }
+  }
+
+  .field label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .field label .hint {
+    font-weight: 400;
+    color: var(--ink-mute);
+    font-style: italic;
+    font-size: 0.72rem;
+  }
+
+  .field input[type="text"],
+  .field input[type="number"],
+  .field input[type="date"],
+  .field input[type="time"],
+  .field select,
+  .field textarea {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 70px;
+    font-family: var(--font-body);
+  }
+  .field input[readonly], .field .computed {
+    background: var(--surface-alt);
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+  .field .computed {
+    padding: 0.55rem 0.7rem;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    min-height: 1.2em;
+    font-size: 0.85rem;
+  }
+  .field .computed:empty::before {
+    content: '—';
+    color: var(--ink-mute);
+  }
+
+  /* Yes/No/NA radio toggle */
+  .toggle-group {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+    width: fit-content;
+  }
+  .toggle-group input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .toggle-group label {
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--ink-soft);
+    border-right: 1px solid var(--line);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .toggle-group label:last-child { border-right: none; }
+  .toggle-group input:checked + label {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  /* Koşullu gösterilen bölümler */
+  .conditional {
+    display: none;
+    padding: 1rem 1.25rem;
+    margin-top: 0.5rem;
+    background: var(--surface-alt);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  .conditional.show { display: block; }
+
+  /* ============================================================
+     DOCS TABLOSU
+     ============================================================ */
+  .docs-section {
+    margin-bottom: 2rem;
+  }
+  .docs-section h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1rem;
+    margin: 0 0 0.75rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .docs-section h3 .section-tag {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--ink-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 400;
+  }
+
+  .docs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    table-layout: fixed;
+  }
+  .docs-table thead {
+    background: var(--surface-alt);
+  }
+  .docs-table th {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--line);
+  }
+  .docs-table td {
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: middle;
+  }
+  .docs-table tr:last-child td { border-bottom: none; }
+  .docs-table .doc-name {
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.35;
+  }
+  .docs-table .scope-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    margin-right: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .docs-table input,
+  .docs-table .computed-cell {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    padding: 0.35rem 0.45rem;
+    border: 1px solid transparent;
+    background: transparent;
+    width: 100%;
+    color: var(--ink);
+    border-radius: 3px;
+  }
+  .docs-table input:hover { border-color: var(--line); }
+  .docs-table input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .docs-table .computed-cell {
+    color: var(--ink-mute);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    background: var(--surface-alt);
+    border-color: var(--line-soft);
+    border-style: dashed;
+  }
+  .docs-table .computed-cell.expired { color: var(--error); font-weight: 500; }
+  .docs-table .computed-cell.warn { color: var(--warn); }
+
+  /* Mobilde docs tablosu */
+  @media (max-width: 720px) {
+    .docs-table { display: block; border: none; }
+    .docs-table thead { display: none; }
+    .docs-table tbody, .docs-table tr, .docs-table td { display: block; }
+    .docs-table tr {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .docs-table td {
+      padding: 0.3rem 0;
+      border: none;
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .docs-table td input,
+    .docs-table td .computed-cell {
+      padding: 0.4rem 0.55rem;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      width: 100%;
+    }
+    .docs-table td::before {
+      content: attr(data-label);
+      font-size: 0.7rem;
+      color: var(--ink-mute);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+    .docs-table td.doc-name-cell {
+      grid-template-columns: 1fr;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--line-soft);
+      margin-bottom: 0.5rem;
+    }
+    .docs-table td.doc-name-cell::before { display: none; }
+  }
+
+  /* ============================================================
+     TOAST / BİLDİRİM
+     ============================================================ */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--bg);
+    padding: 0.7rem 1.2rem;
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    box-shadow: var(--shadow-lift);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Yardımcı sınıflar */
+  .muted { color: var(--ink-mute); }
+  .small { font-size: 0.8rem; }
+  .mono { font-family: var(--font-mono); }
+
+  /* Print stilleri */
+  @media print {
+    header.topbar, nav.tabs, .topbar-actions { display: none; }
+    .panel { display: block !important; page-break-after: always; }
+    body { background: white; }
+    section.group { box-shadow: none; border: 1px solid #ccc; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark"></span>CAP<small>audit notes</small>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn ghost" id="btnNew" title="Yeni boş form">⊕ New</button>
+      <button class="btn" id="btnLoad" title="JSON yükle">↥ Load</button>
+      <button class="btn" id="btnSave" title="JSON olarak kaydet">↧ Save</button>
+      <button class="btn primary" id="btnExport" title="Excel olarak dışa aktar">⎘ Export Excel</button>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button class="active" data-tab="info">Facility Info</button>
+    <button data-tab="docs">Documents</button>
+  </nav>
+</header>
+
+<input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+
+<main>
+  <!-- INFO PANEL -->
+  <div class="panel active" id="panel-info">
+    <!-- ============================================================
+     1. TESİS KİMLİĞİ
+     ============================================================ -->
+<section class="group" id="grp-identity">
+  <header>
+    <span class="group-num">01</span>
+    <h2>Tesis Kimliği</h2>
+    <p class="group-desc">İşletmenin temel tanım bilgileri</p>
+  </header>
+  <div class="group-body">
+    <div class="field-grid">
+      <div class="field span-2">
+        <label>Facility name</label>
+        <input type="text" id="facility_name" data-key="facility_name">
+      </div>
+      <div class="field">
+        <label>Audit type</label>
+        <input type="text" list="dl_audit_type" id="audit_type" data-key="audit_type" value="Full">
+        <datalist id="dl_audit_type">
+          <option value="Full"><option value="ICS"><option value="SMETA">
+        </datalist>
+      </div>
+
+      <div class="field span-full">
+        <label>Facility address</label>
+        <textarea id="facility_address" data-key="facility_address" rows="2"></textarea>
+      </div>
+
+      <div class="field">
+        <label>GPS coordinates <span class="hint">(lat, lng)</span></label>
+        <input type="text" id="gps" data-key="gps" placeholder="41.0082, 28.9784">
+      </div>
+      <div class="field">
+        <label>Establishment date</label>
+        <input type="date" id="establishment_date" data-key="establishment_date">
+      </div>
+      <div class="field">
+        <label>Operation time at current address</label>
+        <input type="text" list="dl_op_time" id="operation_time" data-key="operation_time">
+        <datalist id="dl_op_time">
+          <option value="since the establishment date">
+        </datalist>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     2. ÜRETİM
+     ============================================================ -->
+<section class="group" id="grp-production">
+  <header>
+    <span class="group-num">02</span>
+    <h2>Üretim</h2>
+    <p class="group-desc">Ürün, prosesler, kapasite, ekipman</p>
+  </header>
+  <div class="group-body">
+    <div class="field-grid">
+      <div class="field">
+        <label>Product type</label>
+        <input type="text" list="dl_product_type" id="product_type" data-key="product_type">
+        <datalist id="dl_product_type">
+          <option value="outwear garments"><option value="fabric"><option value="yarn"><option value="fiber">
+        </datalist>
+      </div>
+      <div class="field span-2">
+        <label>Production processes</label>
+        <input type="text" list="dl_production_processes" id="production_processes" data-key="production_processes">
+        <datalist id="dl_production_processes">
+          <option value="cutting, sewing, ironing, quality control and packaging">
+          <option value="cutting, sewing, printing, washing, drying, ironing, quality control and packaging">
+          <option value="pre-treatment, dyeing, printing, finishing, quality control and packaging">
+        </datalist>
+      </div>
+
+      <div class="field">
+        <label>Monthly production capacity</label>
+        <input type="text" id="monthly_capacity" data-key="monthly_capacity" placeholder="e.g. 50,000 pcs">
+      </div>
+      <div class="field">
+        <label>Peak months</label>
+        <input type="text" id="peak_months" data-key="peak_months">
+      </div>
+      <div class="field">
+        <label>Non-peak months</label>
+        <input type="text" id="non_peak_months" data-key="non_peak_months">
+      </div>
+
+      <div class="field span-full">
+        <label>Main production equipment of facility</label>
+        <textarea id="main_equipment" data-key="main_equipment" rows="2" placeholder=" overlock machines, sewing machines, ..."></textarea>
+      </div>
+
+      <div class="field span-full">
+        <label>Certifications</label>
+        <textarea id="certifications" data-key="certifications" rows="2"
+          placeholder="Global Organic Textile Standard (GOTS) Version 7.0, ..."></textarea>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     3. ÇALIŞMA SAATLERİ
+     ============================================================ -->
+<section class="group" id="grp-hours">
+  <header>
+    <span class="group-num">03</span>
+    <h2>Çalışma Saatleri</h2>
+    <p class="group-desc">Vardiya yapısı ve saat hesaplamaları</p>
+  </header>
+  <div class="group-body">
+
+    <!-- Vardiyalı çalışma -->
+    <div class="field" style="margin-bottom: 1rem;">
+      <label>Are there multiple shifts?</label>
+      <div class="toggle-group" data-toggle="multiple_shifts">
+        <input type="radio" name="multiple_shifts" id="ms_yes" value="yes"><label for="ms_yes">Yes</label>
+        <input type="radio" name="multiple_shifts" id="ms_no" value="no" checked><label for="ms_no">No</label>
+      </div>
+    </div>
+
+    <div class="conditional" id="cond-shifts">
+      <div class="field-grid">
+        <div class="field">
+          <label>Start time of shift hours</label>
+          <input type="text" list="dl_start_morning" id="shift_start" data-key="shift_start" placeholder="HH:MM">
+          <datalist id="dl_start_morning">
+            <option value="07:00"><option value="07:15"><option value="07:30">
+            <option value="08:00"><option value="08:15"><option value="08:30">
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Finish time of shift hours</label>
+          <input type="text" list="dl_finish_afternoon" id="shift_end" data-key="shift_end" placeholder="HH:MM">
+          <datalist id="dl_finish_afternoon">
+            <option value="15:00"><option value="15:15"><option value="15:30">
+            <option value="16:00"><option value="16:15"><option value="16:30">
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Total break duration <span class="hint">(min)</span></label>
+          <input type="text" list="dl_break" id="shift_break" data-key="shift_break">
+          <datalist id="dl_break">
+            <option value="30"><option value="45"><option value="60">
+            <option value="75"><option value="90"><option value="120"><option value="150">
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Working days</label>
+          <input type="text" list="dl_workdays" id="shift_workdays" data-key="shift_workdays">
+          <datalist id="dl_workdays">
+            <option value="from Monday to Saturday, 6 days a week">
+          </datalist>
+        </div>
+        <div class="field span-2">
+          <label>Department(s) with shift</label>
+          <input type="text" list="dl_dept_shift" id="shift_departments" data-key="shift_departments">
+          <datalist id="dl_dept_shift">
+            <option value="facility"><option value="knitting section"><option value="dyehouse">
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Total daily working time <span class="hint">(auto)</span></label>
+          <div class="computed" id="shift_daily_total"></div>
+        </div>
+        <div class="field">
+          <label>Weekly working hours for 6 days <span class="hint">(auto)</span></label>
+          <div class="computed" id="shift_weekly_total"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pazartesi-Cuma normal çalışma -->
+    <h4 style="margin: 1.5rem 0 0.75rem; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; color: var(--ink-soft);">Monday – Friday</h4>
+    <div class="field-grid">
+      <div class="field">
+        <label>Start of working time</label>
+        <input type="text" list="dl_start_morning" id="mf_start" data-key="mf_start">
+      </div>
+      <div class="field">
+        <label>End of working time</label>
+        <input type="text" list="dl_end_evening" id="mf_end" data-key="mf_end">
+        <datalist id="dl_end_evening">
+          <option value="17:00"><option value="17:30"><option value="18:00">
+          <option value="18:15"><option value="18:30"><option value="19:00"><option value="19:30">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Total break duration <span class="hint">(min)</span></label>
+        <input type="text" list="dl_break" id="mf_break" data-key="mf_break">
+      </div>
+      <div class="field">
+        <label>Department(s)</label>
+        <input type="text" list="dl_dept_normal" id="mf_departments" data-key="mf_departments">
+        <datalist id="dl_dept_normal">
+          <option value="facility"><option value="administration employees">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Total daily working time <span class="hint">(auto)</span></label>
+        <div class="computed" id="mf_daily_total"></div>
+      </div>
+      <div class="field">
+        <label>Weekly working time for 5 days <span class="hint">(auto)</span></label>
+        <div class="computed" id="mf_weekly_total"></div>
+      </div>
+    </div>
+
+    <!-- Cumartesi -->
+    <div class="field" style="margin-top: 1.5rem; margin-bottom: 1rem;">
+      <label>Is there normal working on Saturdays?</label>
+      <div class="toggle-group" data-toggle="saturday_work">
+        <input type="radio" name="saturday_work" id="sw_yes" value="Yes"><label for="sw_yes">Yes</label>
+        <input type="radio" name="saturday_work" id="sw_no" value="No" checked><label for="sw_no">No</label>
+      </div>
+    </div>
+
+    <div class="conditional" id="cond-saturday">
+      <div class="field-grid">
+        <div class="field">
+          <label>Start time on Saturdays</label>
+          <input type="text" list="dl_start_morning" id="sat_start" data-key="sat_start">
+        </div>
+        <div class="field">
+          <label>End time on Saturdays</label>
+          <input type="text" list="dl_sat_end" id="sat_end" data-key="sat_end">
+          <datalist id="dl_sat_end">
+            <option value="12:00"><option value="12:15"><option value="12:30">
+            <option value="13:00"><option value="13:30"><option value="13:45"><option value="14:00">
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Total break duration <span class="hint">(min)</span></label>
+          <input type="text" list="dl_break_sat" id="sat_break" data-key="sat_break">
+          <datalist id="dl_break_sat">
+            <option value="15"><option value="30"><option value="45"><option value="60">
+            <option value="75"><option value="90"><option value="120"><option value="150">
+          </datalist>
+        </div>
+        <div class="field">
+          <label>Total daily working time <span class="hint">(auto)</span></label>
+          <div class="computed" id="sat_daily_total"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toplam haftalık -->
+    <div class="field-grid" style="margin-top: 1.5rem;">
+      <div class="field span-2">
+        <label>Total weekly working time <span class="hint">(M-F + Sat, auto)</span></label>
+        <div class="computed" id="total_weekly"></div>
+      </div>
+      <div class="field span-2">
+        <label>Time recording system</label>
+        <input type="text" list="dl_time_rec" id="time_recording" data-key="time_recording">
+        <datalist id="dl_time_rec">
+          <option value="digital system with fingerprint scan">
+          <option value="digital system with face scan">
+          <option value="digital system with electronic time card">
+          <option value="manual attendance list">
+          <option value="digital system with pin code">
+        </datalist>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     4. BİNA VE TESİS
+     ============================================================ -->
+<section class="group" id="grp-building">
+  <header>
+    <span class="group-num">04</span>
+    <h2>Bina ve Tesis</h2>
+    <p class="group-desc">Fiziksel yapı, alan, mülkiyet, tehlike sınıfı</p>
+  </header>
+  <div class="group-body">
+    <div class="field-grid">
+      <div class="field">
+        <label>Facility closed area <span class="hint">(sqm)</span></label>
+        <input type="number" id="closed_area" data-key="closed_area" min="0">
+      </div>
+      <div class="field">
+        <label>Building type</label>
+        <input type="text" list="dl_bldg_type" id="building_type" data-key="building_type" value="not shared">
+        <datalist id="dl_bldg_type">
+          <option value="shared"><option value="not shared">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Number of floors</label>
+        <input type="number" id="num_floors" data-key="num_floors" min="0">
+      </div>
+      <div class="field">
+        <label>Property of building</label>
+        <input type="text" list="dl_property" id="property_building" data-key="property_building"
+          value="The building belongs to the facility.">
+        <datalist id="dl_property">
+          <option value="The building belongs to the facility.">
+          <option value="The facility is a tenant in the building.">
+        </datalist>
+      </div>
+      <div class="field span-full">
+        <label>Building structure</label>
+        <textarea id="building_structure" data-key="building_structure" rows="2"
+          placeholder="Ground floor: administration offices, 1st floor: ..."></textarea>
+      </div>
+      <div class="field">
+        <label>Hazard class of facility</label>
+        <input type="text" list="dl_hazard" id="hazard_class" data-key="hazard_class" value="low hazardous">
+        <datalist id="dl_hazard">
+          <option value="low hazardous"><option value="hazardous"><option value="very hazardous">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Canteen</label>
+        <input type="text" list="dl_canteen" id="canteen" data-key="canteen" value="Canteen is available.">
+        <datalist id="dl_canteen">
+          <option value="Canteen is available.">
+          <option value="Canteen is not available.">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Dormitory</label>
+        <input type="text" list="dl_dormitory" id="dormitory" data-key="dormitory" value="Dormitory is not available.">
+        <datalist id="dl_dormitory">
+          <option value="Dormitory is available.">
+          <option value="Dormitory is not available.">
+        </datalist>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     5. PERSONEL YAPISI
+     ============================================================ -->
+<section class="group" id="grp-workforce">
+  <header>
+    <span class="group-num">05</span>
+    <h2>Personel Yapısı</h2>
+    <p class="group-desc">İşgücü dağılımı — alt toplamlar otomatik hesaplanır</p>
+  </header>
+  <div class="group-body">
+
+    <!-- Yönetim & üretim -->
+    <h4 style="margin: 0 0 0.75rem; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem;">Yönetim ve Üretim</h4>
+    <div class="field-grid cols-3">
+      <div class="field">
+        <label>Management — male</label>
+        <input type="number" id="mgmt_male" data-key="mgmt_male" min="0" data-numeric>
+      </div>
+      <div class="field">
+        <label>Management — female</label>
+        <input type="number" id="mgmt_female" data-key="mgmt_female" min="0" data-numeric>
+      </div>
+      <div class="field">
+        <label>Management total <span class="hint">(auto)</span></label>
+        <div class="computed" id="mgmt_total"></div>
+      </div>
+      <div class="field">
+        <label>Non-management — male</label>
+        <input type="number" id="nonmgmt_male" data-key="nonmgmt_male" min="0" data-numeric>
+      </div>
+      <div class="field">
+        <label>Non-management — female</label>
+        <input type="number" id="nonmgmt_female" data-key="nonmgmt_female" min="0" data-numeric>
+      </div>
+      <div class="field">
+        <label>Non-management total <span class="hint">(auto)</span></label>
+        <div class="computed" id="nonmgmt_total"></div>
+      </div>
+    </div>
+
+    <!-- Müteahhit -->
+    <div class="field" style="margin: 1.5rem 0 1rem;">
+      <label>Contractors</label>
+      <div class="toggle-group" data-toggle="contractors">
+        <input type="radio" name="contractors" id="c_yes" value="yes"><label for="c_yes">Yes</label>
+        <input type="radio" name="contractors" id="c_no" value="no" checked><label for="c_no">No</label>
+      </div>
+    </div>
+    <div class="conditional" id="cond-contractors">
+      <div class="field-grid cols-3">
+        <div class="field">
+          <label>Contractor male</label>
+          <input type="number" id="contractor_male" data-key="contractor_male" min="0" data-numeric value="0">
+        </div>
+        <div class="field">
+          <label>Contractor female</label>
+          <input type="number" id="contractor_female" data-key="contractor_female" min="0" data-numeric value="0">
+        </div>
+        <div class="field">
+          <label>Total contractors <span class="hint">(auto)</span></label>
+          <div class="computed" id="contractor_total"></div>
+        </div>
+        <div class="field span-3">
+          <label>Contractor information</label>
+          <textarea id="contractor_info" data-key="contractor_info" rows="2"
+            placeholder="Catering ( male,  female), security, cleaning..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toplam çalışan özetleri -->
+    <div class="field-grid cols-2" style="margin-top: 1.5rem; padding: 1rem 1.25rem; background: var(--surface-alt); border-radius: var(--radius);">
+      <div class="field">
+        <label>Total employee number <span class="hint">(without contractors, auto)</span></label>
+        <div class="computed" id="total_employees"></div>
+      </div>
+      <div class="field">
+        <label>Total with contractors <span class="hint">(auto)</span></label>
+        <div class="computed" id="total_with_contractors"></div>
+      </div>
+      <div class="field">
+        <label>Total male workers <span class="hint">(auto)</span></label>
+        <div class="computed" id="total_male"></div>
+      </div>
+      <div class="field">
+        <label>Total female workers <span class="hint">(auto)</span></label>
+        <div class="computed" id="total_female"></div>
+      </div>
+      <div class="field">
+        <label>Total male incl. contractors <span class="hint">(auto)</span></label>
+        <div class="computed" id="total_male_with_c"></div>
+      </div>
+      <div class="field">
+        <label>Total female incl. contractors <span class="hint">(auto)</span></label>
+        <div class="computed" id="total_female_with_c"></div>
+      </div>
+      <div class="field">
+        <label>Contractors % of workforce <span class="hint">(auto)</span></label>
+        <div class="computed" id="contractor_pct"></div>
+      </div>
+      <div class="field">
+        <label>Employee number on the audit date</label>
+        <input type="number" id="employees_on_audit" data-key="employees_on_audit" min="0">
+      </div>
+    </div>
+
+    <!-- Genç çalışan -->
+    <div class="field" style="margin: 1.5rem 0 1rem;">
+      <label>Young employee</label>
+      <div class="toggle-group" data-toggle="young_employee">
+        <input type="radio" name="young_employee" id="y_yes" value="Yes"><label for="y_yes">Yes</label>
+        <input type="radio" name="young_employee" id="y_no" value="No" checked><label for="y_no">No</label>
+      </div>
+    </div>
+    <div class="conditional" id="cond-young">
+      <div class="field-grid cols-3">
+        <div class="field">
+          <label>Young male</label>
+          <input type="number" id="young_male" data-key="young_male" min="0" data-numeric>
+        </div>
+        <div class="field">
+          <label>Young female</label>
+          <input type="number" id="young_female" data-key="young_female" min="0" data-numeric>
+        </div>
+        <div class="field">
+          <label>Total young <span class="hint">(auto)</span></label>
+          <div class="computed" id="young_total"></div>
+        </div>
+        <div class="field">
+          <label>Start of working time</label>
+          <input type="text" list="dl_start_morning" id="young_start" data-key="young_start">
+        </div>
+        <div class="field">
+          <label>End of working time</label>
+          <input type="text" list="dl_end_evening" id="young_end" data-key="young_end">
+        </div>
+        <div class="field">
+          <label>Break <span class="hint">(min)</span></label>
+          <input type="text" list="dl_break" id="young_break" data-key="young_break">
+        </div>
+        <div class="field">
+          <label>Daily working time <span class="hint">(auto)</span></label>
+          <div class="computed" id="young_daily"></div>
+        </div>
+        <div class="field">
+          <label>Weekly hours / 5 days <span class="hint">(auto)</span></label>
+          <div class="computed" id="young_weekly"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Engelli -->
+    <div class="field" style="margin: 1.5rem 0 1rem;">
+      <label>Disabled employee</label>
+      <div class="toggle-group" data-toggle="disabled">
+        <input type="radio" name="disabled" id="d_yes" value="Yes"><label for="d_yes">Yes</label>
+        <input type="radio" name="disabled" id="d_no" value="No" checked><label for="d_no">No</label>
+      </div>
+    </div>
+    <div class="conditional" id="cond-disabled">
+      <div class="field-grid cols-3">
+        <div class="field">
+          <label>Disabled male</label>
+          <input type="number" id="disabled_male" data-key="disabled_male" min="0" data-numeric value="0">
+        </div>
+        <div class="field">
+          <label>Disabled female</label>
+          <input type="number" id="disabled_female" data-key="disabled_female" min="0" data-numeric value="0">
+        </div>
+        <div class="field">
+          <label>Total disabled <span class="hint">(auto)</span></label>
+          <div class="computed" id="disabled_total"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Göçmen -->
+    <div class="field" style="margin: 1.5rem 0 1rem;">
+      <label>Migrant employee</label>
+      <div class="toggle-group" data-toggle="migrant">
+        <input type="radio" name="migrant" id="mig_yes" value="Yes"><label for="mig_yes">Yes</label>
+        <input type="radio" name="migrant" id="mig_no" value="No" checked><label for="mig_no">No</label>
+      </div>
+    </div>
+    <div class="conditional" id="cond-migrant">
+      <div class="field-grid cols-3">
+        <div class="field">
+          <label>Migrant male</label>
+          <input type="number" id="migrant_male" data-key="migrant_male" min="0" data-numeric value="0">
+        </div>
+        <div class="field">
+          <label>Migrant female</label>
+          <input type="number" id="migrant_female" data-key="migrant_female" min="0" data-numeric value="0">
+        </div>
+        <div class="field">
+          <label>Total migrant <span class="hint">(auto)</span></label>
+          <div class="computed" id="migrant_total"></div>
+        </div>
+        <div class="field span-3">
+          <label>Nationality(s)</label>
+          <input type="text" list="dl_nationalities" id="nationalities" data-key="nationalities">
+          <datalist id="dl_nationalities">
+            <option value="Syrian"><option value="Afghan"><option value="Turkmen">
+            <option value="Uzbek"><option value="Iranian"><option value="Vietnamese">
+          </datalist>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stajyer -->
+    <div class="field" style="margin: 1.5rem 0 1rem;">
+      <label>Trainee</label>
+      <div class="toggle-group" data-toggle="trainee">
+        <input type="radio" name="trainee" id="t_yes" value="Yes"><label for="t_yes">Yes</label>
+        <input type="radio" name="trainee" id="t_na" value="NA" checked><label for="t_na">NA</label>
+      </div>
+    </div>
+    <div class="conditional" id="cond-trainee">
+      <div class="field-grid cols-3">
+        <div class="field">
+          <label>Male trainees</label>
+          <input type="number" id="trainee_male" data-key="trainee_male" min="0" data-numeric>
+        </div>
+        <div class="field">
+          <label>Female trainees</label>
+          <input type="number" id="trainee_female" data-key="trainee_female" min="0" data-numeric>
+        </div>
+        <div class="field">
+          <label>Total trainees <span class="hint">(auto)</span></label>
+          <div class="computed" id="trainee_total"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hamile -->
+    <div class="field" style="margin: 1.5rem 0 1rem;">
+      <label>Pregnant employee</label>
+      <div class="toggle-group" data-toggle="pregnant">
+        <input type="radio" name="pregnant" id="p_yes" value="Yes"><label for="p_yes">Yes</label>
+        <input type="radio" name="pregnant" id="p_no" value="No" checked><label for="p_no">No</label>
+      </div>
+    </div>
+    <div class="conditional" id="cond-pregnant">
+      <div class="field-grid cols-3">
+        <div class="field">
+          <label>Number of pregnant employees</label>
+          <input type="number" id="pregnant_num" data-key="pregnant_num" min="0" value="0">
+        </div>
+        <div class="field">
+          <label>Start of working time</label>
+          <input type="text" list="dl_start_morning" id="pregnant_start" data-key="pregnant_start">
+        </div>
+        <div class="field">
+          <label>End of working time</label>
+          <input type="text" list="dl_end_evening" id="pregnant_end" data-key="pregnant_end">
+        </div>
+        <div class="field">
+          <label>Break <span class="hint">(min)</span></label>
+          <input type="text" list="dl_break" id="pregnant_break" data-key="pregnant_break">
+        </div>
+        <div class="field">
+          <label>Daily working time <span class="hint">(auto)</span></label>
+          <div class="computed" id="pregnant_daily"></div>
+        </div>
+        <div class="field">
+          <label>Weekly / 5 days <span class="hint">(auto)</span></label>
+          <div class="computed" id="pregnant_weekly"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-grid cols-2" style="margin-top: 1.5rem;">
+      <div class="field">
+        <label>Employee on breastfeeding leave</label>
+        <input type="number" id="breastfeeding" data-key="breastfeeding" min="0" value="0">
+      </div>
+      <div class="field">
+        <label>Employee on maternity leave</label>
+        <input type="number" id="maternity" data-key="maternity" min="0" value="0">
+      </div>
+    </div>
+
+    <!-- Sendikalı -->
+    <div class="field" style="margin: 1.5rem 0 1rem;">
+      <label>Unionized employee</label>
+      <div class="toggle-group" data-toggle="unionized">
+        <input type="radio" name="unionized" id="u_yes" value="Yes"><label for="u_yes">Yes</label>
+        <input type="radio" name="unionized" id="u_no" value="No" checked><label for="u_no">No</label>
+      </div>
+    </div>
+    <div class="conditional" id="cond-unionized">
+      <div class="field-grid cols-3">
+        <div class="field">
+          <label>Unionized male</label>
+          <input type="number" id="union_male" data-key="union_male" min="0" data-numeric>
+        </div>
+        <div class="field">
+          <label>Unionized female</label>
+          <input type="number" id="union_female" data-key="union_female" min="0" data-numeric>
+        </div>
+        <div class="field">
+          <label>Total unionized <span class="hint">(auto)</span></label>
+          <div class="computed" id="union_total"></div>
+        </div>
+        <div class="field span-3">
+          <label>Name of trade union and CBA information</label>
+          <textarea id="union_info" data-key="union_info" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- En genç çalışan -->
+    <h4 style="margin: 1.5rem 0 0.75rem; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem;">En genç çalışan</h4>
+    <div class="field-grid cols-4">
+      <div class="field">
+        <label>Birth date</label>
+        <input type="date" id="youngest_birth" data-key="youngest_birth">
+      </div>
+      <div class="field">
+        <label>Hire date</label>
+        <input type="date" id="youngest_hire" data-key="youngest_hire">
+      </div>
+      <div class="field">
+        <label>Current age <span class="hint">(auto)</span></label>
+        <div class="computed" id="youngest_age"></div>
+      </div>
+      <div class="field">
+        <label>Hiring age <span class="hint">(auto)</span></label>
+        <div class="computed" id="youngest_hire_age"></div>
+      </div>
+    </div>
+
+    <!-- % gece vardiyası -->
+    <div class="field-grid cols-2" style="margin-top: 1rem;">
+      <div class="field">
+        <label>% of workforce on work during night shift</label>
+        <input type="text" id="night_shift_pct" data-key="night_shift_pct" placeholder="e.g. 0% or 15%">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     6. ÜCRETLER
+     ============================================================ -->
+<section class="group" id="grp-wages">
+  <header>
+    <span class="group-num">06</span>
+    <h2>Ücretler</h2>
+    <p class="group-desc">Ödeme yöntemi ve ücret aralığı — öneriler düzenlenebilir</p>
+  </header>
+  <div class="group-body">
+    <div class="field-grid">
+      <div class="field">
+        <label>Wage date <span class="hint">(of each month)</span></label>
+        <input type="text" id="wage_date" data-key="wage_date" placeholder="e.g. 5">
+      </div>
+      <div class="field">
+        <label>Payment method</label>
+        <input type="text" list="dl_payment" id="payment_method" data-key="payment_method" value="by bank transfer">
+        <datalist id="dl_payment">
+          <option value="by bank transfer">
+          <option value="by bank transfer and in cash">
+          <option value="in cash">
+        </datalist>
+      </div>
+      <div class="field span-2">
+        <label>Last paid month</label>
+        <input type="text" id="last_paid_month" data-key="last_paid_month" placeholder="e.g. October 2024">
+      </div>
+      <div class="field">
+        <label>Selected month 2</label>
+        <input type="text" id="month_2" data-key="month_2">
+      </div>
+      <div class="field">
+        <label>Selected month 3</label>
+        <input type="text" id="month_3" data-key="month_3">
+      </div>
+    </div>
+
+    <div class="field-grid cols-2" style="margin-top: 1.25rem;">
+      <div class="field">
+        <label>Lowest wage (net) <span class="hint">(önerilen değerler düzenlenebilir)</span></label>
+        <input type="text" list="dl_low_net" id="lowest_net" data-key="lowest_net">
+        <datalist id="dl_low_net">
+          <option value="22104.67"><option value="17002.12"><option value="28075.50">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Lowest wage (gross)</label>
+        <input type="text" list="dl_low_gross" id="lowest_gross" data-key="lowest_gross">
+        <datalist id="dl_low_gross">
+          <option value="26005.50"><option value="20002.50"><option value="33030">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Highest wage (net)</label>
+        <input type="text" id="highest_net" data-key="highest_net">
+      </div>
+      <div class="field">
+        <label>Highest wage (gross)</label>
+        <input type="text" id="highest_gross" data-key="highest_gross">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     7. DENETİM BİLGİLERİ
+     ============================================================ -->
+<section class="group" id="grp-audit">
+  <header>
+    <span class="group-num">07</span>
+    <h2>Denetim Bilgileri</h2>
+    <p class="group-desc">Denetim tarihleri, görüşmeler, sosyal uygunluk sorumlusu</p>
+  </header>
+  <div class="group-body">
+    <div class="field-grid cols-3">
+      <div class="field">
+        <label>Audit start date</label>
+        <input type="date" id="audit_start" data-key="audit_start">
+      </div>
+      <div class="field">
+        <label>Audit end date</label>
+        <input type="date" id="audit_end" data-key="audit_end">
+      </div>
+      <div class="field">
+        <label>Previous audit date</label>
+        <input type="date" id="prev_audit" data-key="prev_audit">
+      </div>
+    </div>
+
+    <h4 style="margin: 1.5rem 0 0.75rem; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem;">Görüşmeler</h4>
+    <div class="field-grid cols-4">
+      <div class="field">
+        <label>Individual — male</label>
+        <input type="number" id="iv_ind_male" data-key="iv_ind_male" min="0" data-numeric>
+      </div>
+      <div class="field">
+        <label>Individual — female</label>
+        <input type="number" id="iv_ind_female" data-key="iv_ind_female" min="0" data-numeric>
+      </div>
+      <div class="field">
+        <label>Group — male</label>
+        <input type="number" id="iv_grp_male" data-key="iv_grp_male" min="0" data-numeric>
+      </div>
+      <div class="field">
+        <label>Group — female</label>
+        <input type="number" id="iv_grp_female" data-key="iv_grp_female" min="0" data-numeric>
+      </div>
+      <div class="field">
+        <label>Total interviewed <span class="hint">(auto)</span></label>
+        <div class="computed" id="iv_total"></div>
+      </div>
+      <div class="field">
+        <label>Total male <span class="hint">(auto)</span></label>
+        <div class="computed" id="iv_male_total"></div>
+      </div>
+      <div class="field">
+        <label>Total female <span class="hint">(auto)</span></label>
+        <div class="computed" id="iv_female_total"></div>
+      </div>
+    </div>
+
+    <h4 style="margin: 1.5rem 0 0.75rem; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem;">Day of Audit (workforce)</h4>
+    <div class="field-grid cols-3">
+      <div class="field">
+        <label>Total workforce</label>
+        <input type="number" id="audit_total" data-key="audit_total" min="0">
+      </div>
+      <div class="field">
+        <label>Male workers</label>
+        <input type="number" id="audit_male" data-key="audit_male" min="0">
+      </div>
+      <div class="field">
+        <label>Female workers</label>
+        <input type="number" id="audit_female" data-key="audit_female" min="0">
+      </div>
+    </div>
+
+    <h4 style="margin: 1.5rem 0 0.75rem; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem;">Sosyal Uygunluk Sorumlusu</h4>
+    <div class="field-grid">
+      <div class="field">
+        <label>Name</label>
+        <input type="text" id="sc_name" data-key="sc_name">
+      </div>
+      <div class="field">
+        <label>Title</label>
+        <input type="text" list="dl_sc_title" id="sc_title" data-key="sc_title">
+        <datalist id="dl_sc_title">
+          <option value="social compliance responsible">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Gender</label>
+        <input type="text" list="dl_gender" id="sc_gender" data-key="sc_gender">
+        <datalist id="dl_gender">
+          <option value="male"><option value="female">
+        </datalist>
+      </div>
+    </div>
+  </div>
+</section>
+
+  </div>
+
+  <!-- DOCS PANEL -->
+  <div class="panel" id="panel-docs">
+    <!-- Docs paneli, kategorilere göre gruplanmış belgeler -->
+
+<section class="group">
+  <header>
+    <span class="group-num">A</span>
+    <h2>Personnel Files & Documents</h2>
+    <p class="group-desc">Personel dosyaları</p>
+  </header>
+  <div class="group-body">
+    <table class="docs-table" data-section="personnel">
+      <thead>
+        <tr>
+          <th style="width: 42%">Document</th>
+          <th style="width: 14%">Issue Date</th>
+          <th style="width: 14%">Expiry Date</th>
+          <th style="width: 14%">Number / Period</th>
+          <th style="width: 16%">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Doldurulacak via JS -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="group">
+  <header>
+    <span class="group-num">B</span>
+    <h2>Official Documents</h2>
+    <p class="group-desc">Resmi belgeler — ruhsatlar, vergi, ticaret sicili</p>
+  </header>
+  <div class="group-body">
+    <table class="docs-table" data-section="official">
+      <thead>
+        <tr>
+          <th style="width: 42%">Document</th>
+          <th style="width: 14%">Issue Date</th>
+          <th style="width: 14%">Expiry Date</th>
+          <th style="width: 14%">Number / Period</th>
+          <th style="width: 16%">Notes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="group">
+  <header>
+    <span class="group-num">C</span>
+    <h2>Health & Safety</h2>
+    <p class="group-desc">İSG belgeleri — bazı bitiş tarihleri otomatik (hazard class'a göre)</p>
+  </header>
+  <div class="group-body">
+    <table class="docs-table" data-section="hs">
+      <thead>
+        <tr>
+          <th style="width: 42%">Document</th>
+          <th style="width: 14%">Issue Date</th>
+          <th style="width: 14%">Expiry Date</th>
+          <th style="width: 14%">Number / Period</th>
+          <th style="width: 16%">Notes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="group">
+  <header>
+    <span class="group-num">D</span>
+    <h2>Environmental</h2>
+    <p class="group-desc">Çevre belgeleri</p>
+  </header>
+  <div class="group-body">
+    <table class="docs-table" data-section="env">
+      <thead>
+        <tr>
+          <th style="width: 42%">Document</th>
+          <th style="width: 14%">Issue Date</th>
+          <th style="width: 14%">Expiry Date</th>
+          <th style="width: 14%">Number / Period</th>
+          <th style="width: 16%">Notes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="group">
+  <header>
+    <span class="group-num">E</span>
+    <h2>Social Compliance — Internal</h2>
+    <p class="group-desc">İç sosyal uygunluk belgeleri</p>
+  </header>
+  <div class="group-body">
+    <table class="docs-table" data-section="sc">
+      <thead>
+        <tr>
+          <th style="width: 42%">Document</th>
+          <th style="width: 14%">Issue Date</th>
+          <th style="width: 14%">Expiry Date</th>
+          <th style="width: 14%">Number / Period</th>
+          <th style="width: 16%">Notes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="group">
+  <header>
+    <span class="group-num">F</span>
+    <h2>ICS Specific</h2>
+    <p class="group-desc">Yalnızca ICS denetimleri için ek alanlar</p>
+  </header>
+  <div class="group-body">
+    <table class="docs-table" data-section="ics">
+      <thead>
+        <tr>
+          <th style="width: 42%">Item</th>
+          <th style="width: 14%">Issue Date</th>
+          <th style="width: 14%">Expiry Date</th>
+          <th style="width: 14%">Number / Period</th>
+          <th style="width: 16%">Notes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="group">
+  <header>
+    <span class="group-num">G</span>
+    <h2>BSCI Specific</h2>
+    <p class="group-desc">Yalnızca BSCI denetimleri için ek alanlar</p>
+  </header>
+  <div class="group-body">
+    <table class="docs-table" data-section="bsci">
+      <thead>
+        <tr>
+          <th style="width: 42%">Item</th>
+          <th style="width: 14%">Issue Date</th>
+          <th style="width: 14%">Expiry Date</th>
+          <th style="width: 14%">Number / Period</th>
+          <th style="width: 16%">Notes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- SheetJS — Excel export için (internet gerektirir; offline desteği sonraki sürümde) -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+<!-- ANA UYGULAMA SCRIPT'İ -->
+<script>
+/* ============================================================
+   CAP Audit Notes — uygulama mantığı
+   ============================================================ */
+
+(function() {
+'use strict';
+
+/* ============================================================
+   YARDIMCI FONKSİYONLAR
+   ============================================================ */
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+const byId = (id) => document.getElementById(id);
+
+function showToast(msg, ms = 2200) {
+  const t = byId('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// "HH:MM" -> dakika (gün başlangıcından)
+function timeToMinutes(str) {
+  if (!str || typeof str !== 'string') return null;
+  const m = str.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10), mi = parseInt(m[2], 10);
+  if (isNaN(h) || isNaN(mi) || h < 0 || h > 23 || mi < 0 || mi > 59) return null;
+  return h * 60 + mi;
+}
+
+// dakika -> "X hours" veya "X hours Y minutes" formatı (Excel formülüne sadık)
+function formatHoursMinutes(totalMinutes) {
+  if (totalMinutes === null || isNaN(totalMinutes) || totalMinutes < 0) return '';
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes === 0 ? `${hours} hours` : `${hours} hours ${minutes} minutes`;
+}
+
+// Günlük çalışma süresi (dakika): start, end, break (dakika)
+// Excel formülüne uygun: gece bitişi varsa +24 saat
+function calcDailyMinutes(startStr, endStr, breakMin) {
+  const start = timeToMinutes(startStr);
+  const end = timeToMinutes(endStr);
+  const br = parseInt(breakMin, 10) || 0;
+  if (start === null || end === null) return null;
+  let diff = end - start;
+  if (diff < 0) diff += 24 * 60;  // ertesi güne sarkıyorsa
+  return Math.max(0, diff - br);
+}
+
+function getVal(id) {
+  const el = byId(id);
+  if (!el) return '';
+  return el.value || '';
+}
+
+function setComputed(id, value) {
+  const el = byId(id);
+  if (el) el.textContent = value || '';
+}
+
+function num(id) {
+  const v = getVal(id);
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+}
+
+// Tarih ekleme: ISO tarih string + ay sayısı -> ISO tarih
+function addMonthsISO(dateStr, months) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
+
+// İki tarih arasındaki tam yıl farkı (DATEDIF "Y" eşdeğeri)
+function yearsBetween(start, end) {
+  if (!start || !end) return '';
+  const s = new Date(start), e = new Date(end);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return '';
+  let years = e.getFullYear() - s.getFullYear();
+  const monthDiff = e.getMonth() - s.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && e.getDate() < s.getDate())) years--;
+  return years;
+}
+
+// Bugünün tarihi (ISO)
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/* ============================================================
+   DOKÜMAN VERİSİ — Excel'deki Docs sheet'ten yapılandırılmış
+   Her belge: { name, scope?, expiryRule?, lockedFields? }
+   scope: 'ICS' | 'BSCI' | undefined  (undefined = her denetimde)
+   expiryRule: { type: 'edate', months: N } |
+               { type: 'hazard', months: { low: N, mid: N, high: N } } |
+               { type: 'conditional', condition: ... }
+   ============================================================ */
+
+const DOCS_DATA = {
+  personnel: [
+    { name: 'AYLIK İŞE GİRİŞ - ÇIKIŞ SAATLERİNİ GÖSTEREN KAYITLAR (PUANTAJLAR)' },
+    { name: 'ÜCRET HESAP PUSULALARI' },
+    { name: 'SGK TAHAKKUK VE HİZMET LİSTELERİ' },
+    { name: 'YILLIK İZİN KAYITLARI VE YILLIK İZİN KURULU KAYITLARI' },
+    { name: 'İŞ SÖZLEŞMELERİ VE PERSONEL ÖZLÜK DOSYALARI' },
+    { name: 'İŞE GİRİŞ / PERİYODİK SAĞLIK MUAYENE FORMLARI' },
+    { name: 'İŞTEN ÇIKIŞ EVRAKLARI' },
+  ],
+  official: [
+    { name: 'TİCARET SİCİL GAZETESİ KAYDI' },
+    { name: 'VERGİ LEVHASI' },
+    { name: 'İŞ YERİ AÇMA VE ÇALIŞTIRMA RUHSATI' },
+    { name: 'İTFAİYE RAPORU', scope: 'ICS' },
+    { name: 'YAPI RUHSATI' },
+    { name: 'YAPI KULLANIM İZNİ', scope: 'ICS' },
+    { name: 'YAPI KAYIT BELGESİ' },
+  ],
+  hs: [
+    { name: 'TAHLİYE PLANI' },
+    { name: 'YANGIN EKİPMANLARININ KONTROL LİSTESİ', scope: 'ICS' },
+    { name: 'YANGIN TESİSATI YILLIK FENNİ MUAYENE RAPORU', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'YANGIN SÖNDÜRME EĞİTİMİ KAYITLARI', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'ACİL DURUM TAHLİYE TATBİKATLARI KAYITLARI', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'ACİL DURUM PLANI VE ACİL DURUM EKİP LİSTELERİ',
+      expiryRule: { type: 'hazard', months: { 'low hazardous': 72, 'hazardous': 48, 'very hazardous': 24 } } },
+    { name: 'ÇALIŞAN TEMSİLCİSİ SEÇİM KAYITLARI', scope: 'ICS' },
+    { name: 'İSG KURULU TOPLANTI TUTANAKLARI', scope: 'ICS' },
+    { name: 'İSG UZMANI SÖZLEŞMESİ / ATAMA YAZISI' },
+    { name: 'DOKTOR SÖZLEŞMESİ / ATAMA YAZISI' },
+    { name: 'RİSK DEĞERLENDİRMESİ', scope: 'ICS',
+      expiryRule: { type: 'hazard', months: { 'low hazardous': 72, 'hazardous': 48, 'very hazardous': 24 } } },
+    { name: 'BUHAR KAZANI YILLIK FENNİ MUAYENE RAPORU', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'KOMPRESÖR YILLIK FENNİ MUAYENE RAPORU', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'HİDROFOR YILLIK FENNİ MUAYENE RAPORU', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'ASANSÖR YILLIK FENNİ MUAYENE RAPORU', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'CARASKAL YILLIK FENNİ MUAYENE RAPORU', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'VİNÇ YILLIK FENNİ MUAYENE RAPORU', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'FORKLİFT YILLIK FENNİ MUAYENE RAPORU', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'TRANSPALET YILLIK FENNİ MUAYENE RAPORU', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'ENDÜSTRİYEL RAF SİSTEMİ YILLIK FENNİ MUAYENE RAPORU', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'DİĞER EKİPMANLARIN BAKIM VE MUAYENE RAPORLARI', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'HAVALANDIRMA TESİSATI YILLIK FENNİ MUAYENE RAPORU', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'ELEKTRİK TESİSATI TOPRAKLAMA RAPORU', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'PARATONER TOPRAKLAMA RAPORU', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'ELEKTRİK İÇ TESİSAT KONTROL RAPORU', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'İÇME SUYU ANALİZ RAPORU', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'AYDINLATMA İÇ ORTAM ÖLÇÜM RAPORU' },
+    { name: 'TOZ İÇ ORTAM ÖLÇÜM RAPORU' },
+    { name: 'GÜRÜLTÜ İÇ ORTAM ÖLÇÜM RAPORU' },
+    { name: 'TERMAL KONFOR İÇ ORTAM ÖLÇÜM RAPORU' },
+    { name: 'UÇUCU ORGANİK BİLEŞİK (VOC) İÇ ORTAM ÖLÇÜM RAPORU' },
+    { name: 'TİTREŞİM İÇ ORTAM ÖLÇÜM RAPORU' },
+    { name: 'İŞ KAZASI KAYITLARI', scope: 'ICS' },
+    { name: 'İLK YARDIMCI SERTİFİKALARI', scope: 'ICS', expiryRule: { type: 'edate', months: 36 } },
+    { name: 'İSG EĞİTİM KAYITLARI - SON PERİYODİK EĞİTİM TARİHİ', scope: 'ICS',
+      expiryRule: { type: 'hazard', months: { 'low hazardous': 36, 'hazardous': 24, 'very hazardous': 12 } } },
+    { name: 'KAZANCI BELGESİ' },
+    { name: 'FORKLİFT/VİNÇ OPERATÖR BELGESİ' },
+    { name: 'HİJYEN EĞİTİMİ KAYITLARI' },
+    { name: 'KREŞ SÖZLEŞMESİ' },
+    { name: 'DEPREM PERFORMANS ANALİZ RAPORU (19.08.2008 öncesi binalar için)' },
+    { name: 'TEHLİKELİ MADDE FAALİYET BELGESİ' },
+    { name: 'PATLAMADAN KORUNMA DÖKÜMANI' },
+  ],
+  env: [
+    { name: 'ÇEVRE İZNİ VEYA ÇEVRE İZNİ KAPSAM DIŞI YAZISI',
+      // F62/F61 dropdown: "Exemption letter" ise expiry yok
+      expiryRule: { type: 'conditional_exempt', months: 60 } },
+    { name: 'ÇED GÖRÜŞÜ' },
+    { name: 'ÇEVRE BOYUT ANALİZİ' },
+    { name: 'DEŞARJ KALİTE KONTROL RUHSATI', expiryRule: { type: 'edate', months: 36 } },
+    { name: 'ATIK SU ANALİZ RAPORU' },
+    { name: 'EMİSYON RAPORU' },
+    { name: 'ENDÜSTRİYEL ATIK YÖNETİM PLANI' },
+    { name: 'YILLIK ATIK BEYANI' },
+    { name: 'GEÇİCİ ATIK DEPOLAMA İZNİ' },
+    { name: 'MOTAT KAYITLARI' },
+    { name: 'ÇEVRE EĞİTİMİ', expiryRule: { type: 'edate', months: 12 } },
+    { name: 'SIFIR ATIK BELGESİ', expiryRule: { type: 'edate', months: 60 } },
+    { name: 'AYLIK DEĞERLENDİRME RAPORU' },
+    { name: 'İÇ TETKİK RAPORU' },
+    { name: 'BEKRA BEYANI' },
+  ],
+  sc: [
+    { name: 'SOSYAL UYGUNLUK EĞİTİMİ' },
+    { name: 'ÇALIŞAN TEMSİLCİLERİ İLE TOPLANTI' },
+    { name: 'İÇ DENETİM' },
+    { name: 'DİLEK VE ŞİKAYET KUTUSU KAYITLARI' },
+  ],
+  ics: [
+    { name: 'TATBİKAT SÜRESİ' },
+    { name: 'YST SAYISI' },
+    { name: 'YANGIN DOLABI SAYISI' },
+    { name: 'DUMAN DEDEKTÖRLERİNİN İÇ KONTROLÜ' },
+    { name: 'HİDRANTLARIN İÇ KONTROLÜ' },
+    { name: 'PROVINCE' },
+    { name: 'İŞTEN ÇIKIŞ ORANI' },
+    { name: 'KIDEM SÜRESİ' },
+    { name: 'İŞE GİRİŞ ORANI' },
+    { name: 'Highest number of overtime hours per week' },
+    { name: 'Month with the highest number of overtime hours' },
+    { name: 'Maximum number of consecutive days' },
+    { name: 'How many times occurred?' },
+  ],
+  bsci: [
+    { name: 'YILLIK YÖNETİM GÖZDEN GEÇİRME TOPLANTISI' },
+    { name: 'BSCI KOMİTE TOPLANTI PERİYODU' },
+    { name: 'BSCI KOMİTE TOPLANTISI' },
+    { name: 'BSCI EĞİTİMİ' },
+    { name: 'İÇ DENETİM' },
+    { name: 'ÇALIŞAN MEMNUNİYET ANKETİ' },
+  ],
+};
+
+/* ============================================================
+   DOCS TABLOLARINI INŞA ET
+   ============================================================ */
+
+function buildDocsTables() {
+  Object.entries(DOCS_DATA).forEach(([sectionKey, items]) => {
+    const tbody = document.querySelector(`table[data-section="${sectionKey}"] tbody`);
+    if (!tbody) return;
+    items.forEach((item, idx) => {
+      const rowId = `${sectionKey}_${idx}`;
+      const tr = document.createElement('tr');
+      tr.dataset.section = sectionKey;
+      tr.dataset.idx = idx;
+
+      // Belge adı
+      const tdName = document.createElement('td');
+      tdName.className = 'doc-name-cell';
+      tdName.dataset.label = '';
+      let nameHTML = '';
+      if (item.scope) {
+        nameHTML += `<span class="scope-badge">${item.scope}</span>`;
+      }
+      nameHTML += `<span class="doc-name">${item.name}</span>`;
+      tdName.innerHTML = nameHTML;
+
+      // Issue date
+      const tdIssue = document.createElement('td');
+      tdIssue.dataset.label = 'Issue';
+      const issueInput = document.createElement('input');
+      issueInput.type = 'date';
+      issueInput.dataset.docKey = `${rowId}_issue`;
+      issueInput.dataset.row = rowId;
+      issueInput.dataset.field = 'issue';
+      tdIssue.appendChild(issueInput);
+
+      // Expiry date — kuralı varsa hesaplanır, yoksa manuel
+      const tdExpiry = document.createElement('td');
+      tdExpiry.dataset.label = 'Expiry';
+      if (item.expiryRule) {
+        const div = document.createElement('div');
+        div.className = 'computed-cell';
+        div.dataset.docKey = `${rowId}_expiry_auto`;
+        div.dataset.row = rowId;
+        div.dataset.expiryRule = JSON.stringify(item.expiryRule);
+        tdExpiry.appendChild(div);
+      } else {
+        const exInput = document.createElement('input');
+        exInput.type = 'date';
+        exInput.dataset.docKey = `${rowId}_expiry`;
+        exInput.dataset.row = rowId;
+        exInput.dataset.field = 'expiry';
+        tdExpiry.appendChild(exInput);
+      }
+
+      // Number / Period
+      const tdNum = document.createElement('td');
+      tdNum.dataset.label = 'Number';
+      const numInput = document.createElement('input');
+      numInput.type = 'text';
+      numInput.dataset.docKey = `${rowId}_number`;
+      numInput.dataset.row = rowId;
+      numInput.dataset.field = 'number';
+      tdNum.appendChild(numInput);
+
+      // Notes
+      const tdNotes = document.createElement('td');
+      tdNotes.dataset.label = 'Notes';
+      const notesInput = document.createElement('input');
+      notesInput.type = 'text';
+      notesInput.dataset.docKey = `${rowId}_notes`;
+      notesInput.dataset.row = rowId;
+      notesInput.dataset.field = 'notes';
+      tdNotes.appendChild(notesInput);
+
+      tr.append(tdName, tdIssue, tdExpiry, tdNum, tdNotes);
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+/* ============================================================
+   HESAPLAMALAR
+   ============================================================ */
+
+function getHazardClass() {
+  return getVal('hazard_class') || 'low hazardous';
+}
+
+function recalcAll() {
+  // Toggle koşullarını güncelle
+  updateConditionals();
+
+  // Çalışma saatleri
+  const shiftDaily = calcDailyMinutes(getVal('shift_start'), getVal('shift_end'), getVal('shift_break'));
+  setComputed('shift_daily_total', formatHoursMinutes(shiftDaily));
+  setComputed('shift_weekly_total', formatHoursMinutes(shiftDaily !== null ? shiftDaily * 6 : null));
+
+  const mfDaily = calcDailyMinutes(getVal('mf_start'), getVal('mf_end'), getVal('mf_break'));
+  setComputed('mf_daily_total', formatHoursMinutes(mfDaily));
+  const mfWeekly = mfDaily !== null ? mfDaily * 5 : null;
+  setComputed('mf_weekly_total', formatHoursMinutes(mfWeekly));
+
+  const satWork = document.querySelector('input[name="saturday_work"]:checked');
+  const satOn = satWork && satWork.value === 'Yes';
+  let satDaily = null;
+  if (satOn) {
+    satDaily = calcDailyMinutes(getVal('sat_start'), getVal('sat_end'), getVal('sat_break'));
+  }
+  setComputed('sat_daily_total', formatHoursMinutes(satDaily));
+
+  // Toplam haftalık (M-F + Sat)
+  const totalWeeklyMin = (mfWeekly || 0) + (satDaily || 0);
+  setComputed('total_weekly', mfWeekly !== null ? formatHoursMinutes(totalWeeklyMin) : '');
+
+  // Personel toplamları
+  const mgmtM = num('mgmt_male'), mgmtF = num('mgmt_female');
+  const nonM = num('nonmgmt_male'), nonF = num('nonmgmt_female');
+  const cM = num('contractor_male'), cF = num('contractor_female');
+  setComputed('mgmt_total', mgmtM + mgmtF || '');
+  setComputed('nonmgmt_total', nonM + nonF || '');
+  setComputed('contractor_total', cM + cF || '');
+
+  const totalEmp = mgmtM + mgmtF + nonM + nonF;
+  const totalContractors = cM + cF;
+  const totalWithC = totalEmp + totalContractors;
+  setComputed('total_employees', totalEmp || '');
+  setComputed('total_with_contractors', totalWithC || '');
+  setComputed('total_male', (mgmtM + nonM) || '');
+  setComputed('total_female', (mgmtF + nonF) || '');
+  setComputed('total_male_with_c', (mgmtM + nonM + cM) || '');
+  setComputed('total_female_with_c', (mgmtF + nonF + cF) || '');
+  setComputed('contractor_pct', totalWithC > 0 ? ((totalContractors / totalWithC) * 100).toFixed(1) + '%' : '');
+
+  // Genç
+  setComputed('young_total', (num('young_male') + num('young_female')) || '');
+  const youngDaily = calcDailyMinutes(getVal('young_start'), getVal('young_end'), getVal('young_break'));
+  setComputed('young_daily', formatHoursMinutes(youngDaily));
+  setComputed('young_weekly', formatHoursMinutes(youngDaily !== null ? youngDaily * 5 : null));
+
+  // Engelli, göçmen, stajyer
+  setComputed('disabled_total', (num('disabled_male') + num('disabled_female')) || '');
+  setComputed('migrant_total', (num('migrant_male') + num('migrant_female')) || '');
+  setComputed('trainee_total', (num('trainee_male') + num('trainee_female')) || '');
+
+  // Hamile
+  const pregDaily = calcDailyMinutes(getVal('pregnant_start'), getVal('pregnant_end'), getVal('pregnant_break'));
+  setComputed('pregnant_daily', formatHoursMinutes(pregDaily));
+  setComputed('pregnant_weekly', formatHoursMinutes(pregDaily !== null ? pregDaily * 5 : null));
+
+  // Sendika
+  setComputed('union_total', (num('union_male') + num('union_female')) || '');
+
+  // En genç çalışan yaşları
+  const yBirth = getVal('youngest_birth');
+  const yHire = getVal('youngest_hire');
+  if (yBirth) {
+    const age = yearsBetween(yBirth, todayISO());
+    setComputed('youngest_age', age !== '' ? age : '');
+  } else {
+    setComputed('youngest_age', '');
+  }
+  if (yBirth && yHire) {
+    const ha = yearsBetween(yBirth, yHire);
+    setComputed('youngest_hire_age', ha !== '' ? ha : '');
+  } else {
+    setComputed('youngest_hire_age', '');
+  }
+
+  // Görüşmeler
+  const im = num('iv_ind_male'), iff = num('iv_ind_female'), gm = num('iv_grp_male'), gf = num('iv_grp_female');
+  setComputed('iv_total', (im + iff + gm + gf) || '');
+  setComputed('iv_male_total', (im + gm) || '');
+  setComputed('iv_female_total', (iff + gf) || '');
+
+  // Docs expiry hesapları
+  recalcDocsExpiry();
+}
+
+function recalcDocsExpiry() {
+  const hazard = getHazardClass();
+  document.querySelectorAll('.computed-cell[data-expiry-rule]').forEach(cell => {
+    const row = cell.dataset.row;
+    const issueInput = document.querySelector(`input[data-row="${row}"][data-field="issue"]`);
+    const numberInput = document.querySelector(`input[data-row="${row}"][data-field="number"]`);
+    const issue = issueInput ? issueInput.value : '';
+
+    let rule;
+    try { rule = JSON.parse(cell.dataset.expiryRule); } catch (e) { return; }
+
+    let result = '';
+    if (!issue) {
+      result = '';
+    } else if (rule.type === 'edate') {
+      result = addMonthsISO(issue, rule.months);
+    } else if (rule.type === 'hazard') {
+      const months = rule.months[hazard];
+      if (months) result = addMonthsISO(issue, months);
+    } else if (rule.type === 'conditional_exempt') {
+      const numVal = numberInput ? numberInput.value : '';
+      if (numVal === 'Exemption letter') {
+        result = 'N/A';
+      } else {
+        result = addMonthsISO(issue, rule.months);
+      }
+    }
+
+    cell.textContent = result;
+
+    // Vade durumu — bugünden sonra mı, yakında mı, geçmiş mi
+    cell.classList.remove('expired', 'warn');
+    if (result && result !== 'N/A') {
+      const d = new Date(result);
+      const now = new Date();
+      const diffDays = (d - now) / (1000 * 60 * 60 * 24);
+      if (diffDays < 0) cell.classList.add('expired');
+      else if (diffDays < 60) cell.classList.add('warn');
+    }
+  });
+}
+
+function updateConditionals() {
+  const map = [
+    { toggle: 'multiple_shifts', cond: 'cond-shifts', showOn: 'yes' },
+    { toggle: 'saturday_work', cond: 'cond-saturday', showOn: 'Yes' },
+    { toggle: 'contractors', cond: 'cond-contractors', showOn: 'yes' },
+    { toggle: 'young_employee', cond: 'cond-young', showOn: 'Yes' },
+    { toggle: 'disabled', cond: 'cond-disabled', showOn: 'Yes' },
+    { toggle: 'migrant', cond: 'cond-migrant', showOn: 'Yes' },
+    { toggle: 'trainee', cond: 'cond-trainee', showOn: 'Yes' },
+    { toggle: 'pregnant', cond: 'cond-pregnant', showOn: 'Yes' },
+    { toggle: 'unionized', cond: 'cond-unionized', showOn: 'Yes' },
+  ];
+  map.forEach(m => {
+    const checked = document.querySelector(`input[name="${m.toggle}"]:checked`);
+    const cond = byId(m.cond);
+    if (cond) {
+      cond.classList.toggle('show', checked && checked.value === m.showOn);
+    }
+  });
+}
+
+/* ============================================================
+   KAYDET / YÜKLE (JSON)
+   ============================================================ */
+
+function gatherData() {
+  const data = { _version: 1, _timestamp: new Date().toISOString(), info: {}, docs: {} };
+  // Info: data-key olan tüm input/select/textarea
+  document.querySelectorAll('[data-key]').forEach(el => {
+    data.info[el.dataset.key] = el.value || '';
+  });
+  // Toggle/radio değerleri
+  ['multiple_shifts','saturday_work','contractors','young_employee','disabled',
+   'migrant','trainee','pregnant','unionized'].forEach(name => {
+    const checked = document.querySelector(`input[name="${name}"]:checked`);
+    data.info[name] = checked ? checked.value : '';
+  });
+  // Docs satırları
+  document.querySelectorAll('[data-doc-key]').forEach(el => {
+    if (el.tagName === 'INPUT') data.docs[el.dataset.docKey] = el.value || '';
+  });
+  return data;
+}
+
+function applyData(data) {
+  if (!data || !data.info) {
+    showToast('Geçersiz dosya formatı', 3000);
+    return;
+  }
+  // Önce tüm input'ları temizle
+  document.querySelectorAll('[data-key]').forEach(el => {
+    if (el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number' || el.type === 'date' || el.type === 'time')) el.value = '';
+    else if (el.tagName === 'TEXTAREA') el.value = '';
+    else if (el.tagName === 'SELECT') el.selectedIndex = 0;
+  });
+  document.querySelectorAll('[data-doc-key]').forEach(el => { if (el.tagName === 'INPUT') el.value = ''; });
+
+  Object.entries(data.info).forEach(([key, val]) => {
+    const el = document.querySelector(`[data-key="${key}"]`);
+    if (el) {
+      el.value = val;
+    } else {
+      // Toggle'lar için
+      const radio = document.querySelector(`input[name="${key}"][value="${val}"]`);
+      if (radio) radio.checked = true;
+    }
+  });
+  if (data.docs) {
+    Object.entries(data.docs).forEach(([key, val]) => {
+      const el = document.querySelector(`input[data-doc-key="${key}"]`);
+      if (el) el.value = val;
+    });
+  }
+  recalcAll();
+  showToast('Yüklendi');
+}
+
+function saveJSON() {
+  const data = gatherData();
+  const fname = (data.info.facility_name || 'facility').toString().replace(/[^\w-]+/g, '_').slice(0, 40);
+  const date = todayISO();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `CAP_${fname}_${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('JSON indirildi');
+}
+
+function loadJSON() {
+  byId('fileInput').click();
+}
+
+byId('fileInput').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      applyData(data);
+    } catch (err) {
+      showToast('JSON okunamadı: ' + err.message, 3500);
+    }
+  };
+  reader.readAsText(f);
+  e.target.value = '';  // Aynı dosya tekrar seçilebilsin
+});
+
+/* ============================================================
+   YENİ FORM
+   ============================================================ */
+
+function newForm() {
+  if (!confirm('Tüm formu sıfırlamak istediğine emin misin? Kaydetmediğin değişiklikler kaybolacak.')) return;
+  document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], input[type="time"], textarea').forEach(el => {
+    if (el.id === 'fileInput') return;
+    if (el.dataset.key || el.dataset.docKey) el.value = '';
+  });
+  // Default değerleri geri yükle
+  const defaults = {
+    audit_type: 'Full',
+    building_type: 'not shared',
+    property_building: 'The building belongs to the facility.',
+    hazard_class: 'low hazardous',
+    canteen: 'Canteen is available.',
+    dormitory: 'Dormitory is not available.',
+    payment_method: 'by bank transfer',
+  };
+  Object.entries(defaults).forEach(([k, v]) => { const el = byId(k); if (el) el.value = v; });
+  // Toggle'lar default'a
+  document.querySelectorAll('input[type="radio"]').forEach(r => {
+    if (['no','No','NA'].includes(r.value)) r.checked = true;
+  });
+  recalcAll();
+  showToast('Yeni form');
+}
+
+/* ============================================================
+   EXCEL EXPORT
+   ============================================================ */
+
+/* ============================================================
+   EXCEL EXPORT (SheetJS — internet bağlantısı gerektirir)
+   ============================================================ */
+
+function exportExcel() {
+  if (typeof XLSX === 'undefined') {
+    showToast('Excel kütüphanesi yüklenemedi (internet gerekiyor)', 4000);
+    return;
+  }
+  const data = gatherData();
+
+  // INFO sheet — orijinal Excel düzenine yakın (etiket | değer)
+  const infoRows = [
+    ['FACILITY INFORMATION', '', '', '', 'Audit', data.info.audit_type || 'Full'],
+    ['Facility name', '', data.info.facility_name || ''],
+    ['Facility address', '', data.info.facility_address || ''],
+    ['GPS coordinates', '', data.info.gps || ''],
+    ['Establishment date', '', data.info.establishment_date || ''],
+    ['Operation time at current address', '', data.info.operation_time || ''],
+    ['Product type', '', data.info.product_type || ''],
+    ['Production processes', '', data.info.production_processes || ''],
+    ['Are there multiple shifts?', '', data.info.multiple_shifts || 'no'],
+    ['Start time of shift hours', '', data.info.shift_start || ''],
+    ['Finish time of shift hours', '', data.info.shift_end || ''],
+    ['Total break duration (in minutes)', '', data.info.shift_break || ''],
+    ['Working days', '', data.info.shift_workdays || ''],
+    ['Department(s) with shift', '', data.info.shift_departments || ''],
+    ['Total daily working time', '', byId('shift_daily_total').textContent || ''],
+    ['Weekly working hours for 6 days', '', byId('shift_weekly_total').textContent || ''],
+    ['Start of working time from Monday to Friday', '', data.info.mf_start || ''],
+    ['End of working time from Monday to Friday', '', data.info.mf_end || ''],
+    ['Total break duration (in minutes)', '', data.info.mf_break || ''],
+    ['Department(s)', '', data.info.mf_departments || ''],
+    ['Total daily working time', '', byId('mf_daily_total').textContent || ''],
+    ['Total weekly working time for 5 days', '', byId('mf_weekly_total').textContent || ''],
+    ['Is there normal working on Saturdays?', '', data.info.saturday_work || 'No'],
+    ['Start time of daily work on Saturdays', '', data.info.sat_start || ''],
+    ['End time of daily work on Saturdays', '', data.info.sat_end || ''],
+    ['Total break duration (in minutes)', '', data.info.sat_break || ''],
+    ['Total daily working time', '', byId('sat_daily_total').textContent || ''],
+    ['Total weekly working time', '', byId('total_weekly').textContent || ''],
+    ['Time recording system', '', data.info.time_recording || ''],
+    ['Wage date', '', data.info.wage_date || ''],
+    ['Payment method', '', data.info.payment_method || ''],
+    ['Monthly production capacity', '', data.info.monthly_capacity || ''],
+    ['Peak months', '', data.info.peak_months || ''],
+    ['Non-peak months', '', data.info.non_peak_months || ''],
+    ['Contractors', '', data.info.contractors || 'no'],
+    ['Male contractor employee number', '', data.info.contractor_male || 0],
+    ['Female contractor employee number', '', data.info.contractor_female || 0],
+    ['Total number of contractors', '', byId('contractor_total').textContent || 0],
+    ['Contractor information', '', data.info.contractor_info || ''],
+    ['Facility closed area (in sqm.)', '', data.info.closed_area || ''],
+    ['Building type', '', data.info.building_type || ''],
+    ['Number of floors', '', data.info.num_floors || ''],
+    ['Building structure', '', data.info.building_structure || ''],
+    ['Total employee number with contractors', '', byId('total_with_contractors').textContent || 0],
+    ['Total employee number', '', byId('total_employees').textContent || 0],
+    ['Management male employee number', '', data.info.mgmt_male || ''],
+    ['Management female employee number', '', data.info.mgmt_female || ''],
+    ['Management employee number', '', byId('mgmt_total').textContent || 0],
+    ['Non-management male employee number', '', data.info.nonmgmt_male || ''],
+    ['Non-management female employee number', '', data.info.nonmgmt_female || ''],
+    ['Non-management employee number', '', byId('nonmgmt_total').textContent || 0],
+    ['Young employee', '', data.info.young_employee || 'No'],
+    ['Young male employee number', '', data.info.young_male || ''],
+    ['Young female employee number', '', data.info.young_female || ''],
+    ['Total young employee number', '', byId('young_total').textContent || 0],
+    ['Start of working time for young employee(s)', '', data.info.young_start || ''],
+    ['End of working time for young employee(s)', '', data.info.young_end || ''],
+    ['Total break duration (in minutes)', '', data.info.young_break || ''],
+    ['Total daily working time', '', byId('young_daily').textContent || ''],
+    ['Weekly working hours for 5 days', '', byId('young_weekly').textContent || ''],
+    ['Disabled employee', '', data.info.disabled || 'No'],
+    ['Disabled male employee', '', data.info.disabled_male || 0],
+    ['Disabled female employee', '', data.info.disabled_female || 0],
+    ['Total disabled employee number', '', byId('disabled_total').textContent || 0],
+    ['Migrant employee', '', data.info.migrant || 'No'],
+    ['Migrant male employee', '', data.info.migrant_male || 0],
+    ['Migrant female employee', '', data.info.migrant_female || 0],
+    ['Total migrant employee number', '', byId('migrant_total').textContent || 0],
+    ['Nationality(s)', '', data.info.nationalities || ''],
+    ['Trainee', '', data.info.trainee || 'NA'],
+    ['Total male trainee number', '', data.info.trainee_male || ''],
+    ['Total female trainee number', '', data.info.trainee_female || ''],
+    ['Total trainee number', '', byId('trainee_total').textContent || 0],
+    ['Pregnant employee', '', data.info.pregnant || 'No'],
+    ['Pregnant employee number', '', data.info.pregnant_num || 0],
+    ['Start of working time for pregnant employee(s)', '', data.info.pregnant_start || ''],
+    ['End of working time for pregnant employee(s)', '', data.info.pregnant_end || ''],
+    ['Total break duration (in minutes)', '', data.info.pregnant_break || ''],
+    ['Total daily working time', '', byId('pregnant_daily').textContent || ''],
+    ['Weekly working hours for 5 days', '', byId('pregnant_weekly').textContent || ''],
+    ['Employee on breastfeeding leave', '', data.info.breastfeeding || 0],
+    ['Employee on maternity leave', '', data.info.maternity || 0],
+    ['Unionized employee', '', data.info.unionized || 'No'],
+    ['Unionized male employee number', '', data.info.union_male || ''],
+    ['Unionized female employee number', '', data.info.union_female || ''],
+    ['Total unionized employee number', '', byId('union_total').textContent || 0],
+    ['Name of trade union and CBA information', '', data.info.union_info || ''],
+    ['The youngest employee birth date', '', data.info.youngest_birth || ''],
+    ['The youngest employee hire date', '', data.info.youngest_hire || ''],
+    ["The youngest employee's age", '', byId('youngest_age').textContent || ''],
+    ["The youngest employee's hiring age", '', byId('youngest_hire_age').textContent || ''],
+    ['Canteen', '', data.info.canteen || ''],
+    ['Dormitory', '', data.info.dormitory || ''],
+    ['Property of building', '', data.info.property_building || ''],
+    ['Hazard class of facility', '', data.info.hazard_class || ''],
+    ['Last paid month', '', data.info.last_paid_month || ''],
+    ['Selected month 2', '', data.info.month_2 || ''],
+    ['Selected month 3', '', data.info.month_3 || ''],
+    ['Male employee number in individual interview', '', data.info.iv_ind_male || ''],
+    ['Female employee number in individual interview', '', data.info.iv_ind_female || ''],
+    ['Male employee number in group interview', '', data.info.iv_grp_male || ''],
+    ['Female employee number in group interview', '', data.info.iv_grp_female || ''],
+    ['Total interviewed employee number', '', byId('iv_total').textContent || 0],
+    ['Total interviewed male employee number', '', byId('iv_male_total').textContent || 0],
+    ['Total interviewed female employee number', '', byId('iv_female_total').textContent || 0],
+    ['Employee number on the audit date', '', data.info.employees_on_audit || ''],
+    ['Certifications', '', data.info.certifications || ''],
+    ['Main production equipment of facility', '', data.info.main_equipment || ''],
+    ['% of workforce on work during night shift', '', data.info.night_shift_pct || ''],
+    ['Title of social compliance responsible', '', data.info.sc_title || ''],
+    ['Lowest wage (net)', '', data.info.lowest_net || ''],
+    ['Lowest wage (gross)', '', data.info.lowest_gross || ''],
+    ['Highest wage (net)', '', data.info.highest_net || ''],
+    ['Highest wage (gross)', '', data.info.highest_gross || ''],
+    ['Audit start date', '', data.info.audit_start || ''],
+    ['Audit end date', '', data.info.audit_end || ''],
+    ['', '', ''],
+    ['The percentage of contractors out of the total workforce', '', byId('contractor_pct').textContent || ''],
+    ['Name of social compliance responsible', '', data.info.sc_name || ''],
+    ['Gender of social compliance responsible', '', data.info.sc_gender || ''],
+    ['Total workforce - Day of Audit', '', data.info.audit_total || ''],
+    ['Male workers - Day of Audit', '', data.info.audit_male || ''],
+    ['Female workers - Day of Audit', '', data.info.audit_female || ''],
+    ['Total male workers including contractors', '', byId('total_male_with_c').textContent || 0],
+    ['Total female workers including contractors', '', byId('total_female_with_c').textContent || 0],
+    ['Total male workers', '', byId('total_male').textContent || 0],
+    ['Total female workers', '', byId('total_female').textContent || 0],
+    ['', '', ''],
+    ['Previous audit date', '', data.info.prev_audit || ''],
+  ];
+
+  // DOCS sheet
+  const docsRows = [['Scope', 'Document', 'Issue Date', 'Expiry Date', 'Number/Period', 'Notes']];
+  const sectionTitles = {
+    personnel: 'Personnel Files and Documents',
+    official: 'Official Documents',
+    hs: 'Health and Safety Documents',
+    env: 'Environmental Documents',
+    sc: 'Social Compliance Internal Documents',
+    ics: 'ICS Specific',
+    bsci: 'BSCI Specific',
+  };
+  Object.entries(DOCS_DATA).forEach(([sectionKey, items]) => {
+    docsRows.push(['', sectionTitles[sectionKey], '', '', '', '']);
+    items.forEach((item, idx) => {
+      const rowId = `${sectionKey}_${idx}`;
+      const issue = data.docs[`${rowId}_issue`] || '';
+      const expiry = data.docs[`${rowId}_expiry`] || '';
+      const expiryAuto = (() => {
+        const cell = document.querySelector(`.computed-cell[data-row="${rowId}"]`);
+        return cell ? cell.textContent : '';
+      })();
+      const numberV = data.docs[`${rowId}_number`] || '';
+      const notes = data.docs[`${rowId}_notes`] || '';
+      docsRows.push([
+        item.scope || '',
+        item.name,
+        issue,
+        item.expiryRule ? expiryAuto : expiry,
+        numberV,
+        notes
+      ]);
+    });
+    docsRows.push(['', '', '', '', '', '']);
+  });
+
+  const wsInfo = XLSX.utils.aoa_to_sheet(infoRows);
+  wsInfo['!cols'] = [{ wch: 4 }, { wch: 50 }, { wch: 50 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, wsInfo, 'Info');
+  const wsDocs = XLSX.utils.aoa_to_sheet(docsRows);
+  wsDocs['!cols'] = [{ wch: 6 }, { wch: 60 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 30 }];
+  XLSX.utils.book_append_sheet(wb, wsDocs, 'Docs');
+  const fname = (data.info.facility_name || 'facility').toString().replace(/[^\w-]+/g, '_').slice(0, 40);
+  XLSX.writeFile(wb, `CAP_${fname}_${todayISO()}.xlsx`);
+  showToast('Excel indirildi');
+}
+
+/* ============================================================
+   SEKMELER
+   ============================================================ */
+
+function setupTabs() {
+  document.querySelectorAll('nav.tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      byId(`panel-${btn.dataset.tab}`).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+/* ============================================================
+   BAŞLATMA
+   ============================================================ */
+
+function init() {
+  buildDocsTables();
+  setupTabs();
+
+  // Tüm input değişikliklerinde yeniden hesapla
+  document.addEventListener('input', recalcAll);
+  document.addEventListener('change', recalcAll);
+
+  // Buton bağlantıları
+  byId('btnSave').addEventListener('click', saveJSON);
+  byId('btnLoad').addEventListener('click', loadJSON);
+  byId('btnNew').addEventListener('click', newForm);
+  byId('btnExport').addEventListener('click', exportExcel);
+
+  recalcAll();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+})();
+
+</script>
+
+</body>
+</html>
