@@ -1,8 +1,8 @@
-<!-- Mobilde: facility name sol + gps sağ; alt satırda facility address tam; alt satırda operation time sol + establishment date sağ -->
+<!-- Satır 1: facility name (uzayan) + GPS -->
 <div class="row m-2" style="grid-template-columns: 2fr 1fr;">
   <div class="field">
     <label>Facility name</label>
-    <input type="text" data-key="facility_name">
+    <textarea data-key="facility_name" rows="1"></textarea>
   </div>
   <div class="field">
     <label>GPS coordinates</label>
@@ -10,6 +10,7 @@
   </div>
 </div>
 
+<!-- Satır 2: facility address (uzayan, tam) -->
 <div class="row m-1" style="grid-template-columns: 1fr;">
   <div class="field">
     <label>Facility address</label>
@@ -17,6 +18,7 @@
   </div>
 </div>
 
+<!-- Satır 3: operation time + establishment date -->
 <div class="row m-2" style="grid-template-columns: 2fr 1fr;">
   <div class="field">
     <label>Operation time / duration</label>
@@ -29,21 +31,19 @@
   </div>
 </div>
 
-<div class="row divider m-2" style="grid-template-columns: 1fr 2fr 1fr 1fr;">
+<!-- Product type ve Production processes textarea (uzayan) -->
+<div class="row divider m-2" style="grid-template-columns: 1fr 2fr;">
   <div class="field">
     <label>Product type</label>
-    <input type="text" list="dl_pt" data-key="product_type">
-    <datalist id="dl_pt"><option value="outwear garments"><option value="fabric"><option value="yarn"><option value="fiber"></datalist>
+    <textarea data-key="product_type" rows="1"></textarea>
   </div>
   <div class="field">
     <label>Production processes</label>
-    <input type="text" list="dl_pp" data-key="production_processes">
-    <datalist id="dl_pp">
-      <option value="cutting, sewing, ironing, quality control and packaging">
-      <option value="cutting, sewing, printing, washing, drying, ironing, quality control and packaging">
-      <option value="pre-treatment, dyeing, printing, finishing, quality control and packaging">
-    </datalist>
+    <textarea data-key="production_processes" rows="1"></textarea>
   </div>
+</div>
+
+<div class="row m-2" style="grid-template-columns: 1fr 1fr;">
   <div class="field">
     <label>Capacity / month</label>
     <input type="text" data-key="monthly_capacity" placeholder="50,000 pcs">
@@ -54,7 +54,7 @@
   </div>
 </div>
 
-<!-- Main equipment ve Certifications tek satır başlasın (textarea zaten min-height 28px) -->
+<!-- Main equipment ve Certifications textarea (uzayan, tek satır başlar) -->
 <div class="row m-1" style="grid-template-columns: 1fr 1fr;">
   <div class="field">
     <label>Main production equipment</label>
@@ -66,8 +66,10 @@
   </div>
 </div>
 
-<!-- Shift toggle + 7 alan: tüm conditional alanlar TEK SATIRDA -->
-<div class="row divider m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 65px 1fr 130px 95px 110px;">
+<!-- Shift toggle + alanlar:
+     7 alan yan yana sığmadığı için 6+working days alt satıra (kullanıcı önerisi)
+     toggle solda kompakt, hemen yanında start, end, break, dept, daily, weekly  -->
+<div class="row divider m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 60px 1.3fr 145px 145px;">
   <div class="field">
     <label>Shift?</label>
     <div class="toggle">
@@ -90,11 +92,6 @@
     <datalist id="dl_break"><option value="30"><option value="45"><option value="60"><option value="75"><option value="90"></datalist>
   </div>
   <div class="field conditional-row cond-shifts span-mobile-full">
-    <label>Working days</label>
-    <input type="text" list="dl_wd" data-key="shift_workdays">
-    <datalist id="dl_wd"><option value="from Monday to Saturday, 6 days a week"></datalist>
-  </div>
-  <div class="field conditional-row cond-shifts">
     <label>Department(s)</label>
     <input type="text" list="dl_dept" data-key="shift_departments">
     <datalist id="dl_dept"><option value="facility"><option value="knitting section"><option value="dyehouse"></datalist>
@@ -109,7 +106,21 @@
   </div>
 </div>
 
-<div class="row" style="grid-template-columns: 80px 80px 75px 1fr 110px 120px;">
+<!-- Working days ALT SATIR (shift Y iken) -->
+<div class="row conditional-row cond-shifts m-1" style="grid-template-columns: 200px 1fr;">
+  <div></div>
+  <div class="field">
+    <label>Working days</label>
+    <input type="text" list="dl_wd" data-key="shift_workdays">
+    <datalist id="dl_wd">
+      <option value="from Monday to Saturday">
+      <option value="6 days a week">
+    </datalist>
+  </div>
+</div>
+
+<!-- M-F satırı: Department(s) genişletildi, Daily ve Weekly daha geniş (49 hours 30 minutes sığsın) -->
+<div class="row" style="grid-template-columns: 70px 70px 60px 1.5fr 145px 145px;">
   <div class="field">
     <label>M-F start</label>
     <input type="text" list="dl_start" data-key="mf_start">
@@ -137,8 +148,8 @@
   </div>
 </div>
 
-<!-- Sat work: total_weekly cond-saturday içinde — Sat=N iken görünmez -->
-<div class="row m-toggle-then-3" style="grid-template-columns: 60px 80px 80px 75px 110px 130px 1fr;">
+<!-- Sat work: toggle + alanlar TEK SATIR — sabit pikselli kolonlar (büyüme/küçülme yok) -->
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 60px 145px 165px 1fr;">
   <div class="field">
     <label>Sat work?</label>
     <div class="toggle">
@@ -167,6 +178,7 @@
     <label>Total weekly (auto)</label>
     <div class="computed" id="total_weekly"></div>
   </div>
+  <div></div>
 </div>
 
 <div class="row m-1" style="grid-template-columns: 1fr;">
@@ -212,8 +224,7 @@
   </div>
 </div>
 
-<!-- Desktopta sıralama: building structure | canteen | dormitory
-     Mobilde sıralama: canteen | dormitory | building structure (kullanıcı isteği) -->
+<!-- Building structure textarea uzar; mobilde sırası canteen, dormitory, building structure -->
 <div class="row m-2 mobile-reorder-building" style="grid-template-columns: 1fr 1fr 1fr;">
   <div class="field building-structure-field">
     <label>Building structure</label>
@@ -243,8 +254,8 @@
   </div>
 </div>
 
-<!-- Contractors: mobilde M/F/Σ tek satır, description ALT SATIR tam genişlik -->
-<div class="row m-toggle-then-3" style="grid-template-columns: auto 70px 70px 70px 1fr;">
+<!-- Contractors: 60px (toggle) + 70 + 70 + 70 + 1fr (description) -->
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 1fr;">
   <div class="field"><label>Contractors?</label>
     <div class="toggle">
       <input type="radio" name="contractors" id="c_yes" value="yes"><label for="c_yes">Y</label>
@@ -264,7 +275,8 @@
   <div class="field"><label>F incl. contr. (auto)</label><div class="computed" id="total_female_with_c"></div></div>
 </div>
 
-<div class="row m-toggle-then-3" style="grid-template-columns: auto 70px 70px 70px 80px 80px 75px 110px 120px;">
+<!-- Young: toggle 60 + M/F/Σ (70x3) + start/end/break (70+70+60) + Daily/Weekly (145x2) -->
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 70px 70px 60px 145px 145px 1fr;">
   <div class="field"><label>Young?</label>
     <div class="toggle">
       <input type="radio" name="young_employee" id="y_yes" value="Yes"><label for="y_yes">Y</label>
@@ -279,9 +291,10 @@
   <div class="field conditional-row cond-young"><label>Break</label><input type="text" list="dl_break" data-key="young_break"></div>
   <div class="field conditional-row cond-young"><label>Daily</label><div class="computed" id="young_daily"></div></div>
   <div class="field conditional-row cond-young"><label>Weekly /5</label><div class="computed" id="young_weekly"></div></div>
+  <div></div>
 </div>
 
-<div class="row m-toggle-then-3" style="grid-template-columns: auto 70px 70px 70px 1fr;">
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 1fr;">
   <div class="field"><label>Disabled?</label>
     <div class="toggle">
       <input type="radio" name="disabled" id="d_yes" value="Yes"><label for="d_yes">Y</label>
@@ -294,8 +307,7 @@
   <div></div>
 </div>
 
-<!-- Migrant: nationalities mobilde tam satır -->
-<div class="row m-toggle-then-3" style="grid-template-columns: auto 70px 70px 70px 1fr;">
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 1fr;">
   <div class="field"><label>Migrant?</label>
     <div class="toggle">
       <input type="radio" name="migrant" id="mig_yes" value="Yes"><label for="mig_yes">Y</label>
@@ -311,7 +323,7 @@
   </div>
 </div>
 
-<div class="row m-toggle-then-3" style="grid-template-columns: auto 70px 70px 70px 1fr;">
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 1fr;">
   <div class="field"><label>Trainee?</label>
     <div class="toggle">
       <input type="radio" name="trainee" id="t_yes" value="Yes"><label for="t_yes">Y</label>
@@ -324,7 +336,8 @@
   <div></div>
 </div>
 
-<div class="row m-toggle-then-3" style="grid-template-columns: auto 70px 80px 80px 75px 110px 120px;">
+<!-- Pregnant: 60 (toggle) + 70 (Number) + 70+70+60 (start/end/break) + 145+145 (Daily/Weekly) + 1fr -->
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 60px 145px 145px 1fr;">
   <div class="field"><label>Pregnant?</label>
     <div class="toggle">
       <input type="radio" name="pregnant" id="p_yes" value="Yes"><label for="p_yes">Y</label>
@@ -337,6 +350,7 @@
   <div class="field conditional-row cond-pregnant"><label>Break</label><input type="text" list="dl_break" data-key="pregnant_break"></div>
   <div class="field conditional-row cond-pregnant"><label>Daily</label><div class="computed" id="pregnant_daily"></div></div>
   <div class="field conditional-row cond-pregnant"><label>Weekly /5</label><div class="computed" id="pregnant_weekly"></div></div>
+  <div></div>
 </div>
 
 <div class="row m-2" style="grid-template-columns: 1fr 1fr;">
@@ -344,7 +358,7 @@
   <div class="field"><label>On maternity leave</label><input type="number" data-key="maternity" min="0" value="0"></div>
 </div>
 
-<div class="row m-toggle-then-3" style="grid-template-columns: auto 70px 70px 70px 1fr;">
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 1fr;">
   <div class="field"><label>Unionized?</label>
     <div class="toggle">
       <input type="radio" name="unionized" id="u_yes" value="Yes"><label for="u_yes">Y</label>
@@ -373,7 +387,6 @@
   </div>
 </div>
 
-<!-- Mobilde 3 ay alanı yan yana -->
 <div class="row m-3" style="grid-template-columns: 1fr 1fr 1fr;">
   <div class="field"><label>Last paid month</label><input type="text" data-key="last_paid_month" placeholder="October 2024"></div>
   <div class="field"><label>Selected month 2</label><input type="text" data-key="month_2"></div>
@@ -393,14 +406,12 @@
   <div class="field"><label>Highest wage (gross)</label><input type="text" data-key="highest_gross"></div>
 </div>
 
-<!-- Mobilde 3 audit tarihi yan yana -->
 <div class="row divider m-3" style="grid-template-columns: 1fr 1fr 1fr;">
   <div class="field"><label>Audit start date</label><input type="date" data-key="audit_start"></div>
   <div class="field"><label>Audit end date</label><input type="date" data-key="audit_end"></div>
   <div class="field"><label>Previous audit date</label><input type="date" data-key="prev_audit"></div>
 </div>
 
-<!-- Görüşmeler: 3+3+3 satır, her birinde mobilde 3 sütun -->
 <div class="row m-3" style="grid-template-columns: 1fr 1fr 1fr;">
   <div class="field"><label>Ind. M</label><input type="number" data-key="iv_ind_male" min="0"></div>
   <div class="field"><label>Ind. F</label><input type="number" data-key="iv_ind_female" min="0"></div>
@@ -419,13 +430,13 @@
   <div class="field"><label>Total F (auto)</label><div class="computed" id="iv_female_total"></div></div>
 </div>
 
-<div class="row m-2" style="grid-template-columns: 1fr 1fr 1fr;">
+<!-- Employees on audit + Male workers + Female workers TEK SATIR (kullanıcı talebi) -->
+<div class="row m-3" style="grid-template-columns: 1fr 1fr 1fr;">
   <div class="field"><label>Employees on audit date</label><input type="number" data-key="employees_on_audit" min="0"></div>
   <div class="field"><label>Male workers — audit day</label><input type="number" data-key="audit_male" min="0"></div>
   <div class="field"><label>Female workers — audit day</label><input type="number" data-key="audit_female" min="0"></div>
 </div>
 
-<!-- SC responsible: mobilde 3 sütun -->
 <div class="row m-3" style="grid-template-columns: 1fr 1fr 1fr;">
   <div class="field"><label>SC responsible name</label><input type="text" data-key="sc_name"></div>
   <div class="field"><label>Title</label>
