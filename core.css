@@ -218,7 +218,7 @@ main {
 .field select,
 .field textarea {
   font-family: var(--font-body);
-  font-size: 16px;  /* mobilde zoom önlemek için 16px+ olmalı */
+  font-size: 14px;  /* mobil varsayılan; desktop @media içinde 12px'e iniyor */
   padding: 5px 8px;
   border: 0.5px solid var(--line);
   border-radius: var(--radius);
@@ -245,8 +245,14 @@ main {
   .field input[type="time"],
   .field select,
   .field textarea {
-    background: #243142;
-    border-color: #3a4a5e;
+    background: #2a3a4f;
+    border-color: #4a5e7a;
+    color: #e8ecf1;
+  }
+  .field .computed {
+    background: #1a2330;
+    border-color: #38486a;
+    color: #aab4c0;
   }
 }
 .field input:focus,
@@ -276,6 +282,8 @@ main {
   min-height: 28px;
   display: flex;
   align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .field .computed:empty::before {
   content: '—';
@@ -318,10 +326,14 @@ main {
 /* Toggle içeren field'a width verme - kompakt kalsın */
 .field:has(> .toggle) { width: fit-content; }
 
-/* Koşullu alan satırı / hücresi */
-.conditional-row { display: none !important; }
-.conditional-row.show { display: flex !important; flex-direction: column; }
-.row > .field.conditional-row.show { display: flex !important; }
+/* Koşullu alan satırı / hücresi
+   visibility: hidden ile gizlerken grid yapısını koruyoruz — toggle Y/N geçişinde
+   diğer alanlar yerinde kalır, yana kaymaz */
+.conditional-row { visibility: hidden; }
+.conditional-row.show { visibility: visible; }
+/* Eğer conditional-row .row'un kendisi ise (alt satır gibi), display ile gizle */
+.row.conditional-row { display: none; }
+.row.conditional-row.show { display: grid; visibility: visible; }
 
 /* ============================================================
    DOCS TABLOSU
@@ -343,7 +355,6 @@ main {
   padding: 4px 6px;
   font-size: 10px;
   color: var(--ink-mute);
-  text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 0.5px solid var(--line-soft);
 }
@@ -540,13 +551,38 @@ main {
   .row.m-2 { grid-template-columns: 1fr 1fr !important; }
   .row.m-3 { grid-template-columns: 1fr 1fr 1fr !important; }
   .row.m-4 { grid-template-columns: repeat(4, 1fr) !important; }
-  .row.m-toggle-then-3 { grid-template-columns: auto 1fr 1fr 1fr !important; }
+  /* Mobilde toggle-then-3: toggle solda kompakt, sonrası yumuşak wrap */
+  .row.m-toggle-then-3 {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: end;
+  }
+  .row.m-toggle-then-3 > .field {
+    flex: 1 1 auto;
+    min-width: 65px;
+  }
+  /* Toggle field: kompakt kalsın */
+  .row.m-toggle-then-3 > .field:has(> .toggle) {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+  /* span-mobile-full: tam satır */
+  .row.m-toggle-then-3 > .span-mobile-full {
+    flex-basis: 100%;
+  }
+  /* Computed mobil: text-overflow ellipsis yerine wrap */
+  .row.m-toggle-then-3 .computed { white-space: normal; font-size: 12px; }
   .row.full-mobile { grid-template-columns: 1fr !important; }
   .row.three-mobile { grid-template-columns: 1fr 1fr 1fr !important; }
   .row .span-mobile-full { grid-column: 1 / -1; }
 
+  /* Mobilde conditional-row gizliyken display:none — yer kaplamasın */
+  .conditional-row { display: none; visibility: visible; }
+  .conditional-row.show { display: flex; flex-direction: column; }
+
   .field input, .field select, .field textarea, .field .computed {
-    font-size: 16px; /* iOS zoom önlemi: 16px altında olunca otomatik yakınlaşır */
+    font-size: 14px;
     padding: 4px 6px;
   }
   .field label { font-size: 10px; }
@@ -571,14 +607,14 @@ main {
     border: 0.5px solid var(--line);
     background: var(--surface);
     padding: 4px 6px;
-    font-size: 16px;
+    font-size: 14px;
     min-height: 30px;
   }
   @media (prefers-color-scheme: dark) {
     .doc-row > input,
     .doc-row > .computed-cell {
-      background: #243142;
-      border-color: #3a4a5e;
+      background: #2a3a4f;
+      border-color: #4a5e7a;
     }
   }
 }
