@@ -69,7 +69,7 @@
 <!-- Shift toggle + alanlar:
      7 alan yan yana sığmadığı için 6+working days alt satıra (kullanıcı önerisi)
      toggle solda kompakt, hemen yanında start, end, break, dept, daily, weekly  -->
-<div class="row divider m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 60px 1.3fr 145px 145px;">
+<div class="row divider m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 60px 1fr 1fr 158px 158px;">
   <div class="field">
     <label>Shift?</label>
     <div class="toggle">
@@ -92,6 +92,14 @@
     <datalist id="dl_break"><option value="30"><option value="45"><option value="60"><option value="75"><option value="90"></datalist>
   </div>
   <div class="field conditional-row cond-shifts span-mobile-full">
+    <label>Working days</label>
+    <input type="text" list="dl_wd" data-key="shift_workdays">
+    <datalist id="dl_wd">
+      <option value="from Monday to Saturday">
+      <option value="6 days a week">
+    </datalist>
+  </div>
+  <div class="field conditional-row cond-shifts span-mobile-full">
     <label>Department(s)</label>
     <input type="text" list="dl_dept" data-key="shift_departments">
     <datalist id="dl_dept"><option value="facility"><option value="knitting section"><option value="dyehouse"></datalist>
@@ -106,21 +114,8 @@
   </div>
 </div>
 
-<!-- Working days ALT SATIR (shift Y iken) -->
-<div class="row conditional-row cond-shifts m-1" style="grid-template-columns: 200px 1fr;">
-  <div></div>
-  <div class="field">
-    <label>Working days</label>
-    <input type="text" list="dl_wd" data-key="shift_workdays">
-    <datalist id="dl_wd">
-      <option value="from Monday to Saturday">
-      <option value="6 days a week">
-    </datalist>
-  </div>
-</div>
-
 <!-- M-F satırı: Department(s) genişletildi, Daily ve Weekly daha geniş (49 hours 30 minutes sığsın) -->
-<div class="row" style="grid-template-columns: 70px 70px 60px 1.5fr 145px 145px;">
+<div class="row" style="grid-template-columns: 70px 70px 60px 1.5fr 158px 158px;">
   <div class="field">
     <label>M-F start</label>
     <input type="text" list="dl_start" data-key="mf_start">
@@ -149,7 +144,7 @@
 </div>
 
 <!-- Sat work: toggle + alanlar TEK SATIR — sabit pikselli kolonlar (büyüme/küçülme yok) -->
-<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 60px 145px 165px 1fr;">
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 60px 158px 165px 1fr;">
   <div class="field">
     <label>Sat work?</label>
     <div class="toggle">
@@ -268,7 +263,7 @@
   <div class="field conditional-row cond-contractors span-mobile-full"><label>Description</label><input type="text" data-key="contractor_info"></div>
 </div>
 
-<div class="row m-2" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+<div class="row m-2 conditional-row cond-contractors" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
   <div class="field"><label>Total w/contractors (auto)</label><div class="computed" id="total_with_contractors"></div></div>
   <div class="field"><label>Contractor % (auto)</label><div class="computed" id="contractor_pct"></div></div>
   <div class="field"><label>M incl. contr. (auto)</label><div class="computed" id="total_male_with_c"></div></div>
@@ -276,7 +271,7 @@
 </div>
 
 <!-- Young: toggle 60 + M/F/Σ (70x3) + start/end/break (70+70+60) + Daily/Weekly (145x2) -->
-<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 70px 70px 60px 145px 145px 1fr;">
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 70px 70px 60px 158px 158px 1fr;">
   <div class="field"><label>Young?</label>
     <div class="toggle">
       <input type="radio" name="young_employee" id="y_yes" value="Yes"><label for="y_yes">Y</label>
@@ -337,7 +332,7 @@
 </div>
 
 <!-- Pregnant: 60 (toggle) + 70 (Number) + 70+70+60 (start/end/break) + 145+145 (Daily/Weekly) + 1fr -->
-<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 60px 145px 145px 1fr;">
+<div class="row m-toggle-then-3" style="grid-template-columns: 60px 70px 70px 70px 60px 158px 158px 1fr;">
   <div class="field"><label>Pregnant?</label>
     <div class="toggle">
       <input type="radio" name="pregnant" id="p_yes" value="Yes"><label for="p_yes">Y</label>
