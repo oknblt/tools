@@ -174,6 +174,8 @@ function recalcInfo() {
 
   // Görüşmeler
   const im = num('iv_ind_male'), iff = num('iv_ind_female'), gm = num('iv_grp_male'), gf = num('iv_grp_female');
+  setComputed('iv_ind_total', (im + iff) || '');
+  setComputed('iv_grp_total', (gm + gf) || '');
   setComputed('iv_total', (im + iff + gm + gf) || '');
   setComputed('iv_male_total', (im + gm) || '');
   setComputed('iv_female_total', (iff + gf) || '');
@@ -271,7 +273,7 @@ function syncDOMToStore() {
     'total_male_with_c','total_female_with_c','contractor_pct',
     'young_total','young_daily','young_weekly','disabled_total','migrant_total','trainee_total',
     'pregnant_daily','pregnant_weekly','union_total','youngest_age','youngest_hire_age',
-    'iv_total','iv_male_total','iv_female_total'];
+    'iv_total','iv_male_total','iv_female_total','iv_ind_total','iv_grp_total'];
   computedIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) store.info['_computed_' + id] = el.textContent || '';
@@ -380,7 +382,6 @@ function clearDOM() {
 
 function applyDefaults() {
   const defaults = {
-    audit_type: 'Full',
     building_type: 'not shared',
     property_building: 'The building belongs to the facility.',
     hazard_class: 'low hazardous',
@@ -411,7 +412,7 @@ function exportExcel() {
   const c = k => info['_computed_' + k] || '';
 
   const infoRows = [
-    ['FACILITY INFORMATION', '', '', '', 'Audit', info.audit_type || 'Full'],
+    ['FACILITY INFORMATION', '', ''],
     ['Facility name', '', info.facility_name || ''],
     ['Facility address', '', info.facility_address || ''],
     ['GPS coordinates', '', info.gps || ''],
@@ -444,7 +445,6 @@ function exportExcel() {
     ['Payment method', '', info.payment_method || ''],
     ['Monthly production capacity', '', info.monthly_capacity || ''],
     ['Peak months', '', info.peak_months || ''],
-    ['Non-peak months', '', info.non_peak_months || ''],
     ['Contractors', '', info.contractors || 'no'],
     ['Contractor male', '', info.contractor_male || 0],
     ['Contractor female', '', info.contractor_female || 0],
@@ -530,7 +530,6 @@ function exportExcel() {
     ['Contractor %', '', c('contractor_pct')],
     ['SC responsible name', '', info.sc_name || ''],
     ['SC responsible gender', '', info.sc_gender || ''],
-    ['Audit day total', '', info.audit_total || ''],
     ['Audit day male', '', info.audit_male || ''],
     ['Audit day female', '', info.audit_female || ''],
     ['Total male incl. contractors', '', c('total_male_with_c')],
@@ -611,6 +610,7 @@ async function loadPanel(name) {
   // Bilgi paneli ise mevcut store'u DOM'a yansıt
   if (name === 'info' || name === 'docs') {
     syncStoreToDOM();
+    initAllTextareas();
   } else {
     // Rapor panelleri: rapor render fonksiyonu çağrılır
     refreshReport(name);
@@ -715,13 +715,56 @@ async function init() {
   const btnExport = byId('btnExport'); if (btnExport) btnExport.addEventListener('click', exportExcel);
 
   // Tüm form değişiklikleri merkezi recalc
-  document.addEventListener('input', recalcAll);
+  document.addEventListener('input', e => {
+    // Textarea auto-grow (field-sizing desteklemeyen tarayıcılar için fallback)
+    if (e.target.tagName === 'TEXTAREA' && !CSS.supports('field-sizing: content')) {
+      autoGrowTextarea(e.target);
+    }
+    recalcAll();
+  });
   document.addEventListener('change', recalcAll);
+
+  // Datalist davranışı: focus olunca değeri geçici temizle ki tüm seçenekler görünsün
+  // Kullanıcı bir şey seçer veya yazarsa onunla devam et; hiçbir şey yapmadan blur olursa eski değeri geri getir
+  document.addEventListener('focus', e => {
+    const el = e.target;
+    if (el.tagName === 'INPUT' && el.getAttribute('list')) {
+      el._cap_orig = el.value;
+      if (el.value) {
+        el.value = '';
+        // Tarayıcıya "input event" yolla ki datalist tüm seçenekleri tazelesin
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  }, true);
+  document.addEventListener('blur', e => {
+    const el = e.target;
+    if (el.tagName === 'INPUT' && el.getAttribute('list')) {
+      if (el.value === '' && el._cap_orig) {
+        // Kullanıcı seçim yapmadan ayrıldı, eski değeri geri yaz
+        el.value = el._cap_orig;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      delete el._cap_orig;
+    }
+  }, true);
 
   // İlk sekme yükleme
   await activateTab('info');
   applyDefaults();
   recalcAll();
+}
+
+// Textarea auto-grow fallback
+function autoGrowTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+// Sayfa yüklenince tüm textarea'ları bir kere auto-grow yap
+function initAllTextareas() {
+  if (CSS.supports('field-sizing: content')) return;
+  document.querySelectorAll('textarea').forEach(t => autoGrowTextarea(t));
 }
 
 if (document.readyState === 'loading') {

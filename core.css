@@ -25,16 +25,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1a1917;
-    --surface: #232220;
-    --surface-alt: #1f1e1c;
-    --ink: #ece9e0;
-    --ink-soft: #b8b5ab;
-    --ink-mute: #76746c;
-    --line: #38362f;
-    --line-soft: #2c2a25;
-    --accent: #d18a76;
-    --accent-soft: #2e2520;
+    --bg: #0f1419;
+    --surface: #1a2330;
+    --surface-alt: #151c26;
+    --ink: #e8ecf1;
+    --ink-soft: #aab4c0;
+    --ink-mute: #6b7682;
+    --line: #2a3a4d;
+    --line-soft: #1f2a38;
+    --accent: #e89880;
+    --accent-soft: #2a1f1c;
   }
 }
 
@@ -218,7 +218,7 @@ main {
 .field select,
 .field textarea {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 16px;  /* mobilde zoom önlemek için 16px+ olmalı */
   padding: 5px 8px;
   border: 0.5px solid var(--line);
   border-radius: var(--radius);
@@ -228,6 +228,27 @@ main {
   transition: border-color 0.15s, box-shadow 0.15s;
   min-width: 0;
 }
+@media (min-width: 721px) {
+  .field input[type="text"],
+  .field input[type="number"],
+  .field input[type="date"],
+  .field input[type="time"],
+  .field select,
+  .field textarea {
+    font-size: 13px;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  .field input[type="text"],
+  .field input[type="number"],
+  .field input[type="date"],
+  .field input[type="time"],
+  .field select,
+  .field textarea {
+    background: #243142;
+    border-color: #3a4a5e;
+  }
+}
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
@@ -236,10 +257,13 @@ main {
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 .field textarea {
-  resize: vertical;
-  min-height: 30px;
+  resize: none;
+  min-height: 28px;
+  height: 28px;
   font-family: var(--font-body);
   line-height: 1.4;
+  overflow: hidden;
+  word-wrap: break-word;
 }
 .field .computed {
   padding: 5px 8px;
@@ -266,6 +290,7 @@ main {
   overflow: hidden;
   background: var(--surface);
   height: 28px;
+  width: fit-content;
 }
 .toggle input[type="radio"] {
   position: absolute;
@@ -273,7 +298,7 @@ main {
   pointer-events: none;
 }
 .toggle label {
-  padding: 0 10px;
+  padding: 0 7px;
   font-size: 12px;
   cursor: pointer;
   color: var(--ink-mute);
@@ -282,12 +307,16 @@ main {
   user-select: none;
   display: inline-flex;
   align-items: center;
+  min-width: 22px;
+  justify-content: center;
 }
 .toggle label:last-child { border-right: none; }
 .toggle input:checked + label {
   background: var(--ink);
   color: var(--bg);
 }
+/* Toggle içeren field'a width verme - kompakt kalsın */
+.field:has(> .toggle) { width: fit-content; }
 
 /* Koşullu alan satırı / hücresi */
 .conditional-row { display: none !important; }
@@ -502,46 +531,67 @@ main {
   button.btn { height: 28px; font-size: 11px; padding: 0 8px; }
   button.btn.icon { width: 28px; }
 
-  /* Mobilde tüm grid'ler tek sütun değil — basit 2 sütun varsayılan */
+  /* Mobilde tüm grid'ler 2 sütun varsayılan, .m-* ile override */
   .row {
     grid-template-columns: 1fr 1fr !important;
     gap: 5px;
   }
+  .row.m-1 { grid-template-columns: 1fr !important; }
+  .row.m-2 { grid-template-columns: 1fr 1fr !important; }
+  .row.m-3 { grid-template-columns: 1fr 1fr 1fr !important; }
+  .row.m-4 { grid-template-columns: repeat(4, 1fr) !important; }
+  .row.m-toggle-then-3 { grid-template-columns: auto 1fr 1fr 1fr !important; }
   .row.full-mobile { grid-template-columns: 1fr !important; }
   .row.three-mobile { grid-template-columns: 1fr 1fr 1fr !important; }
+  .row .span-mobile-full { grid-column: 1 / -1; }
 
   .field input, .field select, .field textarea, .field .computed {
-    font-size: 12px;
+    font-size: 16px; /* iOS zoom önlemi: 16px altında olunca otomatik yakınlaşır */
     padding: 4px 6px;
   }
   .field label { font-size: 10px; }
   .toggle { height: 26px; }
-  .toggle label { padding: 0 8px; font-size: 11px; }
+  .toggle label { padding: 0 6px; font-size: 11px; min-width: 20px; }
 
-  /* Docs: belge adı üstte, 2x2 input grid altta */
+  /* Docs mobilde: belge adı üstte (tam satır), sonra 2x2 grid */
   .docs-header { display: none; }
   .doc-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr !important;
     gap: 4px;
     padding: 6px 4px;
     border-bottom: 0.5px solid var(--line-soft);
   }
-  .doc-row .doc-name { font-weight: 500; }
+  .doc-row .doc-name {
+    grid-column: 1 / -1;
+    font-weight: 500;
+    padding-bottom: 2px;
+  }
   .doc-row > input,
   .doc-row > .computed-cell {
-    position: relative;
     border: 0.5px solid var(--line);
     background: var(--surface);
-    padding: 14px 5px 3px;
-    font-size: 11px;
-    min-height: 32px;
+    padding: 4px 6px;
+    font-size: 16px;
+    min-height: 30px;
   }
-  /* Mobilde her input'tan önce kendi etiketi bir before olarak görünür */
-  .doc-row > input[data-field="issue"]::before,
-  .doc-row > input[data-field="expiry"]::before,
-  .doc-row > input[data-field="number"]::before,
-  .doc-row > input[data-field="notes"]::before,
-  .doc-row > .computed-cell::before {
-    content: '';
+  @media (prefers-color-scheme: dark) {
+    .doc-row > input,
+    .doc-row > .computed-cell {
+      background: #243142;
+      border-color: #3a4a5e;
+    }
+  }
+}
+
+/* Textarea auto-grow - modern tarayıcılarda native, eski tarayıcılarda JS */
+@supports (field-sizing: content) {
+  .field textarea { field-sizing: content; }
+}
+
+/* Mobilde building structure'ı en alta al, full width */
+@media (max-width: 720px) {
+  .mobile-reorder-building > .building-structure-field {
+    order: 99;
+    grid-column: 1 / -1;
   }
 }
