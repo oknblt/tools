@@ -1,0 +1,96 @@
+<div id="bsci-content"></div>
+
+<script>
+(function() {
+  function render(container, store) {
+    const i = store.info;
+    const c = k => i['_computed_' + k] || '';
+
+    function block(title, content) {
+      return `<div class="report-block">
+        <button class="copy-btn" data-copy="${encodeURIComponent(content)}">Copy</button>
+        <div class="block-title">${title}</div>
+        <div class="block-content">${content || '<span style="color:var(--ink-mute);font-style:italic;">— no data yet —</span>'}</div>
+      </div>`;
+    }
+
+    // Basit metinler
+    const facility = `Facility name: ${i.facility_name || ''}
+Address: ${i.facility_address || ''}
+GPS: ${i.gps || ''}
+Established: ${i.establishment_date || ''}`;
+
+    const product = `Product: ${i.product_type || ''}
+Processes: ${i.production_processes || ''}
+Monthly capacity: ${i.monthly_capacity || ''}`;
+
+    // BSCI tarzı çalışma saatleri metni (Excel formülünün kopyası)
+    let hours = 'Operating shifts and hours:\n';
+    if (!i.multiple_shifts || i.multiple_shifts === 'no') {
+      if (i.mf_start && i.mf_end) {
+        const dept = i.mf_departments || 'facility';
+        hours += `The regular working hours of the ${dept} are ${i.mf_start} - ${i.mf_end} including total ${i.mf_break || 0} minutes breaks from Monday to Friday.`;
+        if (i.saturday_work === 'Yes' && i.sat_start && i.sat_end) {
+          hours += ` And on Saturdays the working hours are ${i.sat_start} - ${i.sat_end} including total ${i.sat_break || 0} minutes breaks.`;
+        }
+        hours += `\nTotal weekly working time: ${c('total_weekly') || c('mf_weekly_total') || ''}`;
+      } else {
+        hours += '(M-F start/end times needed)';
+      }
+    } else {
+      if (i.shift_start && i.shift_end) {
+        const dept = i.shift_departments || 'facility';
+        hours += `The ${dept} operates in shifts. The shift hours are ${i.shift_start} - ${i.shift_end} including ${i.shift_break || 0} minutes breaks, ${i.shift_workdays || ''}.\nWeekly: ${c('shift_weekly_total') || ''}`;
+      } else {
+        hours += '(Shift start/end times needed)';
+      }
+    }
+
+    const workforce = `Total workforce: ${c('total_employees') || 0}
+  · Management: ${c('mgmt_total') || 0} (${i.mgmt_male || 0}M / ${i.mgmt_female || 0}F)
+  · Production: ${c('nonmgmt_total') || 0} (${i.nonmgmt_male || 0}M / ${i.nonmgmt_female || 0}F)
+Total male: ${c('total_male') || 0}
+Total female: ${c('total_female') || 0}` +
+(i.contractors === 'yes' ? `\nContractors: ${c('contractor_total') || 0} (${i.contractor_male || 0}M / ${i.contractor_female || 0}F) — ${c('contractor_pct') || ''}\nContractor info: ${i.contractor_info || ''}` : '');
+
+    const building = `Closed area: ${i.closed_area || ''} sqm
+Building type: ${i.building_type || ''}
+Floors: ${i.num_floors || ''}
+Structure: ${i.building_structure || ''}
+Hazard class: ${i.hazard_class || ''}
+Property: ${i.property_building || ''}
+Canteen: ${i.canteen || ''} | Dormitory: ${i.dormitory || ''}`;
+
+    const wages = `Wage date: ${i.wage_date || ''} of each month
+Payment method: ${i.payment_method || ''}
+Wage range — net:  lowest ${i.lowest_net || '—'}, highest ${i.highest_net || '—'}
+Wage range — gross: lowest ${i.lowest_gross || '—'}, highest ${i.highest_gross || '—'}`;
+
+    container.innerHTML = `<div class="report-output">
+      ${block('Facility', facility)}
+      ${block('Product / production', product)}
+      ${block('Operating hours', hours)}
+      ${block('Workforce', workforce)}
+      ${block('Building', building)}
+      ${block('Wages', wages)}
+    </div>
+    <p style="font-size:11px; color:var(--ink-mute); font-style:italic; padding:0 4px;">
+      Bu, ilk taslak çıktıdır. Sonraki turlarda BSCI'nin gerçek metin şablonlarını ekleyeceğiz — formüller Info ve Docs verisinden otomatik üretilecek.
+    </p>`;
+
+    container.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const text = decodeURIComponent(btn.dataset.copy);
+        navigator.clipboard.writeText(text).then(() => {
+          const orig = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(() => btn.textContent = orig, 1200);
+        });
+      });
+    });
+  }
+
+  window.CAP.registerReport('bsci', render);
+})();
+</script>

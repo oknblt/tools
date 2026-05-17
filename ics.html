@@ -1,0 +1,58 @@
+<div id="ics-content"></div>
+
+<script>
+(function() {
+  function render(container, store) {
+    const i = store.info;
+    const c = k => i['_computed_' + k] || '';
+
+    function block(title, content) {
+      return `<div class="report-block">
+        <button class="copy-btn" data-copy="${encodeURIComponent(content)}">Copy</button>
+        <div class="block-title">${title}</div>
+        <div class="block-content">${content || '<span style="color:var(--ink-mute);font-style:italic;">— no data yet —</span>'}</div>
+      </div>`;
+    }
+
+    // ICS: "Operating shifts and hours:" başlığını YAZMA (BSCI'den fark)
+    let hours = '';
+    if (!i.multiple_shifts || i.multiple_shifts === 'no') {
+      if (i.mf_start && i.mf_end) {
+        const dept = i.mf_departments || 'facility';
+        hours = `The regular working hours of the ${dept} are ${i.mf_start} - ${i.mf_end} including total ${i.mf_break || 0} minutes breaks from Monday to Friday.`;
+        if (i.saturday_work === 'Yes' && i.sat_start && i.sat_end) {
+          hours += ` On Saturdays the working hours are ${i.sat_start} - ${i.sat_end} including ${i.sat_break || 0} minutes breaks.`;
+        }
+      }
+    } else if (i.shift_start && i.shift_end) {
+      hours = `The ${i.shift_departments || 'facility'} operates in shifts (${i.shift_start} - ${i.shift_end}, ${i.shift_break || 0} min break).`;
+    }
+
+    const facility = `${i.facility_name || ''} located at ${i.facility_address || ''}. GPS: ${i.gps || ''}. Established on ${i.establishment_date || ''}.`;
+
+    const workforce = `The facility employs ${c('total_employees') || 0} workers (${c('total_male') || 0} male, ${c('total_female') || 0} female).` +
+(i.contractors === 'yes' ? ` Plus ${c('contractor_total') || 0} contractors.` : '');
+
+    container.innerHTML = `<div class="report-output">
+      ${block('Facility', facility)}
+      ${block('Working hours (no header)', hours)}
+      ${block('Workforce', workforce)}
+    </div>
+    <p style="font-size:11px; color:var(--ink-mute); font-style:italic; padding:0 4px;">
+      ICS placeholder — sonraki turlarda ICS'nin gerçek metin şablonları eklenecek.
+    </p>`;
+
+    container.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(decodeURIComponent(btn.dataset.copy)).then(() => {
+          const orig = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(() => btn.textContent = orig, 1200);
+        });
+      });
+    });
+  }
+  window.CAP.registerReport('ics', render);
+})();
+</script>

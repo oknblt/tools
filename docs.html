@@ -1,0 +1,238 @@
+<div class="docs-section">
+  <h3>Personnel Files</h3>
+  <div class="docs-header">
+    <div>Document</div><div>Issue</div><div>Expiry</div><div>Number / Period</div><div>Notes</div>
+  </div>
+  <div id="docs-personnel"></div>
+</div>
+
+<div class="docs-section">
+  <h3>Official Documents</h3>
+  <div class="docs-header">
+    <div>Document</div><div>Issue</div><div>Expiry</div><div>Number / Period</div><div>Notes</div>
+  </div>
+  <div id="docs-official"></div>
+</div>
+
+<div class="docs-section">
+  <h3>Health &amp; Safety</h3>
+  <div class="docs-header">
+    <div>Document</div><div>Issue</div><div>Expiry (auto if applicable)</div><div>Number / Period</div><div>Notes</div>
+  </div>
+  <div id="docs-hs"></div>
+</div>
+
+<div class="docs-section">
+  <h3>Environmental</h3>
+  <div class="docs-header">
+    <div>Document</div><div>Issue</div><div>Expiry</div><div>Number / Period</div><div>Notes</div>
+  </div>
+  <div id="docs-env"></div>
+</div>
+
+<div class="docs-section">
+  <h3>Social Compliance — Internal</h3>
+  <div class="docs-header">
+    <div>Document</div><div>Issue</div><div>Expiry</div><div>Number / Period</div><div>Notes</div>
+  </div>
+  <div id="docs-sc"></div>
+</div>
+
+<div class="docs-section">
+  <h3>ICS Specific</h3>
+  <div class="docs-header">
+    <div>Item</div><div>Issue</div><div>Expiry</div><div>Number / Period</div><div>Notes</div>
+  </div>
+  <div id="docs-ics"></div>
+</div>
+
+<div class="docs-section">
+  <h3>BSCI Specific</h3>
+  <div class="docs-header">
+    <div>Item</div><div>Issue</div><div>Expiry</div><div>Number / Period</div><div>Notes</div>
+  </div>
+  <div id="docs-bsci"></div>
+</div>
+
+<script>
+(function() {
+  const DOCS = {
+    personnel: [
+      { name: 'Monthly attendance records (timesheets)' },
+      { name: 'Pay slips' },
+      { name: 'SGK accrual and service lists' },
+      { name: 'Annual leave records and leave board minutes' },
+      { name: 'Employment contracts and personnel files' },
+      { name: 'Pre-employment / periodic health examination forms' },
+      { name: 'Exit documents' },
+    ],
+    official: [
+      { name: 'Trade registry gazette entry' },
+      { name: 'Tax plate' },
+      { name: 'Workplace opening and operating license' },
+      { name: 'Fire department report', scope: 'ICS' },
+      { name: 'Building permit' },
+      { name: 'Occupancy permit', scope: 'ICS' },
+      { name: 'Building registration certificate' },
+    ],
+    hs: [
+      { name: 'Evacuation plan' },
+      { name: 'Fire equipment control list', scope: 'ICS' },
+      { name: 'Fire installation annual inspection report', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Fire extinguishing training records', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Emergency evacuation drill records', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Emergency plan and emergency team lists',
+        expiryRule: { type: 'hazard', months: { 'low hazardous': 72, 'hazardous': 48, 'very hazardous': 24 } } },
+      { name: 'Employee representative election records', scope: 'ICS' },
+      { name: 'OHS board meeting minutes', scope: 'ICS' },
+      { name: 'OHS specialist contract / assignment letter' },
+      { name: 'Doctor contract / assignment letter' },
+      { name: 'Risk assessment', scope: 'ICS',
+        expiryRule: { type: 'hazard', months: { 'low hazardous': 72, 'hazardous': 48, 'very hazardous': 24 } } },
+      { name: 'Steam boiler annual inspection report', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Compressor annual inspection report', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Hydrophore annual inspection report', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Elevator annual inspection report', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Hoist annual inspection report', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Crane annual inspection report', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Forklift annual inspection report', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Pallet truck annual inspection report', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Industrial rack system annual inspection report', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Other equipment maintenance and inspection reports', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Ventilation installation annual inspection report', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Electrical installation grounding report', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Lightning rod grounding report', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Electrical internal installation control report', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Drinking water analysis report', scope: 'ICS', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Illumination indoor measurement report' },
+      { name: 'Dust indoor measurement report' },
+      { name: 'Noise indoor measurement report' },
+      { name: 'Thermal comfort indoor measurement report' },
+      { name: 'Volatile organic compound (VOC) indoor measurement report' },
+      { name: 'Vibration indoor measurement report' },
+      { name: 'Work accident records', scope: 'ICS' },
+      { name: 'First aid certificates', scope: 'ICS', expiryRule: { type: 'edate', months: 36 } },
+      { name: 'OHS training records — last periodic training date', scope: 'ICS',
+        expiryRule: { type: 'hazard', months: { 'low hazardous': 36, 'hazardous': 24, 'very hazardous': 12 } } },
+      { name: 'Boiler operator certificate' },
+      { name: 'Forklift / crane operator certificate' },
+      { name: 'Hygiene training records' },
+      { name: 'Daycare agreement' },
+      { name: 'Earthquake performance analysis report (for buildings pre-19.08.2008)' },
+      { name: 'Hazardous material activity certificate' },
+      { name: 'Explosion protection document' },
+    ],
+    env: [
+      { name: 'Environmental permit or exemption letter',
+        expiryRule: { type: 'conditional_exempt', months: 60 } },
+      { name: 'EIA opinion' },
+      { name: 'Environmental aspect analysis' },
+      { name: 'Discharge quality control license', expiryRule: { type: 'edate', months: 36 } },
+      { name: 'Wastewater analysis report' },
+      { name: 'Emission report' },
+      { name: 'Industrial waste management plan' },
+      { name: 'Annual waste declaration' },
+      { name: 'Temporary waste storage permit' },
+      { name: 'MOTAT records' },
+      { name: 'Environmental training', expiryRule: { type: 'edate', months: 12 } },
+      { name: 'Zero waste certificate', expiryRule: { type: 'edate', months: 60 } },
+      { name: 'Monthly evaluation report' },
+      { name: 'Internal audit report' },
+      { name: 'BEKRA declaration' },
+    ],
+    sc: [
+      { name: 'Social compliance training' },
+      { name: 'Meeting with employee representatives' },
+      { name: 'Internal audit' },
+      { name: 'Suggestion and complaint box records' },
+    ],
+    ics: [
+      { name: 'Drill duration' },
+      { name: 'Fire extinguisher count' },
+      { name: 'Fire cabinet count' },
+      { name: 'Internal control of smoke detectors' },
+      { name: 'Internal control of hydrants' },
+      { name: 'Province' },
+      { name: 'Turnover rate' },
+      { name: 'Tenure duration' },
+      { name: 'Hiring rate' },
+      { name: 'Highest weekly overtime hours' },
+      { name: 'Month with highest overtime' },
+      { name: 'Maximum consecutive working days' },
+      { name: 'How many times occurred' },
+    ],
+    bsci: [
+      { name: 'Annual management review meeting' },
+      { name: 'BSCI committee meeting period' },
+      { name: 'BSCI committee meeting' },
+      { name: 'BSCI training' },
+      { name: 'Internal audit' },
+      { name: 'Employee satisfaction survey' },
+    ],
+  };
+
+  function buildRow(sectionKey, idx, item) {
+    const rowId = `${sectionKey}_${idx}`;
+    const row = document.createElement('div');
+    row.className = 'doc-row';
+
+    const nameCell = document.createElement('div');
+    nameCell.className = 'doc-name';
+    nameCell.innerHTML = (item.scope ? `<span class="scope-badge">${item.scope}</span>` : '') + item.name;
+
+    const issueIn = document.createElement('input');
+    issueIn.type = 'date';
+    issueIn.dataset.docKey = `${rowId}_issue`;
+    issueIn.dataset.row = rowId;
+    issueIn.dataset.field = 'issue';
+    issueIn.title = 'Issue date';
+
+    let expCell;
+    if (item.expiryRule) {
+      expCell = document.createElement('div');
+      expCell.className = 'computed-cell';
+      expCell.dataset.row = rowId;
+      expCell.dataset.expiryRule = JSON.stringify(item.expiryRule);
+      expCell.title = 'Expiry (auto)';
+    } else {
+      expCell = document.createElement('input');
+      expCell.type = 'date';
+      expCell.dataset.docKey = `${rowId}_expiry`;
+      expCell.dataset.row = rowId;
+      expCell.dataset.field = 'expiry';
+      expCell.title = 'Expiry date';
+    }
+
+    const numIn = document.createElement('input');
+    numIn.type = 'text';
+    numIn.dataset.docKey = `${rowId}_number`;
+    numIn.dataset.row = rowId;
+    numIn.dataset.field = 'number';
+    numIn.placeholder = 'Number / period';
+    numIn.title = 'Number / period';
+
+    const notesIn = document.createElement('input');
+    notesIn.type = 'text';
+    notesIn.dataset.docKey = `${rowId}_notes`;
+    notesIn.dataset.row = rowId;
+    notesIn.dataset.field = 'notes';
+    notesIn.placeholder = 'Notes';
+    notesIn.title = 'Notes';
+
+    // Mobil için tüm input'ları sarmak
+    [issueIn, expCell, numIn, notesIn].forEach((el, i) => {
+      const labels = ['Issue', 'Expiry', 'Number', 'Notes'];
+      el.setAttribute('data-mobile-label', labels[i]);
+    });
+
+    row.append(nameCell, issueIn, expCell, numIn, notesIn);
+    return row;
+  }
+
+  Object.entries(DOCS).forEach(([key, items]) => {
+    const container = document.getElementById(`docs-${key}`);
+    if (!container) return;
+    items.forEach((item, idx) => container.appendChild(buildRow(key, idx, item)));
+  });
+})();
+</script>
