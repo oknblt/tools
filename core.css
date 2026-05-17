@@ -235,7 +235,7 @@ main {
   .field input[type="time"],
   .field select,
   .field textarea {
-    font-size: 13px;
+    font-size: 12px;
   }
 }
 @media (prefers-color-scheme: dark) {

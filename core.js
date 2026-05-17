@@ -724,31 +724,6 @@ async function init() {
   });
   document.addEventListener('change', recalcAll);
 
-  // Datalist davranışı: focus olunca değeri geçici temizle ki tüm seçenekler görünsün
-  // Kullanıcı bir şey seçer veya yazarsa onunla devam et; hiçbir şey yapmadan blur olursa eski değeri geri getir
-  document.addEventListener('focus', e => {
-    const el = e.target;
-    if (el.tagName === 'INPUT' && el.getAttribute('list')) {
-      el._cap_orig = el.value;
-      if (el.value) {
-        el.value = '';
-        // Tarayıcıya "input event" yolla ki datalist tüm seçenekleri tazelesin
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    }
-  }, true);
-  document.addEventListener('blur', e => {
-    const el = e.target;
-    if (el.tagName === 'INPUT' && el.getAttribute('list')) {
-      if (el.value === '' && el._cap_orig) {
-        // Kullanıcı seçim yapmadan ayrıldı, eski değeri geri yaz
-        el.value = el._cap_orig;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      delete el._cap_orig;
-    }
-  }, true);
-
   // İlk sekme yükleme
   await activateTab('info');
   applyDefaults();
