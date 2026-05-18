@@ -35,11 +35,11 @@
 <div class="row divider m-2" style="grid-template-columns: 1fr 2fr;">
   <div class="field">
     <label>Product type</label>
-    <textarea data-key="product_type" rows="1"></textarea>
+    <textarea data-key="product_type" rows="1">men's and women's outwear garments</textarea>
   </div>
   <div class="field">
     <label>Production processes</label>
-    <textarea data-key="production_processes" rows="1"></textarea>
+    <textarea data-key="production_processes" rows="1">cutting, sewing, ironing and packing</textarea>
   </div>
 </div>
 
@@ -84,7 +84,8 @@
   </div>
   <div class="field conditional-row cond-shifts">
     <label>End</label>
-    <input type="text" data-key="shift_end">
+    <input type="text" list="dl_shift_end" data-key="shift_end">
+    <datalist id="dl_shift_end"><option value="15:00"><option value="15:30"><option value="16:00"><option value="16:30"></datalist>
   </div>
   <div class="field conditional-row cond-shifts">
     <label>Break</label>

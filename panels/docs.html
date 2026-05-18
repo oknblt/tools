@@ -149,10 +149,13 @@
     nameCell.innerHTML = (item.scope ? `<span class="scope-badge">${item.scope}</span>` : '') + item.name;
 
     const issueIn = document.createElement('input');
-    issueIn.type = 'date';
+    issueIn.type = 'text';
+    issueIn.inputMode = 'decimal';  // mobilde rakam + . klavyesi
+    issueIn.placeholder = 'dd.mm.yyyy';
     issueIn.dataset.docKey = `${rowId}_issue`;
     issueIn.dataset.row = rowId;
     issueIn.dataset.field = 'issue';
+    issueIn.dataset.dateField = '1';
     issueIn.title = 'Issue date';
 
     let expCell;
@@ -164,10 +167,13 @@
       expCell.title = 'Expiry (auto)';
     } else {
       expCell = document.createElement('input');
-      expCell.type = 'date';
+      expCell.type = 'text';
+      expCell.inputMode = 'decimal';
+      expCell.placeholder = 'dd.mm.yyyy';
       expCell.dataset.docKey = `${rowId}_expiry`;
       expCell.dataset.row = rowId;
       expCell.dataset.field = 'expiry';
+      expCell.dataset.dateField = '1';
       expCell.title = 'Expiry date';
     }
 
