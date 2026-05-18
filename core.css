@@ -627,6 +627,15 @@ main {
     flex: 0 1 calc(33.333% - 4px);
     min-width: 70px;
   }
+  /* Daily (auto) & Weekly (auto) ikisi — yan yana eşit %50 */
+  .row.m-toggle-then-3 .field:has(> .computed[id$="_daily"]),
+  .row.m-toggle-then-3 .field:has(> .computed[id$="_daily_total"]),
+  .row.m-toggle-then-3 .field:has(> .computed[id$="_weekly"]),
+  .row.m-toggle-then-3 .field:has(> .computed[id$="_weekly_total"]),
+  .row.m-toggle-then-3 .field:has(> .computed[id="total_weekly"]) {
+    flex: 0 1 calc(50% - 3px);
+    min-width: 120px;
+  }
   /* Computed mobil: text-overflow ellipsis yerine wrap */
   .row.m-toggle-then-3 .computed { white-space: normal; font-size: 12px; }
   .row.full-mobile { grid-template-columns: 1fr !important; }
