@@ -602,12 +602,30 @@ main {
   }
   /* Toggle field: kompakt kalsın */
   .row.m-toggle-then-3 > .field:has(> .toggle) {
-    flex: 0 0 auto;
+    flex: 0 0 100%;
     min-width: 0;
   }
   /* span-mobile-full: tam satır */
   .row.m-toggle-then-3 > .span-mobile-full {
     flex-basis: 100%;
+  }
+  /* M, F, Σ (number/computed üçlüleri) — üçü tek satır.
+     data-key ile spesifik alanları targetle. flex-basis %30 ile 3'ü tek satıra sığar,
+     toggle'dan sonra wrap olabilir veya toggle ile aynı satıra gelir. */
+  .row.m-toggle-then-3 .field:has(> input[data-key$="_male"]),
+  .row.m-toggle-then-3 .field:has(> input[data-key$="_female"]),
+  .row.m-toggle-then-3 .field:has(> input[data-key="pregnant_num"]),
+  .row.m-toggle-then-3 .field:has(> .computed[id$="_total"]),
+  .row.m-toggle-then-3 .field:has(> .computed[id="contractor_total"]) {
+    flex: 0 1 calc(33.333% - 4px);
+    min-width: 50px;
+  }
+  /* Start / End / Break üçlüsü — üçü tek satır */
+  .row.m-toggle-then-3 .field:has(> input[data-key$="_start"]),
+  .row.m-toggle-then-3 .field:has(> input[data-key$="_end"]),
+  .row.m-toggle-then-3 .field:has(> input[data-key$="_break"]) {
+    flex: 0 1 calc(33.333% - 4px);
+    min-width: 70px;
   }
   /* Computed mobil: text-overflow ellipsis yerine wrap */
   .row.m-toggle-then-3 .computed { white-space: normal; font-size: 12px; }
