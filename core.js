@@ -713,6 +713,18 @@ async function init() {
   const btnLoad = byId('btnLoad'); if (btnLoad) btnLoad.addEventListener('click', loadJSON);
   const btnSave = byId('btnSave'); if (btnSave) btnSave.addEventListener('click', saveJSON);
   const btnExport = byId('btnExport'); if (btnExport) btnExport.addEventListener('click', exportExcel);
+  const btnTheme = byId('btnTheme');
+  if (btnTheme) {
+    btnTheme.addEventListener('click', () => {
+      const root = document.documentElement;
+      const cur = root.getAttribute('data-theme');
+      // Cycle: auto (yok) -> dark -> light -> auto
+      if (!cur) root.setAttribute('data-theme', 'dark');
+      else if (cur === 'dark') root.setAttribute('data-theme', 'light');
+      else root.removeAttribute('data-theme');
+      showToast('Theme: ' + (root.getAttribute('data-theme') || 'auto'));
+    });
+  }
 
   // Tüm form değişiklikleri merkezi recalc
   document.addEventListener('input', e => {

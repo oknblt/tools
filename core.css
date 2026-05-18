@@ -23,8 +23,9 @@
   --radius-lg: 8px;
 }
 
+/* Dark mode: sistem ayarı VEYA manuel toggle */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0f1419;
     --surface: #1a2330;
     --surface-alt: #151c26;
@@ -36,6 +37,18 @@
     --accent: #e89880;
     --accent-soft: #2a1f1c;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1419;
+  --surface: #1a2330;
+  --surface-alt: #151c26;
+  --ink: #e8ecf1;
+  --ink-soft: #aab4c0;
+  --ink-mute: #6b7682;
+  --line: #2a3a4d;
+  --line-soft: #1f2a38;
+  --accent: #e89880;
+  --accent-soft: #2a1f1c;
 }
 
 * { box-sizing: border-box; }
@@ -218,7 +231,7 @@ main {
 .field select,
 .field textarea {
   font-family: var(--font-body);
-  font-size: 14px;  /* mobil varsayılan; desktop @media içinde 12px'e iniyor */
+  font-size: 16px;  /* mobil varsayılan (iOS zoom önlemi); desktop @media içinde 12px'e iniyor */
   padding: 5px 8px;
   border: 0.5px solid var(--line);
   border-radius: var(--radius);
@@ -239,21 +252,36 @@ main {
   }
 }
 @media (prefers-color-scheme: dark) {
-  .field input[type="text"],
-  .field input[type="number"],
-  .field input[type="date"],
-  .field input[type="time"],
-  .field select,
-  .field textarea {
+  :root:not([data-theme="light"]) .field input[type="text"],
+  :root:not([data-theme="light"]) .field input[type="number"],
+  :root:not([data-theme="light"]) .field input[type="date"],
+  :root:not([data-theme="light"]) .field input[type="time"],
+  :root:not([data-theme="light"]) .field select,
+  :root:not([data-theme="light"]) .field textarea {
     background: #2a3a4f;
     border-color: #4a5e7a;
     color: #e8ecf1;
   }
-  .field .computed {
+  :root:not([data-theme="light"]) .field .computed {
     background: #1a2330;
     border-color: #38486a;
     color: #aab4c0;
   }
+}
+:root[data-theme="dark"] .field input[type="text"],
+:root[data-theme="dark"] .field input[type="number"],
+:root[data-theme="dark"] .field input[type="date"],
+:root[data-theme="dark"] .field input[type="time"],
+:root[data-theme="dark"] .field select,
+:root[data-theme="dark"] .field textarea {
+  background: #2a3a4f;
+  border-color: #4a5e7a;
+  color: #e8ecf1;
+}
+:root[data-theme="dark"] .field .computed {
+  background: #1a2330;
+  border-color: #38486a;
+  color: #aab4c0;
 }
 .field input:focus,
 .field select:focus,
@@ -265,7 +293,6 @@ main {
 .field textarea {
   resize: none;
   min-height: 28px;
-  height: 28px;
   font-family: var(--font-body);
   line-height: 1.4;
   overflow: hidden;
@@ -408,6 +435,17 @@ main {
   font-family: var(--font-mono);
   color: var(--ink-mute);
   font-style: italic;
+  min-height: 22px;
+  border: 0.5px dashed var(--line);
+  border-radius: 2px;
+  background: var(--surface-alt);
+  display: flex;
+  align-items: center;
+}
+.doc-row .computed-cell:empty::before {
+  content: 'auto';
+  color: var(--ink-mute);
+  opacity: 0.5;
 }
 .doc-row .computed-cell.expired { color: var(--error); font-style: normal; }
 .doc-row .computed-cell.warn { color: var(--warn); }
@@ -581,7 +619,15 @@ main {
   .conditional-row { display: none; visibility: visible; }
   .conditional-row.show { display: flex; flex-direction: column; }
 
-  .field input, .field select, .field textarea, .field .computed {
+  .field input, .field select {
+    font-size: 16px; /* iOS Safari zoom önlemek için 16px+ olmalı */
+    padding: 4px 6px;
+  }
+  .field .computed {
+    font-size: 13px;
+    padding: 4px 6px;
+  }
+  .field textarea {
     font-size: 16px;
     padding: 4px 6px;
   }
@@ -611,11 +657,16 @@ main {
     min-height: 30px;
   }
   @media (prefers-color-scheme: dark) {
-    .doc-row > input,
-    .doc-row > .computed-cell {
+    :root:not([data-theme="light"]) .doc-row > input,
+    :root:not([data-theme="light"]) .doc-row > .computed-cell {
       background: #2a3a4f;
       border-color: #4a5e7a;
     }
+  }
+  :root[data-theme="dark"] .doc-row > input,
+  :root[data-theme="dark"] .doc-row > .computed-cell {
+    background: #2a3a4f;
+    border-color: #4a5e7a;
   }
 }
 
