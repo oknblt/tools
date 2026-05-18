@@ -292,6 +292,15 @@ main {
 :root[data-theme="dark"] .field label {
   color: #c8d2e0;
 }
+/* Toggle: dark mode'da seçili label için her zaman kontrastlı yazı (label rengi override'ı yenmek için) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .toggle input:checked + label {
+    color: var(--bg);
+  }
+}
+:root[data-theme="dark"] .toggle input:checked + label {
+  color: var(--bg);
+}
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
@@ -724,7 +733,7 @@ main {
     border: 0.5px solid var(--line);
     background: var(--surface);
     padding: 4px 6px;
-    font-size: 14px;
+    font-size: 16px;
     min-height: 30px;
   }
   @media (prefers-color-scheme: dark) {

@@ -75,14 +75,15 @@ function addMonthsISO(dateStr, months) {
 }
 
 // DD.MM.YYYY veya DD.MM.YY veya YYYY-MM-DD parse et
+// Ayırıcı olarak nokta, virgül, slash, tire kabul edilir (kullanıcı kolaylığı)
 function parseAnyDate(s) {
   if (!s) return null;
   s = String(s).trim();
   // ISO: YYYY-MM-DD
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return new Date(+m[1], +m[2]-1, +m[3]);
-  // DD.MM.YYYY veya DD.MM.YY
-  m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);
+  // DD[.,/-]MM[.,/-]YYYY veya DD[.,/-]MM[.,/-]YY
+  m = s.match(/^(\d{1,2})[.,\/\-](\d{1,2})[.,\/\-](\d{2}|\d{4})$/);
   if (m) {
     let d = +m[1], mo = +m[2], y = +m[3];
     if (y < 100) {
@@ -175,13 +176,23 @@ function markInvalid(elId, invalid) {
 
 function validateBreak(startKey, endKey, breakKey) {
   // Returns true (geçerli) ya da false (yetersiz)
+  // Kural: NET süre (mola düşülmüş) baz alınır
+  //   net <= 4 saat (240 dk) → 15 dk min
+  //   net 4-7.5 saat (240-450 dk) → 30 dk min
+  //   net > 7.5 saat → 60 dk min
   const raw = rawMinutes(getVal(startKey), getVal(endKey));
   if (raw === null) return true; // boş, kontrol yok
   const brStr = getVal(breakKey);
   if (brStr === '') return true; // mola girilmemiş, kontrol yok
   const br = parseInt(brStr, 10);
   if (isNaN(br)) return true;
-  return br >= minBreakRequired(raw);
+  const net = raw - br;
+  if (net < 0) return true; // mola > raw, anlamsız, kontrolü atla
+  let minBreak;
+  if (net <= 240) minBreak = 15;
+  else if (net <= 450) minBreak = 30;
+  else minBreak = 60;
+  return br >= minBreak;
 }
 
 function getInputId(dataKey) {
