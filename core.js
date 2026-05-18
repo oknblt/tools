@@ -66,9 +66,49 @@ function calcDailyMinutes(startStr, endStr, breakMin) {
 
 function addMonthsISO(dateStr, months) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '';
-  d.setMonth(d.getMonth() + months);
+  // dateStr ISO veya DD.MM.YYYY olabilir
+  const parsed = parseAnyDate(dateStr);
+  if (!parsed) return '';
+  parsed.setMonth(parsed.getMonth() + months);
+  // ISO döndür; çağıran formatlar
+  return parsed.toISOString().slice(0, 10);
+}
+
+// DD.MM.YYYY veya DD.MM.YY veya YYYY-MM-DD parse et
+function parseAnyDate(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  // ISO: YYYY-MM-DD
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  // DD.MM.YYYY veya DD.MM.YY
+  m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);
+  if (m) {
+    let d = +m[1], mo = +m[2], y = +m[3];
+    if (y < 100) {
+      // 00-89 → 2000s, 90-99 → 1900s (kullanıcı kuralı)
+      y = y >= 90 ? 1900 + y : 2000 + y;
+    }
+    const dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d) return dt;
+  }
+  return null;
+}
+
+// DD.MM.YYYY formatına çevir
+function toDDMMYYYY(s) {
+  const d = parseAnyDate(s);
+  if (!d) return s; // parse edemezsek olduğu gibi bırak
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
+
+// ISO formatına çevir (YYYY-MM-DD), hesaplamalar için
+function toISO(s) {
+  const d = parseAnyDate(s);
+  if (!d) return '';
   return d.toISOString().slice(0, 10);
 }
 
@@ -108,6 +148,47 @@ function setComputed(id, value) {
   if (el) el.textContent = value || '';
 }
 
+/* Validasyon yardımcıları
+   - Break min: günlük raw süre (start-end, mola düşülmeden) baz alınır
+     <= 4 saat → 15 dk min, 4-7.5 saat → 30 dk min, > 7.5 saat → 60 dk min
+   - Genç: günlük net <= 8 saat (480 dk), haftalık <= 40 saat (2400 dk)
+   - Hamile: günlük net <= 7.5 saat (450 dk)
+*/
+function rawMinutes(startStr, endStr) {
+  const s = timeToMinutes(startStr), e = timeToMinutes(endStr);
+  if (s === null || e === null) return null;
+  let diff = e - s;
+  if (diff < 0) diff += 24 * 60;
+  return diff;
+}
+function minBreakRequired(rawMin) {
+  if (rawMin === null) return 0;
+  if (rawMin <= 240) return 15;          // <= 4 saat
+  if (rawMin <= 450) return 30;          // <= 7.5 saat
+  return 60;                              // > 7.5 saat
+}
+function markInvalid(elId, invalid) {
+  const el = byId(elId);
+  if (!el) return;
+  el.classList.toggle('invalid', !!invalid);
+}
+
+function validateBreak(startKey, endKey, breakKey) {
+  // Returns true (geçerli) ya da false (yetersiz)
+  const raw = rawMinutes(getVal(startKey), getVal(endKey));
+  if (raw === null) return true; // boş, kontrol yok
+  const brStr = getVal(breakKey);
+  if (brStr === '') return true; // mola girilmemiş, kontrol yok
+  const br = parseInt(brStr, 10);
+  if (isNaN(br)) return true;
+  return br >= minBreakRequired(raw);
+}
+
+function getInputId(dataKey) {
+  const el = document.querySelector(`[data-key="${dataKey}"]`);
+  return el ? el.id : null;
+}
+
 function recalcInfo() {
   updateConditionals();
 
@@ -133,6 +214,28 @@ function recalcInfo() {
   const totalWeeklyMin = (mfWeekly || 0) + (satDaily || 0);
   setComputed('total_weekly', mfWeekly !== null ? formatHoursMinutes(totalWeeklyMin) : '');
 
+  // ---- VALIDASYON: Break süreleri ----
+  // Her break input'unun id'sini bul ve invalid class'ını toggle et
+  function checkBreak(startKey, endKey, breakKey, condClass) {
+    const breakEl = document.querySelector(`[data-key="${breakKey}"]`);
+    if (!breakEl) return;
+    // Eğer ilgili koşul kapalıysa (örn. Young N), uyarı gösterme
+    if (condClass) {
+      const cond = document.querySelector(condClass);
+      if (!cond || !cond.classList.contains('show')) {
+        breakEl.classList.remove('invalid');
+        return;
+      }
+    }
+    const ok = validateBreak(startKey, endKey, breakKey);
+    breakEl.classList.toggle('invalid', !ok);
+  }
+  checkBreak('shift_start', 'shift_end', 'shift_break', '.cond-shifts');
+  checkBreak('mf_start', 'mf_end', 'mf_break', null);
+  checkBreak('sat_start', 'sat_end', 'sat_break', '.cond-saturday');
+  checkBreak('young_start', 'young_end', 'young_break', '.cond-young');
+  checkBreak('pregnant_start', 'pregnant_end', 'pregnant_break', '.cond-pregnant');
+
   // Personel
   const mgmtM = num('mgmt_male'), mgmtF = num('mgmt_female');
   const nonM = num('nonmgmt_male'), nonF = num('nonmgmt_female');
@@ -152,18 +255,49 @@ function recalcInfo() {
   setComputed('contractor_pct', totalWithC > 0 ? ((totalC / totalWithC) * 100).toFixed(1) + '%' : '');
 
   // Genç, engelli, göçmen, stajyer, hamile, sendika
-  setComputed('young_total', (num('young_male') + num('young_female')) || '');
+  const yTotal = num('young_male') + num('young_female');
+  setComputed('young_total', yTotal || '');
   const yD = calcDailyMinutes(getVal('young_start'), getVal('young_end'), getVal('young_break'));
   setComputed('young_daily', formatHoursMinutes(yD));
-  setComputed('young_weekly', formatHoursMinutes(yD !== null ? yD * 5 : null));
+  const yW = yD !== null ? yD * 5 : null;
+  setComputed('young_weekly', formatHoursMinutes(yW));
 
-  setComputed('disabled_total', (num('disabled_male') + num('disabled_female')) || '');
+  // ---- VALIDASYON: Young günlük <= 8h, haftalık <= 40h ----
+  const youngCond = document.querySelector('.cond-young');
+  const youngActive = youngCond && youngCond.classList.contains('show');
+  const youngDailyEl = byId('young_daily');
+  const youngWeeklyEl = byId('young_weekly');
+  if (youngDailyEl) youngDailyEl.classList.toggle('invalid', !!(youngActive && yD !== null && yD > 480));
+  if (youngWeeklyEl) youngWeeklyEl.classList.toggle('invalid', !!(youngActive && yW !== null && yW > 2400));
+
+  const disabledTotal = num('disabled_male') + num('disabled_female');
+  setComputed('disabled_total', disabledTotal || '');
   setComputed('migrant_total', (num('migrant_male') + num('migrant_female')) || '');
   setComputed('trainee_total', (num('trainee_male') + num('trainee_female')) || '');
+
+  // ---- VALIDASYON: Disabled %3 (>= 50 toplam çalışan) ----
+  const disabledCond = document.querySelector('.cond-disabled');
+  const disabledActive = disabledCond && disabledCond.classList.contains('show');
+  const disabledTotalEl = byId('disabled_total');
+  if (disabledTotalEl) {
+    if (disabledActive && totalEmp >= 50) {
+      // 3% hesabı, standart yuvarlama (3,5 → 4)
+      const required = Math.round(totalEmp * 0.03);
+      disabledTotalEl.classList.toggle('invalid', disabledTotal < required);
+    } else {
+      disabledTotalEl.classList.remove('invalid');
+    }
+  }
 
   const pD = calcDailyMinutes(getVal('pregnant_start'), getVal('pregnant_end'), getVal('pregnant_break'));
   setComputed('pregnant_daily', formatHoursMinutes(pD));
   setComputed('pregnant_weekly', formatHoursMinutes(pD !== null ? pD * 5 : null));
+
+  // ---- VALIDASYON: Pregnant günlük <= 7.5h (450 dk) ----
+  const pregCond = document.querySelector('.cond-pregnant');
+  const pregActive = pregCond && pregCond.classList.contains('show');
+  const pregDailyEl = byId('pregnant_daily');
+  if (pregDailyEl) pregDailyEl.classList.toggle('invalid', !!(pregActive && pD !== null && pD > 450));
 
   setComputed('union_total', (num('union_male') + num('union_female')) || '');
 
@@ -194,26 +328,30 @@ function recalcDocs() {
     let rule;
     try { rule = JSON.parse(cell.dataset.expiryRule); } catch(e) { return; }
 
-    let result = '';
+    let resultISO = '';
     if (!issue) {
-      result = '';
+      resultISO = '';
     } else if (rule.type === 'edate') {
-      result = addMonthsISO(issue, rule.months);
+      resultISO = addMonthsISO(issue, rule.months);
     } else if (rule.type === 'hazard') {
       const m = rule.months[hazard];
-      if (m) result = addMonthsISO(issue, m);
+      if (m) resultISO = addMonthsISO(issue, m);
     } else if (rule.type === 'conditional_exempt') {
       const nv = numberEl ? numberEl.value : '';
-      result = nv === 'Exemption letter' ? 'N/A' : addMonthsISO(issue, rule.months);
+      resultISO = nv === 'Exemption letter' ? 'N/A' : addMonthsISO(issue, rule.months);
     }
 
-    cell.textContent = result;
+    // Görüntüleme DD.MM.YYYY formatında
+    const displayValue = (resultISO && resultISO !== 'N/A') ? toDDMMYYYY(resultISO) : resultISO;
+    cell.textContent = displayValue;
     cell.classList.remove('expired', 'warn');
-    if (result && result !== 'N/A') {
-      const d = new Date(result), now = new Date();
-      const diffDays = (d - now) / (1000 * 60 * 60 * 24);
-      if (diffDays < 0) cell.classList.add('expired');
-      else if (diffDays < 60) cell.classList.add('warn');
+    if (resultISO && resultISO !== 'N/A') {
+      const d = parseAnyDate(resultISO), now = new Date();
+      if (d) {
+        const diffDays = (d - now) / (1000 * 60 * 60 * 24);
+        if (diffDays < 0) cell.classList.add('expired');
+        else if (diffDays < 60) cell.classList.add('warn');
+      }
     }
   });
   syncDOMToStore();
@@ -388,6 +526,8 @@ function applyDefaults() {
     canteen: 'Canteen is available.',
     dormitory: 'Dormitory is not available.',
     payment_method: 'by bank transfer',
+    product_type: "men's and women's outwear garments",
+    production_processes: 'cutting, sewing, ironing and packing',
   };
   Object.entries(defaults).forEach(([k, v]) => {
     const el = document.querySelector(`[data-key="${k}"]`);
@@ -735,6 +875,21 @@ async function init() {
     recalcAll();
   });
   document.addEventListener('change', recalcAll);
+
+  // Docs tarih alanları: blur'da DD.MM.YY → DD.MM.YYYY otomatik dönüşüm
+  document.addEventListener('blur', e => {
+    const el = e.target;
+    if (el.tagName === 'INPUT' && el.dataset.dateField) {
+      const v = el.value.trim();
+      if (!v) return;
+      const formatted = toDDMMYYYY(v);
+      if (formatted && formatted !== v) {
+        el.value = formatted;
+        // Hesaplamaları tetikle (auto expiry, vade vb.)
+        recalcAll();
+      }
+    }
+  }, true);
 
   // İlk sekme yükleme
   await activateTab('info');

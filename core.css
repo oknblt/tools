@@ -283,6 +283,15 @@ main {
   border-color: #38486a;
   color: #aab4c0;
 }
+/* Dark mode label rengi: hücre üstündeki başlıklar daha okunaklı */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .field label {
+    color: #c8d2e0;
+  }
+}
+:root[data-theme="dark"] .field label {
+  color: #c8d2e0;
+}
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
@@ -315,6 +324,41 @@ main {
 .field .computed:empty::before {
   content: '—';
   color: var(--ink-mute);
+}
+
+/* Validasyon: yetersiz değer / kural ihlali — sarı uyarı tonu */
+.field input.invalid {
+  background: #fff4d0;
+  border-color: #d4a82e;
+  color: #6b4f10;
+}
+.field .computed.invalid {
+  background: #fff4d0;
+  border-color: #d4a82e;
+  color: #6b4f10;
+  font-style: normal;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .field input.invalid {
+    background: #3d3315;
+    border-color: #d4a82e;
+    color: #f5d76e;
+  }
+  :root:not([data-theme="light"]) .field .computed.invalid {
+    background: #3d3315;
+    border-color: #d4a82e;
+    color: #f5d76e;
+  }
+}
+:root[data-theme="dark"] .field input.invalid {
+  background: #3d3315;
+  border-color: #d4a82e;
+  color: #f5d76e;
+}
+:root[data-theme="dark"] .field .computed.invalid {
+  background: #3d3315;
+  border-color: #d4a82e;
+  color: #f5d76e;
 }
 
 /* Toggle: kompakt Y/N */
