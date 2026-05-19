@@ -37,11 +37,11 @@
     official: [
       { name: 'Trade registry gazette entry' },
       { name: 'Tax plate' },
-      { name: 'Workplace opening and operating license' },
-      { name: 'Fire department report', scope: 'ICS' },
-      { name: 'Building permit' },
-      { name: 'Occupancy permit', scope: 'ICS' },
-      { name: 'Building registration certificate' },
+      { name: 'Workplace opening and operating license', addable: true },
+      { name: 'Fire department report', scope: 'ICS', addable: true },
+      { name: 'Building permit', addable: true },
+      { name: 'Occupancy permit', scope: 'ICS', addable: true },
+      { name: 'Building registration certificate', addable: true },
     ],
     hs: [
       { name: 'Evacuation plan' },
@@ -139,18 +139,65 @@
     ],
   };
 
-  function buildRow(sectionKey, idx, item) {
-    const rowId = `${sectionKey}_${idx}`;
+  function buildRow(sectionKey, idx, item, opts) {
+    opts = opts || {};
+    const rowId = opts.rowId || `${sectionKey}_${idx}`;
+    const isExtra = !!opts.isExtra;
     const row = document.createElement('div');
     row.className = 'doc-row';
+    row.dataset.rowId = rowId;
+    if (isExtra) row.dataset.extra = '1';
 
     const nameCell = document.createElement('div');
     nameCell.className = 'doc-name';
-    nameCell.innerHTML = (item.scope ? `<span class="scope-badge">${item.scope}</span>` : '') + item.name;
+
+    // OK tick (manuel "kontrol edildi" işareti)
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'doc-ok';
+    okBtn.dataset.docKey = `${rowId}_ok`;
+    okBtn.title = 'Mark as checked (covered)';
+    okBtn.innerHTML = '<svg viewBox="0 0 16 16"><path d="M3 8l3 3 7-7"/></svg>';
+    okBtn.addEventListener('click', () => {
+      const cur = okBtn.dataset.value === '1';
+      okBtn.dataset.value = cur ? '' : '1';
+      okBtn.classList.toggle('on', !cur);
+      if (window.CAP && window.CAP.recalcAll) window.CAP.recalcAll();
+    });
+
+    const nameText = document.createElement('span');
+    nameText.className = 'doc-name-text';
+    nameText.innerHTML = (item.scope ? `<span class="scope-badge">${item.scope}</span>` : '') + item.name;
+
+    nameCell.append(okBtn, nameText);
+
+    // + butonu (sadece ana addable satırlarda, extra'larda gözükmez)
+    if (item.addable && !isExtra) {
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'doc-add';
+      addBtn.title = 'Add another row';
+      addBtn.textContent = '+';
+      addBtn.addEventListener('click', () => addExtraRow(sectionKey, idx, item, row));
+      nameCell.appendChild(addBtn);
+    }
+    // − butonu (sadece extra satırlarda)
+    if (isExtra) {
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'doc-del';
+      delBtn.title = 'Remove this row';
+      delBtn.textContent = '−';
+      delBtn.addEventListener('click', () => {
+        row.remove();
+        if (window.CAP && window.CAP.recalcAll) window.CAP.recalcAll();
+      });
+      nameCell.appendChild(delBtn);
+    }
 
     const issueIn = document.createElement('input');
     issueIn.type = 'text';
-    issueIn.inputMode = 'decimal';  // mobilde rakam + . klavyesi
+    issueIn.inputMode = 'decimal';
     issueIn.placeholder = 'dd.mm.yyyy';
     issueIn.dataset.docKey = `${rowId}_issue`;
     issueIn.dataset.row = rowId;
@@ -193,15 +240,59 @@
     notesIn.placeholder = 'Notes';
     notesIn.title = 'Notes';
 
-    // Mobil için tüm input'ları sarmak
-    [issueIn, expCell, numIn, notesIn].forEach((el, i) => {
-      const labels = ['Issue', 'Expiry', 'Number', 'Notes'];
-      el.setAttribute('data-mobile-label', labels[i]);
-    });
-
     row.append(nameCell, issueIn, expCell, numIn, notesIn);
     return row;
   }
+
+  // Ekstra satır oluşturucusu - parent satırın hemen ALTINA ekler
+  function addExtraRow(sectionKey, idx, item, afterRow) {
+    // Aynı baseRowId'nin kaç ekstra satırı var, ona göre extra numarası
+    const baseId = `${sectionKey}_${idx}`;
+    const existing = document.querySelectorAll(`.doc-row[data-row-id^="${baseId}_extra"]`);
+    const extraIdx = existing.length + 1;
+    const extraRowId = `${baseId}_extra${extraIdx}`;
+    const extraRow = buildRow(sectionKey, idx, item, { rowId: extraRowId, isExtra: true });
+    afterRow.parentNode.insertBefore(extraRow, afterRow.nextSibling);
+    // Yeni satır eklendi - bazı durumlarda parent + sonra eklenen sıralı satırlar arası
+    // dağıtmak isteyebiliriz ama bu basit haliyle yeterli.
+    if (window.CAP && window.CAP.recalcAll) window.CAP.recalcAll();
+  }
+  // Yükleme sırasında, store içinde "${baseId}_extra${n}_issue" gibi keyler varsa
+  // ilgili satırları yeniden oluşturmamız gerek. Bunu init sonunda yapalım.
+  window.__rebuildExtraRows = function() {
+    const docs = (window.CAP && window.CAP.store && window.CAP.store.docs) || {};
+    // baseId'leri topla
+    const baseIds = {};
+    Object.keys(docs).forEach(k => {
+      const m = k.match(/^(.+)_extra(\d+)_(issue|expiry|number|notes|ok)$/);
+      if (!m) return;
+      const baseId = m[1];
+      const ex = parseInt(m[2], 10);
+      if (!baseIds[baseId] || ex > baseIds[baseId]) baseIds[baseId] = ex;
+    });
+    Object.keys(baseIds).forEach(baseId => {
+      const parts = baseId.split('_');
+      const sectionKey = parts[0];
+      const idx = parseInt(parts[1], 10);
+      const item = (DOCS[sectionKey] || [])[idx];
+      if (!item || !item.addable) return;
+      // Mevcut parent satırı bul
+      const parent = document.querySelector(`.doc-row[data-row-id="${baseId}"]`);
+      if (!parent) return;
+      const need = baseIds[baseId];
+      let after = parent;
+      for (let i = 1; i <= need; i++) {
+        const exRowId = `${baseId}_extra${i}`;
+        if (document.querySelector(`.doc-row[data-row-id="${exRowId}"]`)) {
+          after = document.querySelector(`.doc-row[data-row-id="${exRowId}"]`);
+          continue;
+        }
+        const ex = buildRow(sectionKey, idx, item, { rowId: exRowId, isExtra: true });
+        after.parentNode.insertBefore(ex, after.nextSibling);
+        after = ex;
+      }
+    });
+  };
 
   Object.entries(DOCS).forEach(([key, items]) => {
     const container = document.getElementById(`docs-${key}`);
