@@ -464,7 +464,8 @@ main {
   letter-spacing: 0.05em;
   vertical-align: 1px;
 }
-.doc-row input {
+.doc-row input,
+.doc-row textarea {
   font-family: var(--font-body);
   font-size: 12px;
   padding: 3px 6px;
@@ -475,8 +476,17 @@ main {
   border-radius: 2px;
   min-width: 0;
 }
-.doc-row input:hover { border-color: var(--line); }
-.doc-row input:focus {
+.doc-row textarea {
+  resize: none;
+  min-height: 22px;
+  line-height: 1.4;
+  overflow: hidden;
+  word-wrap: break-word;
+}
+.doc-row input:hover,
+.doc-row textarea:hover { border-color: var(--line); }
+.doc-row input:focus,
+.doc-row textarea:focus {
   outline: none;
   border-color: var(--accent);
   background: var(--surface);
@@ -729,6 +739,7 @@ main {
     padding-bottom: 2px;
   }
   .doc-row > input,
+  .doc-row > textarea,
   .doc-row > .computed-cell {
     border: 0.5px solid var(--line);
     background: var(--surface);
@@ -738,12 +749,14 @@ main {
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .doc-row > input,
+    :root:not([data-theme="light"]) .doc-row > textarea,
     :root:not([data-theme="light"]) .doc-row > .computed-cell {
       background: #2a3a4f;
       border-color: #4a5e7a;
     }
   }
   :root[data-theme="dark"] .doc-row > input,
+  :root[data-theme="dark"] .doc-row > textarea,
   :root[data-theme="dark"] .doc-row > .computed-cell {
     background: #2a3a4f;
     border-color: #4a5e7a;
@@ -752,7 +765,8 @@ main {
 
 /* Textarea auto-grow - modern tarayıcılarda native, eski tarayıcılarda JS */
 @supports (field-sizing: content) {
-  .field textarea { field-sizing: content; }
+  .field textarea,
+  .doc-row textarea { field-sizing: content; }
 }
 
 /* Mobilde building structure'ı en alta al, full width */
