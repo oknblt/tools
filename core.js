@@ -365,6 +365,18 @@ function recalcDocs() {
       }
     }
   });
+
+  // Her doc-row için "checked" (kontrol edildi) durumunu güncelle
+  // Bir satır kontrol edilmiş sayılır: OK tick işaretli VEYA issue/expiry/number/notes dolu
+  document.querySelectorAll('.doc-row').forEach(row => {
+    const inputs = row.querySelectorAll('input[data-doc-key], textarea[data-doc-key]');
+    let hasData = false;
+    inputs.forEach(el => { if (el.value && el.value.trim()) hasData = true; });
+    const okBtn = row.querySelector('button[data-doc-key]');
+    const okOn = okBtn && okBtn.dataset.value === '1';
+    row.classList.toggle('checked', hasData || okOn);
+  });
+
   syncDOMToStore();
 }
 
@@ -428,8 +440,12 @@ function syncDOMToStore() {
     if (el) store.info['_computed_' + id] = el.textContent || '';
   });
 
-  document.querySelectorAll('input[data-doc-key]').forEach(el => {
+  document.querySelectorAll('input[data-doc-key], textarea[data-doc-key]').forEach(el => {
     store.docs[el.dataset.docKey] = el.value || '';
+  });
+  // OK tick butonları (data-value="1" ise işaretli)
+  document.querySelectorAll('button[data-doc-key]').forEach(el => {
+    store.docs[el.dataset.docKey] = el.dataset.value === '1' ? '1' : '';
   });
   document.querySelectorAll('.computed-cell[data-row]').forEach(el => {
     const row = el.dataset.row;
@@ -448,9 +464,22 @@ function syncStoreToDOM() {
       if (r) r.checked = true;
     }
   });
+  // Docs için: önce extra satırları yeniden oluştur (yükleme senaryosu)
+  if (typeof window.__rebuildExtraRows === 'function') {
+    try { window.__rebuildExtraRows(); } catch(e) { console.error(e); }
+  }
   Object.entries(store.docs).forEach(([k, v]) => {
-    const el = document.querySelector(`input[data-doc-key="${k}"]`);
-    if (el) el.value = v;
+    const el = document.querySelector(`input[data-doc-key="${k}"], textarea[data-doc-key="${k}"]`);
+    if (el) {
+      el.value = v;
+    } else {
+      // OK tick button mı?
+      const btn = document.querySelector(`button[data-doc-key="${k}"]`);
+      if (btn) {
+        btn.dataset.value = v === '1' ? '1' : '';
+        btn.classList.toggle('on', v === '1');
+      }
+    }
   });
   recalcAll();
 }
@@ -527,6 +556,13 @@ function clearDOM() {
     if (el.id === 'cap-file-input') return;
     if (el.dataset.key || el.dataset.docKey) el.value = '';
   });
+  // OK tick butonlarını sıfırla
+  document.querySelectorAll('button[data-doc-key]').forEach(btn => {
+    btn.dataset.value = '';
+    btn.classList.remove('on');
+  });
+  // Extra docs satırlarını sil
+  document.querySelectorAll('.doc-row[data-extra="1"]').forEach(r => r.remove());
 }
 
 function applyDefaults() {
