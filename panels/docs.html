@@ -177,16 +177,16 @@
       expCell.title = 'Expiry date';
     }
 
-    const numIn = document.createElement('input');
-    numIn.type = 'text';
+    const numIn = document.createElement('textarea');
+    numIn.rows = 1;
     numIn.dataset.docKey = `${rowId}_number`;
     numIn.dataset.row = rowId;
     numIn.dataset.field = 'number';
     numIn.placeholder = 'Number / period';
     numIn.title = 'Number / period';
 
-    const notesIn = document.createElement('input');
-    notesIn.type = 'text';
+    const notesIn = document.createElement('textarea');
+    notesIn.rows = 1;
     notesIn.dataset.docKey = `${rowId}_notes`;
     notesIn.dataset.row = rowId;
     notesIn.dataset.field = 'notes';
