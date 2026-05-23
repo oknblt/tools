@@ -614,17 +614,37 @@
   });
 
   // JSON save / upload (identical)
-  $('ht-json-save').addEventListener('click', () => {
-    const payload = { version: 1, exportedAt: new Date().toISOString(), records, notes };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+$('ht-json-save').addEventListener('click', async () => {
+  const payload = { version: 1, exportedAt: new Date().toISOString(), records, notes };
+  const json = JSON.stringify(payload, null, 2);
+
+  if (window.showSaveFilePicker) {
+    // File System Access API — kullanıcı dosya adını ve konumunu seçer,
+    // aynı dosyayı tekrar seçerse üzerine yazar
+    try {
+      const fh = await window.showSaveFilePicker({
+        suggestedName: 'health_tracker_backup.json',
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+      });
+      const writable = await fh.createWritable();
+      await writable.write(json);
+      await writable.close();
+      toast('Backup saved');
+    } catch (e) {
+      if (e.name !== 'AbortError') alert('Could not save file.');
+    }
+  } else {
+    // Fallback: eski yöntem (Safari vb.)
+    const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const today = new Date().toISOString().slice(0,10);
-    a.href = url; a.download = `health_tracker_backup_${today}.json`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    a.href = url; a.download = 'health_tracker_backup.json';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast('Backup saved');
-  });
+  }
+});
 
   $('ht-json-load').addEventListener('click', () => $('ht-file').click());
   $('ht-file').addEventListener('change', (e) => {
