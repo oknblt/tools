@@ -1124,6 +1124,9 @@
     document.addEventListener('click', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
 
     // ── INPUT EVENTS ──
+document.querySelectorAll('.time-input').forEach(inp => {
+    inp.addEventListener('focus', () => inp.select());
+});
     [hrsIn, minIn, secIn].forEach(inp => {
         inp.addEventListener('blur', () => {
             clampInput(inp, inp === hrsIn ? 99 : 59);
