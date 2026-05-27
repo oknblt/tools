@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -12,15 +12,9 @@
             --surface-2: #131d2e;
             --surface-3: #1a2640;
             --accent: #e94560;
-            --accent-glow: rgba(233, 69, 96, 0.45);
-            --accent-soft: #c73a52;
-            --sw-accent: #00d4aa;
-            --sw-glow: rgba(0, 212, 170, 0.4);
-            --sw-soft: #00b892;
-            --cd-accent: #4d9fff;
-            --cd-glow: rgba(77, 159, 255, 0.4);
-            --cd-soft: #3a85d4;
-            --gold: #f0b90b;
+            --green: #00d4aa;
+            --green-dark: #00b892;
+            --green-glow: rgba(0,212,170,0.4);
             --text: #e2e8f0;
             --text-dim: #64748b;
             --text-mid: #94a3b8;
@@ -33,12 +27,15 @@
 
         * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; }
 
+#dualInputsRow { display: none; }
+#loopBadge { display: none; }
+
         body {
             font-family: 'DM Sans', system-ui, sans-serif;
             background: var(--bg);
             background-image:
-                radial-gradient(ellipse 80% 40% at 20% 0%, rgba(77,159,255,0.06) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0,212,170,0.05) 0%, transparent 60%);
+                radial-gradient(ellipse 80% 40% at 20% 0%, rgba(0,212,170,0.05) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0,212,170,0.04) 0%, transparent 60%);
             min-height: 100vh;
             min-height: 100dvh;
             display: flex;
@@ -86,13 +83,7 @@
         }
         .settings-btn:hover { color: #fff; background: var(--surface-3); }
 
-        /* ── TIMER PANELS ── */
-        .timers-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
+        /* ── PANELS ── */
         .panel {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -103,8 +94,7 @@
             gap: 14px;
             transition: border-color 0.3s;
         }
-        .panel.running-sw { border-color: rgba(0,212,170,0.3); }
-        .panel.running-cd { border-color: rgba(77,159,255,0.3); }
+        .panel.running { border-color: rgba(0,212,170,0.3); }
 
         .panel-header {
             display: flex;
@@ -114,12 +104,11 @@
         .panel-title {
             font-family: 'Rajdhani', sans-serif;
             font-weight: 700;
-            font-size: 0.78rem;
+            font-size: 0.82rem;
             letter-spacing: 0.12em;
             text-transform: uppercase;
+            color: #ffffff;
         }
-        .panel-title.sw { color: var(--sw-accent); }
-        .panel-title.cd { color: var(--cd-accent); }
 
         /* ── TIME DISPLAY ── */
         .time-display {
@@ -139,11 +128,11 @@
         .time-display .tenths {
             font-size: 0.65em;
             opacity: 0.7;
+            color: var(--green);
         }
-        .panel.running-sw .time-display { box-shadow: 0 0 0 1px rgba(0,212,170,0.2), inset 0 0 20px rgba(0,212,170,0.04); }
-        .panel.running-cd .time-display { box-shadow: 0 0 0 1px rgba(77,159,255,0.2), inset 0 0 20px rgba(77,159,255,0.04); }
-        .tenths.sw { color: var(--sw-accent); }
-        .tenths.cd { color: var(--cd-accent); }
+        .panel.running .time-display {
+            box-shadow: 0 0 0 1px rgba(0,212,170,0.2), inset 0 0 20px rgba(0,212,170,0.04);
+        }
 
         /* ── INPUT ROW ── */
         .input-row {
@@ -168,7 +157,7 @@
             -webkit-appearance: none;
             appearance: none;
         }
-        .time-input:focus { border-color: var(--cd-accent); box-shadow: 0 0 0 3px rgba(77,159,255,0.12); }
+        .time-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,212,170,0.12); }
         .input-sep { color: var(--text-dim); font-weight: 700; font-size: 1.2rem; }
 
         /* ── DUAL SECTION ── */
@@ -192,6 +181,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         .dual-title {
@@ -204,9 +194,9 @@
 
         /* Loop counter badge */
         .loop-badge {
-            background: rgba(240,185,11,0.15);
-            border: 1px solid rgba(240,185,11,0.3);
-            color: var(--gold);
+            background: rgba(0,212,170,0.12);
+            border: 1px solid rgba(0,212,170,0.3);
+            color: var(--green);
             font-size: 0.68rem;
             font-weight: 700;
             font-family: 'JetBrains Mono', monospace;
@@ -215,12 +205,10 @@
             letter-spacing: 0.04em;
             transition: all 0.3s;
         }
-        .loop-badge.pulse {
-            animation: badgePulse 0.4s ease;
-        }
+        .loop-badge.pulse { animation: badgePulse 0.4s ease; }
         @keyframes badgePulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); background: rgba(240,185,11,0.35); }
+            0%   { transform: scale(1); }
+            50%  { transform: scale(1.2); background: rgba(0,212,170,0.3); }
             100% { transform: scale(1); }
         }
 
@@ -238,7 +226,7 @@
             text-transform: uppercase;
             transition: color 0.2s;
         }
-        .toggle-label.on { color: var(--gold); }
+        .toggle-label.on { color: var(--green); }
 
         .slide-toggle {
             position: relative;
@@ -246,7 +234,6 @@
             height: 24px;
             cursor: pointer;
         }
-        .slide-toggle input { display: none; }
         .slider-track {
             position: absolute;
             inset: 0;
@@ -266,23 +253,15 @@
             transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
             box-shadow: 0 1px 4px rgba(0,0,0,0.4);
         }
-        .slide-toggle input:checked + .slider-track {
-            background: rgba(240,185,11,0.2);
-            border-color: var(--gold);
-        }
-        .slide-toggle input:checked + .slider-track + .slider-thumb {
-            left: 25px;
-            background: var(--gold);
-        }
-        /* CSS-only: we need JS to move thumb on input change */
         .slide-toggle.active .slider-track {
-            background: rgba(240,185,11,0.2);
-            border-color: var(--gold);
+            background: rgba(0,212,170,0.2);
+            border-color: var(--green);
         }
         .slide-toggle.active .slider-thumb {
             left: 25px;
-            background: var(--gold);
+            background: var(--green);
         }
+
         .phase-badge {
             font-size: 0.68rem;
             font-weight: 700;
@@ -293,8 +272,8 @@
             border-radius: 20px;
             transition: all 0.3s;
         }
-        .phase-badge.work { background: rgba(240,185,11,0.12); color: var(--gold); border: 1px solid rgba(240,185,11,0.3); }
-        .phase-badge.rest { background: rgba(77,159,255,0.12); color: var(--cd-accent); border: 1px solid rgba(77,159,255,0.3); }
+        .phase-badge.work { background: rgba(0,212,170,0.12); color: var(--green); border: 1px solid rgba(0,212,170,0.3); }
+        .phase-badge.rest { background: rgba(255,255,255,0.07); color: var(--text-mid); border: 1px solid rgba(255,255,255,0.15); }
 
         .dual-inputs-row {
             display: flex;
@@ -308,8 +287,8 @@
             letter-spacing: 0.06em;
             text-transform: uppercase;
         }
-        .dual-group-label.work { color: var(--gold); }
-        .dual-group-label.rest { color: var(--cd-accent); }
+        .dual-group-label.work { color: var(--green); }
+        .dual-group-label.rest { color: var(--text-mid); }
         .dual-input-pair { display: flex; align-items: center; gap: 3px; }
         .dual-input-pair .time-input {
             width: 46px;
@@ -323,7 +302,7 @@
             grid-template-columns: repeat(4, 1fr);
             gap: 7px;
         }
-        .btn-grid.no-lap { grid-template-columns: repeat(3, 1fr); }
+        .btn-grid.three-col { grid-template-columns: repeat(3, 1fr); }
 
         .btn {
             padding: 11px 6px;
@@ -341,58 +320,38 @@
         }
         .btn:active { transform: scale(0.95); }
 
-        /* Stopwatch buttons */
-        .btn-sw-start {
+        /* Start — green for both panels */
+        .btn-start {
             background: linear-gradient(135deg, #00c49a, #00d4aa);
             color: #001a14;
-            border-color: var(--sw-accent);
+            border-color: var(--green);
             box-shadow: 0 3px 12px rgba(0,212,170,0.25);
         }
-        .btn-sw-start:hover { box-shadow: 0 4px 18px rgba(0,212,170,0.4); filter: brightness(1.05); }
+        .btn-start:hover { box-shadow: 0 4px 18px rgba(0,212,170,0.4); filter: brightness(1.05); }
 
-        .btn-sw-stop {
+        /* Stop */
+        .btn-stop {
             background: var(--surface-2);
             border-color: rgba(0,212,170,0.25);
-            color: var(--sw-accent);
+            color: var(--green);
         }
-        .btn-sw-stop:hover { background: var(--surface-3); border-color: rgba(0,212,170,0.5); }
+        .btn-stop:hover { background: var(--surface-3); border-color: rgba(0,212,170,0.5); }
 
-        .btn-sw-lap {
+        /* Lap */
+        .btn-lap {
             background: var(--surface-2);
             border-color: rgba(255,255,255,0.1);
             color: var(--text-mid);
         }
-        .btn-sw-lap:hover { border-color: rgba(255,255,255,0.25); color: #fff; }
+        .btn-lap:hover { border-color: rgba(255,255,255,0.25); color: #fff; }
 
-        .btn-sw-reset {
-            background: transparent;
-            border-color: rgba(255,255,255,0.08);
-            color: var(--text-dim);
-        }
-        .btn-sw-reset:hover { border-color: rgba(255,255,255,0.2); color: var(--text-mid); }
-
-        /* Countdown buttons */
-        .btn-cd-start {
-            background: linear-gradient(135deg, #3a85d4, #4d9fff);
-            color: #fff;
-            border-color: var(--cd-accent);
-            box-shadow: 0 3px 12px rgba(77,159,255,0.25);
-        }
-        .btn-cd-start:hover { box-shadow: 0 4px 18px rgba(77,159,255,0.4); filter: brightness(1.08); }
-
-        .btn-cd-stop {
+        /* Reset — visible, not dim */
+        .btn-reset {
             background: var(--surface-2);
-            border-color: rgba(77,159,255,0.25);
-            color: var(--cd-accent);
+            border-color: rgba(255,255,255,0.15);
+            color: var(--text);
         }
-        .btn-cd-stop:hover { background: var(--surface-3); border-color: rgba(77,159,255,0.5); }
-
-        .btn-cd-reset {
-            background: transparent;
-            border-color: rgba(255,255,255,0.08);
-            color: var(--text-dim);
-        }
-        .btn-cd-reset:hover { border-color: rgba(255,255,255,0.2); color: var(--text-mid); }
+        .btn-reset:hover { border-color: rgba(255,255,255,0.35); color: #fff; background: var(--surface-3); }
 
         /* ── LAPS ── */
         .laps-panel {
@@ -423,14 +382,14 @@
             color: #cbd5e1;
         }
         .lap-row:last-child { border-bottom: none; }
-        .lap-num { color: var(--sw-accent); font-weight: 700; }
+        .lap-num { color: var(--green); font-weight: 700; }
         .no-laps { text-align: center; padding: 14px; color: #374151; font-size: 0.78rem; }
 
         /* ── SETTINGS MODAL ── */
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.75);
             backdrop-filter: blur(6px);
             z-index: 100;
             display: flex;
@@ -442,7 +401,6 @@
             transition: opacity 0.25s;
         }
         .modal-overlay.open { opacity: 1; pointer-events: all; }
-
         .modal {
             background: var(--surface);
             border: 1px solid var(--border-bright);
@@ -457,7 +415,6 @@
             transition: transform 0.25s ease;
         }
         .modal-overlay.open .modal { transform: translateY(0) scale(1); }
-
         .modal-header {
             display: flex;
             align-items: center;
@@ -484,11 +441,7 @@
         }
         .modal-close:hover { color: #fff; background: var(--surface-3); }
 
-        .setting-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+        .setting-group { display: flex; flex-direction: column; gap: 8px; }
         .setting-group-label {
             font-size: 0.68rem;
             font-weight: 700;
@@ -497,11 +450,7 @@
             color: var(--text-dim);
         }
 
-        .alarm-options {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
+        .alarm-options { display: flex; flex-direction: column; gap: 6px; }
         .alarm-option {
             display: flex;
             align-items: center;
@@ -514,7 +463,7 @@
             transition: all 0.2s;
         }
         .alarm-option:hover { border-color: var(--border-bright); }
-        .alarm-option.selected { border-color: var(--cd-accent); background: rgba(77,159,255,0.06); }
+        .alarm-option.selected { border-color: var(--green); background: rgba(0,212,170,0.06); }
         .alarm-option-info { display: flex; flex-direction: column; gap: 2px; }
         .alarm-option-name { font-size: 0.82rem; font-weight: 600; color: var(--text); }
         .alarm-option-desc { font-size: 0.7rem; color: var(--text-dim); }
@@ -542,11 +491,10 @@
         .setting-row-label { font-size: 0.82rem; font-weight: 500; color: var(--text); }
         .setting-row-desc { font-size: 0.7rem; color: var(--text-dim); margin-top: 1px; }
 
-        /* mini toggle for settings */
+        /* mini toggle */
         .mini-toggle {
             position: relative;
-            width: 38px;
-            height: 20px;
+            width: 38px; height: 20px;
             cursor: pointer;
             flex-shrink: 0;
         }
@@ -566,34 +514,28 @@
             border-radius: 50%;
             transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
         }
-        .mini-toggle.on .mini-toggle-track { background: rgba(77,159,255,0.2); border-color: var(--cd-accent); }
-        .mini-toggle.on .mini-toggle-thumb { left: 20px; background: var(--cd-accent); }
+        .mini-toggle.on .mini-toggle-track { background: rgba(0,212,170,0.2); border-color: var(--green); }
+        .mini-toggle.on .mini-toggle-thumb { left: 20px; background: var(--green); }
 
         /* ── SCREEN FLASH ── */
         .flash-overlay {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 200;
-            opacity: 0;
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 200; opacity: 0;
         }
-        .flash-overlay.flashing {
-            animation: screenFlash 1.6s ease;
-        }
+        .flash-overlay.flashing { animation: screenFlash 1.6s ease; }
         @keyframes screenFlash {
-            0%   { opacity: 0; background: rgba(77,159,255,0.0); }
-            8%   { opacity: 1; background: rgba(77,159,255,0.35); }
-            20%  { opacity: 0.1; background: rgba(77,159,255,0.1); }
-            35%  { opacity: 0.8; background: rgba(77,159,255,0.3); }
+            0%   { opacity: 0; background: rgba(0,212,170,0.0); }
+            8%   { opacity: 1; background: rgba(0,212,170,0.4); }
+            20%  { opacity: 0.1; }
+            35%  { opacity: 0.85; background: rgba(0,212,170,0.35); }
             50%  { opacity: 0.05; }
-            65%  { opacity: 0.6; background: rgba(77,159,255,0.2); }
+            65%  { opacity: 0.65; background: rgba(0,212,170,0.25); }
             80%  { opacity: 0.05; }
             100% { opacity: 0; }
         }
 
         .hidden { display: none !important; }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
@@ -607,7 +549,6 @@
             .dual-input-pair .time-input { width: 40px; padding: 7px 2px; }
         }
 
-        /* Number input arrows remove */
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
         input[type=number] { -moz-appearance: textfield; }
@@ -615,52 +556,51 @@
 </head>
 <body>
 
-<!-- Screen flash overlay -->
 <div class="flash-overlay" id="flashOverlay"></div>
 
 <!-- Settings modal -->
 <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
         <div class="modal-header">
-            <div class="modal-title">Ayarlar</div>
+            <div class="modal-title">Settings</div>
             <button class="modal-close" id="modalClose">✕</button>
         </div>
 
         <div class="setting-group">
-            <div class="setting-group-label">Alarm Sesi</div>
+            <div class="setting-group-label">Alarm Sound</div>
             <div class="alarm-options" id="alarmOptions">
                 <div class="alarm-option selected" data-alarm="bells">
                     <div class="alarm-option-info">
-                        <div class="alarm-option-name">Klasik Zil</div>
-                        <div class="alarm-option-desc">Yukarı çıkan üç ton</div>
+                        <div class="alarm-option-name">Classic Bell</div>
+                        <div class="alarm-option-desc">Three ascending tones</div>
                     </div>
                     <button class="alarm-preview" onclick="previewAlarm('bells');event.stopPropagation()">▶</button>
                 </div>
                 <div class="alarm-option" data-alarm="pulse">
                     <div class="alarm-option-info">
-                        <div class="alarm-option-name">Atım</div>
-                        <div class="alarm-option-desc">Hızlı vuruş serisi</div>
+                        <div class="alarm-option-name">Pulse</div>
+                        <div class="alarm-option-desc">Rapid burst series</div>
                     </div>
                     <button class="alarm-preview" onclick="previewAlarm('pulse');event.stopPropagation()">▶</button>
                 </div>
                 <div class="alarm-option" data-alarm="soft">
                     <div class="alarm-option-info">
-                        <div class="alarm-option-name">Yumuşak</div>
-                        <div class="alarm-option-desc">Sakin, köşeli ton</div>
+                        <div class="alarm-option-name">Soft</div>
+                        <div class="alarm-option-desc">Calm triangle tones</div>
                     </div>
                     <button class="alarm-preview" onclick="previewAlarm('soft');event.stopPropagation()">▶</button>
                 </div>
                 <div class="alarm-option" data-alarm="digital">
                     <div class="alarm-option-info">
-                        <div class="alarm-option-name">Dijital</div>
-                        <div class="alarm-option-desc">Retro bip sesi</div>
+                        <div class="alarm-option-name">Digital</div>
+                        <div class="alarm-option-desc">Retro beep</div>
                     </div>
                     <button class="alarm-preview" onclick="previewAlarm('digital');event.stopPropagation()">▶</button>
                 </div>
                 <div class="alarm-option" data-alarm="gong">
                     <div class="alarm-option-info">
                         <div class="alarm-option-name">Gong</div>
-                        <div class="alarm-option-desc">Derin yankılanan ton</div>
+                        <div class="alarm-option-desc">Deep resonating tone</div>
                     </div>
                     <button class="alarm-preview" onclick="previewAlarm('gong');event.stopPropagation()">▶</button>
                 </div>
@@ -668,11 +608,11 @@
         </div>
 
         <div class="setting-group">
-            <div class="setting-group-label">Görsel Efektler</div>
+            <div class="setting-group-label">Visual Effects</div>
             <div class="setting-row">
                 <div>
-                    <div class="setting-row-label">Ekran Flaşı</div>
-                    <div class="setting-row-desc">Süre dolduğunda ekran yanıp söner</div>
+                    <div class="setting-row-label">Screen Flash</div>
+                    <div class="setting-row-desc">Screen blinks when time is up</div>
                 </div>
                 <div class="mini-toggle on" id="flashToggle" onclick="toggleSetting('flash')">
                     <div class="mini-toggle-track"></div>
@@ -689,36 +629,14 @@
         <button class="settings-btn" id="settingsBtn">⚙</button>
     </div>
 
-    <!-- ── STOPWATCH PANEL ── -->
-    <div class="panel" id="swPanel">
-        <div class="panel-header">
-            <div class="panel-title sw">⏱ Kronometre</div>
-        </div>
-
-        <div class="time-display" id="swDisplay">00:00<span class="tenths sw">.0</span></div>
-
-        <div class="btn-grid" id="swBtnGrid">
-            <button class="btn btn-sw-start" id="swStart">Başlat</button>
-            <button class="btn btn-sw-stop" id="swStop">Dur</button>
-            <button class="btn btn-sw-lap" id="swLap">Tur</button>
-            <button class="btn btn-sw-reset" id="swReset">Sıfırla</button>
-        </div>
-
-        <div class="laps-panel" id="lapsPanel">
-            <div class="laps-header">Turlar</div>
-            <div id="lapsList"><div class="no-laps">— Tur kaydı yok —</div></div>
-        </div>
-    </div>
-
-    <!-- ── COUNTDOWN PANEL ── -->
+    <!-- ── COUNTDOWN PANEL (top) ── -->
     <div class="panel" id="cdPanel">
         <div class="panel-header">
-            <div class="panel-title cd">⏳ Geri Sayım</div>
+            <div class="panel-title">⏳ Countdown</div>
         </div>
 
-        <div class="time-display" id="cdDisplay">00:01:00<span class="tenths cd">.0</span></div>
+        <div class="time-display" id="cdDisplay">00:01:00<span class="tenths">.0</span></div>
 
-        <!-- Main countdown inputs -->
         <div class="input-row" id="cdInputRow">
             <input type="number" id="hrsIn" class="time-input" min="0" max="99" value="00" inputmode="numeric">
             <span class="input-sep">:</span>
@@ -727,31 +645,29 @@
             <input type="number" id="secIn" class="time-input" min="0" max="59" value="00" inputmode="numeric">
         </div>
 
-        <!-- Dual / Pomodoro section -->
-        <div class="dual-section" id="dualSection">
+        <div class="dual-section">
             <div class="dual-header">
                 <div class="dual-title-row">
-                    <div class="dual-title">Çift Zamanlayıcı</div>
-                    <div class="loop-badge" id="loopBadge">0 döngü</div>
-                    <div class="phase-badge work hidden" id="phaseBadge">Çalışma</div>
+                    <div class="dual-title">Dual Timer</div>
+                    <div class="loop-badge" id="loopBadge">0 loops</div>
+                    <div class="phase-badge work hidden" id="phaseBadge">Work</div>
                 </div>
                 <div class="slide-toggle-wrap">
-                    <span class="toggle-label" id="toggleLabel">KAPALI</span>
+                    <span class="toggle-label" id="toggleLabel">OFF</span>
                     <div class="slide-toggle" id="dualToggle">
                         <div class="slider-track"></div>
                         <div class="slider-thumb"></div>
                     </div>
                 </div>
             </div>
-
             <div class="dual-inputs-row" id="dualInputsRow">
-                <span class="dual-group-label work">ÇALIŞMA</span>
+                <span class="dual-group-label work">WORK</span>
                 <div class="dual-input-pair">
                     <input type="number" id="workMin" class="time-input" min="0" max="99" value="25" inputmode="numeric">
                     <span class="input-sep">:</span>
                     <input type="number" id="workSec" class="time-input" min="0" max="59" value="00" inputmode="numeric">
                 </div>
-                <span class="dual-group-label rest">DİNLENME</span>
+                <span class="dual-group-label rest">REST</span>
                 <div class="dual-input-pair">
                     <input type="number" id="restMin" class="time-input" min="0" max="99" value="05" inputmode="numeric">
                     <span class="input-sep">:</span>
@@ -760,10 +676,31 @@
             </div>
         </div>
 
-        <div class="btn-grid" id="cdBtnGrid">
-            <button class="btn btn-cd-start" id="cdStart">Başlat</button>
-            <button class="btn btn-cd-stop" id="cdStop">Dur</button>
-            <button class="btn btn-cd-reset" id="cdReset">Sıfırla</button>
+        <div class="btn-grid three-col">
+            <button class="btn btn-start" id="cdStart">Start</button>
+            <button class="btn btn-stop" id="cdStop">Stop</button>
+            <button class="btn btn-reset" id="cdReset">Reset</button>
+        </div>
+    </div>
+
+    <!-- ── STOPWATCH PANEL (bottom) ── -->
+    <div class="panel" id="swPanel">
+        <div class="panel-header">
+            <div class="panel-title">⏱ Stopwatch</div>
+        </div>
+
+        <div class="time-display" id="swDisplay">00:00<span class="tenths">.0</span></div>
+
+        <div class="btn-grid">
+            <button class="btn btn-start" id="swStart">Start</button>
+            <button class="btn btn-stop" id="swStop">Stop</button>
+            <button class="btn btn-lap" id="swLap">Lap</button>
+            <button class="btn btn-reset" id="swReset">Reset</button>
+        </div>
+
+        <div class="laps-panel">
+            <div class="laps-header">Laps</div>
+            <div id="lapsList"><div class="no-laps">— No laps recorded —</div></div>
         </div>
     </div>
 </div>
@@ -775,6 +712,17 @@
     // ── SETTINGS ──
     let selectedAlarm = 'bells';
     let flashEnabled = true;
+
+    // ── AUDIO CONTEXT (persisted to avoid Safari issues) ──
+    let audioCtx = null;
+    function getAudioCtx() {
+        if (!audioCtx || audioCtx.state === 'closed') {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        // Resume if suspended (Safari requires user gesture to resume)
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+    }
 
     // ── STOPWATCH STATE ──
     let swRunning = false;
@@ -790,41 +738,43 @@
     let dualActive = false;
     let dualPhase = 'work';
     let dualLoopCount = 0;
+    let cdStopRequested = false;
 
     // ── ELEMENTS ──
-    const swPanel = document.getElementById('swPanel');
-    const cdPanel = document.getElementById('cdPanel');
-    const swDisplay = document.getElementById('swDisplay');
-    const cdDisplay = document.getElementById('cdDisplay');
-    const swStart = document.getElementById('swStart');
-    const swStop = document.getElementById('swStop');
-    const swLap = document.getElementById('swLap');
-    const swReset = document.getElementById('swReset');
-    const cdStart = document.getElementById('cdStart');
-    const cdStop = document.getElementById('cdStop');
-    const cdReset = document.getElementById('cdReset');
-    const hrsIn = document.getElementById('hrsIn');
-    const minIn = document.getElementById('minIn');
-    const secIn = document.getElementById('secIn');
-    const workMin = document.getElementById('workMin');
-    const workSec = document.getElementById('workSec');
-    const restMin = document.getElementById('restMin');
-    const restSec = document.getElementById('restSec');
-    const lapsList = document.getElementById('lapsList');
+    const swPanel    = document.getElementById('swPanel');
+    const cdPanel    = document.getElementById('cdPanel');
+    const swDisplay  = document.getElementById('swDisplay');
+    const cdDisplay  = document.getElementById('cdDisplay');
+    const swStart    = document.getElementById('swStart');
+    const swStop     = document.getElementById('swStop');
+    const swLap      = document.getElementById('swLap');
+    const swReset    = document.getElementById('swReset');
+    const cdStart    = document.getElementById('cdStart');
+    const cdStop     = document.getElementById('cdStop');
+    const cdReset    = document.getElementById('cdReset');
+    const hrsIn      = document.getElementById('hrsIn');
+    const minIn      = document.getElementById('minIn');
+    const secIn      = document.getElementById('secIn');
+    const workMin    = document.getElementById('workMin');
+    const workSec    = document.getElementById('workSec');
+    const restMin    = document.getElementById('restMin');
+    const restSec    = document.getElementById('restSec');
+    const lapsList   = document.getElementById('lapsList');
     const dualToggle = document.getElementById('dualToggle');
-    const toggleLabel = document.getElementById('toggleLabel');
-    const loopBadge = document.getElementById('loopBadge');
+    const toggleLabel= document.getElementById('toggleLabel');
+    const loopBadge  = document.getElementById('loopBadge');
     const phaseBadge = document.getElementById('phaseBadge');
     const cdInputRow = document.getElementById('cdInputRow');
-    const dualInputsRow = document.getElementById('dualInputsRow');
     const flashOverlay = document.getElementById('flashOverlay');
-    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsBtn  = document.getElementById('settingsBtn');
     const modalOverlay = document.getElementById('modalOverlay');
-    const modalClose = document.getElementById('modalClose');
-    const flashToggle = document.getElementById('flashToggle');
+    const modalClose   = document.getElementById('modalClose');
+    const flashToggle  = document.getElementById('flashToggle');
     const alarmOptions = document.getElementById('alarmOptions');
 
     // ── FORMAT ──
+    function p2(n) { return String(n).padStart(2, '0'); }
+
     function fmtSW(ms) {
         if (ms < 0) ms = 0;
         const totalSec = Math.floor(ms / 1000);
@@ -832,10 +782,10 @@
         const mins = Math.floor((totalSec % 3600) / 60);
         const secs = totalSec % 60;
         const tenth = Math.floor((ms % 1000) / 100);
-        let base = hrs > 0
+        const base = hrs > 0
             ? `${p2(hrs)}:${p2(mins)}:${p2(secs)}`
             : `${p2(mins)}:${p2(secs)}`;
-        return base + `<span class="tenths sw">.${tenth}</span>`;
+        return base + `<span class="tenths">.${tenth}</span>`;
     }
 
     function fmtCD(ms) {
@@ -845,20 +795,12 @@
         const mins = Math.floor((totalSec % 3600) / 60);
         const secs = totalSec % 60;
         const tenth = Math.floor((ms % 1000) / 100);
-        return `${p2(hrs)}:${p2(mins)}:${p2(secs)}<span class="tenths cd">.${tenth}</span>`;
+        return `${p2(hrs)}:${p2(mins)}:${p2(secs)}<span class="tenths">.${tenth}</span>`;
     }
 
-    function p2(n) { return String(n).padStart(2, '0'); }
-
-    // ── DISPLAY ──
     function updateSwDisplay() { swDisplay.innerHTML = fmtSW(swCurrentMs); }
     function updateCdDisplay() { cdDisplay.innerHTML = fmtCD(cdCurrentMs); }
 
-    // ── INPUT FORMAT ──
-    function formatInput(inp) {
-        let v = parseInt(inp.value) || 0;
-        inp.value = p2(Math.max(0, v));
-    }
     function clampInput(inp, max) {
         let v = parseInt(inp.value) || 0;
         v = Math.min(max, Math.max(0, v));
@@ -886,22 +828,22 @@
     }
 
     // ── ALARMS ──
-    window.previewAlarm = function(type) { playAlarm(type); }
+    window.previewAlarm = function(type) { playAlarm(type); };
 
     function playAlarm(type) {
         type = type || selectedAlarm;
         try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const ctx = getAudioCtx();
             if (type === 'bells') {
                 [800, 1000, 1200].forEach((freq, i) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
                     osc.connect(gain); gain.connect(ctx.destination);
                     osc.frequency.value = freq; osc.type = 'sine';
-                    const t = ctx.currentTime + i * 0.25;
-                    gain.gain.setValueAtTime(0.3, t);
-                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-                    osc.start(t); osc.stop(t + 0.25);
+                    const t = ctx.currentTime + i * 0.28;
+                    gain.gain.setValueAtTime(0.35, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+                    osc.start(t); osc.stop(t + 0.28);
                 });
             } else if (type === 'pulse') {
                 for (let i = 0; i < 5; i++) {
@@ -921,7 +863,7 @@
                     osc.connect(gain); gain.connect(ctx.destination);
                     osc.frequency.value = freq; osc.type = 'triangle';
                     const t = ctx.currentTime + i * 0.35;
-                    gain.gain.setValueAtTime(0.25, t);
+                    gain.gain.setValueAtTime(0.28, t);
                     gain.gain.linearRampToValueAtTime(0, t + 0.3);
                     osc.start(t); osc.stop(t + 0.35);
                 });
@@ -932,14 +874,13 @@
                     osc.connect(gain); gain.connect(ctx.destination);
                     osc.frequency.value = 1400 - i*200; osc.type = 'sawtooth';
                     const t = ctx.currentTime + i * 0.2;
-                    gain.gain.setValueAtTime(0.12, t);
+                    gain.gain.setValueAtTime(0.14, t);
                     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
                     osc.start(t); osc.stop(t + 0.18);
                 }
             } else if (type === 'gong') {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
-                const convolver = ctx.createOscillator(); // fake resonance
                 osc.connect(gain); gain.connect(ctx.destination);
                 osc.frequency.setValueAtTime(220, ctx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 1.5);
@@ -948,7 +889,7 @@
                 gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
                 osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 2);
             }
-        } catch(e) {}
+        } catch(e) { console.warn('Audio error:', e); }
     }
 
     function triggerFlash() {
@@ -963,12 +904,15 @@
         playAlarm();
         triggerFlash();
         if (Notification.permission === 'granted') {
-            new Notification('⏰ Süre Doldu', { body: 'Geri sayım tamamlandı.' });
+            new Notification('⏰ Time\'s Up!', { body: 'Countdown finished.' });
         }
         if (document.hidden) {
-            document.title = '⏰ TAMAM! - ProTimer';
+            document.title = '⏰ DONE! - ProTimer';
             document.addEventListener('visibilitychange', function r() {
-                if (!document.hidden) { document.title = 'ProTimer | Stopwatch & Countdown'; document.removeEventListener('visibilitychange', r); }
+                if (!document.hidden) {
+                    document.title = 'ProTimer | Stopwatch & Countdown';
+                    document.removeEventListener('visibilitychange', r);
+                }
             });
         }
     }
@@ -977,7 +921,7 @@
     function swStartFn() {
         if (swRunning) return;
         swRunning = true;
-        swPanel.classList.add('running-sw');
+        swPanel.classList.add('running');
         const t0 = Date.now() - swCurrentMs;
         swIntervalId = setInterval(() => {
             swCurrentMs = Date.now() - t0;
@@ -988,7 +932,7 @@
     function swStopFn() {
         if (swIntervalId) { clearInterval(swIntervalId); swIntervalId = null; }
         swRunning = false;
-        swPanel.classList.remove('running-sw');
+        swPanel.classList.remove('running');
     }
 
     function swLapFn() {
@@ -1009,7 +953,7 @@
     function renderLaps() {
         lapsList.innerHTML = '';
         if (swLaps.length === 0) {
-            lapsList.innerHTML = '<div class="no-laps">— Tur kaydı yok —</div>';
+            lapsList.innerHTML = '<div class="no-laps">— No laps recorded —</div>';
         } else {
             swLaps.forEach(l => {
                 const d = document.createElement('div');
@@ -1018,69 +962,50 @@
                 const h = Math.floor(totalSec/3600), m = Math.floor((totalSec%3600)/60), s = totalSec%60;
                 const tenth = Math.floor((l.ms%1000)/100);
                 const t = h > 0 ? `${p2(h)}:${p2(m)}:${p2(s)}.${tenth}` : `${p2(m)}:${p2(s)}.${tenth}`;
-                d.innerHTML = `<span class="lap-num">Tur ${l.num}</span><span>${t}</span>`;
+                d.innerHTML = `<span class="lap-num">Lap ${l.num}</span><span>${t}</span>`;
                 lapsList.appendChild(d);
             });
         }
     }
 
     // ── COUNTDOWN ──
-    function cdStartFn() {
-        if (cdRunning) return;
-        let ms;
-        if (dualActive) {
-            ms = loadPhaseMs();
-            if (ms <= 0) { alert('Geçerli faz için süre giriniz.'); return; }
-        } else {
-            ms = cdCurrentMs > 0 ? cdCurrentMs : readTimerMs();
-            if (ms <= 0) { alert('Geri sayım süresi giriniz.'); return; }
-        }
+    function cdStopFn() {
+        cdStopRequested = true;
+        if (cdIntervalId) { clearInterval(cdIntervalId); cdIntervalId = null; }
+        cdRunning = false;
+        cdPanel.classList.remove('running');
+    }
+
+    function cdRunPhase(ms) {
+        if (cdStopRequested) return;
         cdCurrentMs = ms;
         cdRunning = true;
-        cdPanel.classList.add('running-cd');
+        cdPanel.classList.add('running');
         const t0 = Date.now();
-        const init = cdCurrentMs;
+        const init = ms;
         cdIntervalId = setInterval(() => {
+            if (cdStopRequested) {
+                clearInterval(cdIntervalId); cdIntervalId = null;
+                cdRunning = false; cdPanel.classList.remove('running');
+                return;
+            }
             cdCurrentMs = init - (Date.now() - t0);
             if (cdCurrentMs <= 0) {
                 cdCurrentMs = 0;
                 updateCdDisplay();
-                cdStopFn(false);
+                clearInterval(cdIntervalId); cdIntervalId = null;
+                cdRunning = false; cdPanel.classList.remove('running');
                 notify();
-                if (dualActive) {
+                if (!cdStopRequested && dualActive) {
                     dualPhase = dualPhase === 'work' ? 'rest' : 'work';
                     if (dualPhase === 'work') {
                         dualLoopCount++;
                         updateLoopBadge();
                     }
                     updatePhaseBadge();
-                    let nextMs = loadPhaseMs();
+                    const nextMs = loadPhaseMs();
                     if (nextMs > 0) {
-                        setTimeout(() => {
-                            cdCurrentMs = nextMs;
-                            cdRunning = true;
-                            cdPanel.classList.add('running-cd');
-                            const t1 = Date.now();
-                            const init2 = cdCurrentMs;
-                            cdIntervalId = setInterval(() => {
-                                cdCurrentMs = init2 - (Date.now() - t1);
-                                if (cdCurrentMs <= 0) {
-                                    cdCurrentMs = 0;
-                                    updateCdDisplay();
-                                    cdStopFn(false);
-                                    notify();
-                                    if (dualActive) {
-                                        dualPhase = dualPhase === 'work' ? 'rest' : 'work';
-                                        if (dualPhase === 'work') { dualLoopCount++; updateLoopBadge(); }
-                                        updatePhaseBadge();
-                                        // Continue via recursive restart
-                                        setTimeout(() => { if (dualActive) cdStartFn(); }, 200);
-                                    }
-                                    return;
-                                }
-                                updateCdDisplay();
-                            }, 50);
-                        }, 300);
+                        setTimeout(() => { if (!cdStopRequested) cdRunPhase(nextMs); }, 300);
                     }
                 }
                 return;
@@ -1089,32 +1014,35 @@
         }, 50);
     }
 
-    function cdStopFn(fullStop = true) {
-        if (cdIntervalId) { clearInterval(cdIntervalId); cdIntervalId = null; }
-        cdRunning = false;
-        cdPanel.classList.remove('running-cd');
-        if (fullStop) {
-            // reset dual phase display
+    function cdStartFn() {
+        if (cdRunning) return;
+        cdStopRequested = false;
+        let ms;
+        if (dualActive) {
+            ms = loadPhaseMs();
+            if (ms <= 0) { alert('Please set a valid duration for the current phase.'); return; }
+        } else {
+            ms = cdCurrentMs > 0 ? cdCurrentMs : readTimerMs();
+            if (ms <= 0) { alert('Please set a countdown time.'); return; }
         }
+        cdRunPhase(ms);
     }
 
     function cdResetFn() {
-        cdStopFn(true);
+        cdStopFn();
         dualPhase = 'work';
         dualLoopCount = 0;
         updateLoopBadge();
         updatePhaseBadge();
-        if (dualActive) {
-            cdCurrentMs = readWorkMs();
-        } else {
-            cdCurrentMs = readTimerMs();
-        }
+        cdCurrentMs = dualActive ? readWorkMs() : readTimerMs();
         updateCdDisplay();
     }
 
     // ── DUAL TOGGLE ──
     function updateLoopBadge() {
-        loopBadge.textContent = dualLoopCount + ' döngü';
+        if (!dualActive) return;
+        loopBadge.style.display = '';
+        loopBadge.textContent = dualLoopCount + ' loop' + (dualLoopCount !== 1 ? 's' : '');
         loopBadge.classList.add('pulse');
         loopBadge.addEventListener('animationend', () => loopBadge.classList.remove('pulse'), { once: true });
     }
@@ -1124,10 +1052,10 @@
             phaseBadge.classList.remove('hidden', 'work', 'rest');
             if (dualPhase === 'work') {
                 phaseBadge.classList.add('work');
-                phaseBadge.textContent = '🔥 Çalışma';
+                phaseBadge.textContent = '🔥 Work';
             } else {
                 phaseBadge.classList.add('rest');
-                phaseBadge.textContent = '💤 Dinlenme';
+                phaseBadge.textContent = '💤 Rest';
             }
         } else {
             phaseBadge.classList.add('hidden');
@@ -1135,13 +1063,16 @@
     }
 
     dualToggle.addEventListener('click', () => {
-        if (cdRunning) return; // don't toggle while running
+        if (cdRunning) return;
         dualActive = !dualActive;
+        cdStopRequested = false;
         if (dualActive) {
             dualToggle.classList.add('active');
-            toggleLabel.textContent = 'AÇIK';
+            toggleLabel.textContent = 'ON';
             toggleLabel.classList.add('on');
             cdInputRow.classList.add('hidden');
+            dualInputsRow.style.display = 'flex';
+            loopBadge.style.display = '';
             dualPhase = 'work';
             dualLoopCount = 0;
             updateLoopBadge();
@@ -1149,10 +1080,12 @@
             cdCurrentMs = readWorkMs();
         } else {
             dualToggle.classList.remove('active');
-            toggleLabel.textContent = 'KAPALI';
+            toggleLabel.textContent = 'OFF';
             toggleLabel.classList.remove('on');
             cdInputRow.classList.remove('hidden');
             phaseBadge.classList.add('hidden');
+            dualInputsRow.style.display = 'none';
+            loopBadge.style.display = 'none';
             dualLoopCount = 0;
             updateLoopBadge();
             cdCurrentMs = readTimerMs();
@@ -1180,30 +1113,24 @@
         }
     };
 
+    // Warm up AudioContext on first user interaction
+    document.addEventListener('touchstart', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
+    document.addEventListener('click', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
+
     // ── INPUT EVENTS ──
     [hrsIn, minIn, secIn].forEach(inp => {
         inp.addEventListener('blur', () => {
             clampInput(inp, inp === hrsIn ? 99 : 59);
-            if (!cdRunning && !dualActive) {
-                cdCurrentMs = readTimerMs();
-                updateCdDisplay();
-            }
+            if (!cdRunning && !dualActive) { cdCurrentMs = readTimerMs(); updateCdDisplay(); }
         });
         inp.addEventListener('input', () => {
-            if (!cdRunning && !dualActive) {
-                cdCurrentMs = readTimerMs();
-                updateCdDisplay();
-            }
+            if (!cdRunning && !dualActive) { cdCurrentMs = readTimerMs(); updateCdDisplay(); }
         });
     });
-
     [workMin, workSec, restMin, restSec].forEach(inp => {
         inp.addEventListener('blur', () => {
             clampInput(inp, inp === workMin || inp === restMin ? 99 : 59);
-            if (!cdRunning && dualActive) {
-                cdCurrentMs = loadPhaseMs();
-                updateCdDisplay();
-            }
+            if (!cdRunning && dualActive) { cdCurrentMs = loadPhaseMs(); updateCdDisplay(); }
         });
     });
 
@@ -1213,23 +1140,10 @@
     swLap.addEventListener('click', swLapFn);
     swReset.addEventListener('click', swResetFn);
     cdStart.addEventListener('click', cdStartFn);
-    cdStop.addEventListener('click', () => {
-        cdStopFn(true);
-        // stop also deactivates dual auto-cycle
-    });
+    cdStop.addEventListener('click', cdStopFn);
     cdReset.addEventListener('click', cdResetFn);
 
-    // cdStop should fully halt including dual cycling
-    cdStop.addEventListener('click', () => {}, { once: false });
-
-    // Override cdStop to also prevent pending restarts
-    let stopSignal = 0;
-    const origCdStop = cdStop.onclick;
-    document.getElementById('cdStop').addEventListener('click', () => {
-        stopSignal++;
-    });
-
-    // ── NOTIFICATION PERMISSION ──
+    // Notification permission
     document.addEventListener('click', function req() {
         if (Notification.permission === 'default') Notification.requestPermission();
         document.removeEventListener('click', req);
@@ -1240,7 +1154,7 @@
     updateSwDisplay();
     updateCdDisplay();
     renderLaps();
-    updateLoopBadge();
+    // updateLoopBadge();
 })();
 </script>
 </body>
