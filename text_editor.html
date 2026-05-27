@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Text Editor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -26,19 +26,16 @@
 }
 body,html{background:var(--bg);font-family:var(--font);transition:background .25s,color .25s}
 .shell{min-height:100vh;background:var(--bg);padding:0 0 2rem;transition:background .25s}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.25rem;height:52px;display:flex;align-items:center;gap:10px;transition:background .25s,border-color .25s}
+.content{padding:1.4rem 1.25rem 0}
+.page-header{margin-bottom:1.25rem;display:flex;align-items:center;gap:9px}
+.page-header-left{display:flex;align-items:center;gap:9px;flex:1}
 .brand-icon{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#4a9eff,#2563eb);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .brand-icon i{color:#fff;font-size:14px}
-.brand-name{font-size:13px;font-weight:500;color:var(--text2);flex:1}
-.brand-name b{color:var(--text);font-weight:600}
-.theme-btn{width:32px;height:32px;border-radius:8px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+.page-title{font-size:20px;font-weight:600;color:var(--text);letter-spacing:-.02em;line-height:1}
+.theme-btn{width:32px;height:32px;border-radius:8px;background:var(--surface);border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;flex-shrink:0}
 .theme-btn:hover{background:var(--border);color:var(--text)}
 .theme-btn:active{transform:scale(.93)}
 .theme-btn i{font-size:16px}
-.content{padding:1.4rem 1.25rem 0}
-.page-header{margin-bottom:1.25rem}
-.page-title{font-size:20px;font-weight:600;color:var(--text);letter-spacing:-.02em;line-height:1}
-.page-sub{font-size:12px;color:var(--text3);margin-top:4px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1rem .9rem;margin-bottom:1rem;transition:background .25s,border-color .25s}
 .card-label-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .card-label{font-size:10px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);display:flex;align-items:center;gap:5px}
@@ -65,34 +62,27 @@ textarea:focus{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-glo
 [data-theme="light"] .btn-danger{border-color:rgba(201,64,64,.25);color:var(--danger)}
 [data-theme="light"] .btn-danger:hover{background:rgba(201,64,64,.14)}
 .btn-danger:active{transform:scale(.97)}
-.btn i{font-size:15px}
 .out-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .copy-ok{font-size:11px;color:var(--success);opacity:0;transition:opacity .3s;display:flex;align-items:center;gap:4px}
 
-/* Mobile: bigger textareas, auto light theme */
 @media(max-width:768px){
   textarea{font-size:16px;padding:14px 16px;min-height:42vh}
   .btn{padding:10px 16px;font-size:14px}
-  .btn i{font-size:16px}
   .content{padding:1rem 1rem 0}
 }
-/* Desktop default stays dark (no override needed, :root is dark) */
-/* Desktop explicit dark stays as :root */
 </style>
 </head>
 <body>
 <div class="shell" id="shell">
-  <div class="topbar">
-    <div class="brand-icon"><i class="ti ti-text-size"></i></div>
-    <div class="brand-name"><b>Text</b> Editor</div>
-    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Temayı değiştir" aria-label="Temayı değiştir">
-      <i class="ti ti-sun" id="themeIcon"></i>
-    </button>
-  </div>
   <div class="content">
     <div class="page-header">
-      <div class="page-title">Text Editor</div>
-      <div class="page-sub">Transform and clean your text</div>
+      <div class="page-header-left">
+        <div class="brand-icon"><i class="ti ti-text-size"></i></div>
+        <div class="page-title">Text Editor</div>
+      </div>
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Temayı değiştir" aria-label="Temayı değiştir">
+        <i class="ti ti-sun" id="themeIcon"></i>
+      </button>
     </div>
 
     <div class="card">
@@ -105,10 +95,10 @@ textarea:focus{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-glo
       </div>
       <textarea id="inp" placeholder="Type or paste your text here…" aria-label="Input text"></textarea>
       <div class="btn-row" role="toolbar" aria-label="Text transformations">
-        <button class="btn btn-default" onclick="transform('upper')"><i class="ti ti-letter-case-upper"></i>Uppercase</button>
-        <button class="btn btn-default" onclick="transform('lower')"><i class="ti ti-letter-case-lower"></i>Lowercase</button>
-        <button class="btn btn-default" onclick="transform('title')"><i class="ti ti-letter-case"></i>Title Case</button>
-        <button class="btn btn-default" onclick="transform('trim')"><i class="ti ti-space"></i>Remove Extra Spaces</button>
+        <button class="btn btn-default" onclick="transform('upper')">Uppercase</button>
+        <button class="btn btn-default" onclick="transform('lower')">Lowercase</button>
+        <button class="btn btn-default" onclick="transform('title')">Title Case</button>
+        <button class="btn btn-default" onclick="transform('trim')">Remove Extra Spaces</button>
         <button class="btn btn-danger" onclick="clearAll()"><i class="ti ti-trash"></i>Clear All</button>
       </div>
     </div>
@@ -129,11 +119,9 @@ textarea:focus{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-glo
 <script>
 const inp = document.getElementById('inp');
 const out = document.getElementById('out');
-const shell = document.getElementById('shell');
 const themeIcon = document.getElementById('themeIcon');
 let lang = 'en';
 
-// Theme: detect mobile and default to light, desktop to dark
 function isMobile() { return window.innerWidth <= 768; }
 let currentTheme = isMobile() ? 'light' : 'dark';
 
@@ -153,7 +141,6 @@ function toggleTheme() {
   applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
 }
 
-// Init theme: saved preference > mobile default light > desktop default dark
 (function(){
   let saved = null;
   try { saved = localStorage.getItem('te-theme'); } catch(e){}
@@ -181,8 +168,7 @@ function removeExtraSpaces(text) {
   ).join('\n\n');
 }
 
-// Title case with exceptions
-const EN_EXCEPTIONS = new Set(['of', 'on', 'and', 'in', 'at', 'to', 'for', 'or', 'nor']);
+const EN_EXCEPTIONS = new Set(['of', 'on', 'and', 'a', 'an', 'the', 'in', 'at', 'to', 'for', 'but', 'or', 'nor']);
 const TR_EXCEPTIONS = new Set(['ve']);
 
 function toTitleCase(text) {
@@ -190,7 +176,6 @@ function toTitleCase(text) {
     const words = text.split(/(\s+)/);
     return words.map((token, idx) => {
       if (/^\s+$/.test(token)) return token;
-      // Keep exception lowercase unless it's the first non-space word
       const isFirstWord = words.slice(0, idx).every(t => /^\s+$/.test(t));
       const lower = token.toLocaleLowerCase('tr-TR');
       if (!isFirstWord && TR_EXCEPTIONS.has(lower)) return lower;
@@ -200,7 +185,6 @@ function toTitleCase(text) {
       return upper + rest.toLocaleLowerCase('tr-TR');
     }).join('');
   }
-  // English
   const words = text.split(/(\s+)/);
   return words.map((token, idx) => {
     if (/^\s+$/.test(token)) return token;
