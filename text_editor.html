@@ -1,0 +1,161 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a2b40;--surface:#223349;--surface2:#2a3e58;
+  --border:#344f6a;--border2:#4a6585;
+  --accent:#4a9eff;--accent-glow:rgba(74,158,255,.14);
+  --text:#eef2f8;--text2:#a0b4cc;--text3:#6a88a6;
+  --success:#3ecf8e;--danger:#ff7070;--danger-bg:rgba(255,112,112,.1);
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace
+}
+body,html{background:var(--bg);font-family:var(--font)}
+.shell{min-height:100vh;background:var(--bg);padding:0 0 2rem}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.25rem;height:52px;display:flex;align-items:center;gap:10px}
+.brand-icon{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#4a9eff,#2563eb);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-icon i{color:#fff;font-size:14px}
+.brand-name{font-size:13px;font-weight:500;color:var(--text2)}
+.brand-name b{color:var(--text);font-weight:600}
+.content{padding:1.4rem 1.25rem 0}
+.page-header{margin-bottom:1.25rem}
+.page-title{font-size:20px;font-weight:600;color:var(--text);letter-spacing:-.02em;line-height:1}
+.page-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1rem .9rem;margin-bottom:1rem}
+.card-label-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.card-label{font-size:10px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);display:flex;align-items:center;gap:5px}
+.card-label i{font-size:13px}
+.lang-toggle{display:flex;border:1px solid var(--border2);border-radius:6px;overflow:hidden}
+.lang-btn{padding:3px 10px;font-size:11px;font-weight:500;font-family:var(--font);background:transparent;border:none;cursor:pointer;color:var(--text3);transition:all .15s;-webkit-tap-highlight-color:transparent}
+.lang-btn.active{background:rgba(74,158,255,.18);color:var(--accent)}
+textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;font-family:var(--mono);color:var(--text);resize:none;overflow:hidden;min-height:96px;line-height:1.65;outline:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s;caret-color:var(--accent)}
+textarea::placeholder{color:var(--text3)}
+textarea:focus{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-glow)}
+.btn-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;font-size:12px;font-family:var(--font);font-weight:500;border-radius:8px;cursor:pointer;white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.btn-default{background:var(--surface2);border:1px solid var(--border2);color:var(--text2)}
+.btn-default:hover{background:#2e4560;border-color:#5a7898;color:var(--text)}
+.btn-default:active{transform:scale(.97)}
+.btn-accent{background:rgba(74,158,255,.14);border:1px solid rgba(74,158,255,.3);color:var(--accent)}
+.btn-accent:hover{background:rgba(74,158,255,.24);border-color:rgba(74,158,255,.5)}
+.btn-accent:active{transform:scale(.97)}
+.btn-danger{background:var(--danger-bg);border:1px solid rgba(255,112,112,.25);color:var(--danger)}
+.btn-danger:hover{background:rgba(255,112,112,.18);border-color:rgba(255,112,112,.45)}
+.btn-danger:active{transform:scale(.97)}
+.btn i{font-size:14px}
+.out-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.copy-ok{font-size:11px;color:var(--success);opacity:0;transition:opacity .3s;display:flex;align-items:center;gap:4px}
+</style>
+
+<div class="shell">
+  <div class="content">
+    <div class="page-header">
+      <div class="page-title">Text Editor</div>
+      <div class="page-sub">Transform and clean your text</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label-row">
+        <div class="card-label"><i class="ti ti-pencil" aria-hidden="true"></i>Input</div>
+        <div class="lang-toggle" role="group" aria-label="Language selection">
+          <button class="lang-btn active" id="btn-en" onclick="setLang('en')" aria-pressed="true">EN</button>
+          <button class="lang-btn" id="btn-tr" onclick="setLang('tr')" aria-pressed="false">TR</button>
+        </div>
+      </div>
+      <textarea id="inp" placeholder="Type or paste your text here…" aria-label="Input text"></textarea>
+      <div class="btn-row" role="toolbar" aria-label="Text transformations">
+        <button class="btn btn-default" onclick="transform('upper')"><i class="ti ti-letter-case-upper" aria-hidden="true"></i>Uppercase</button>
+        <button class="btn btn-default" onclick="transform('lower')"><i class="ti ti-letter-case-lower" aria-hidden="true"></i>Lowercase</button>
+        <button class="btn btn-default" onclick="transform('title')"><i class="ti ti-letter-case" aria-hidden="true"></i>Title Case</button>
+        <button class="btn btn-default" onclick="transform('trim')"><i class="ti ti-space" aria-hidden="true"></i>Remove Extra Spaces</button>
+        <button class="btn btn-danger" onclick="clearAll()"><i class="ti ti-trash" aria-hidden="true"></i>Clear All</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="out-header">
+        <div class="card-label"><i class="ti ti-check" aria-hidden="true"></i>Output</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="copy-ok" id="cf"><i class="ti ti-check" aria-hidden="true"></i>Copied!</span>
+          <button class="btn btn-accent" onclick="copyOut()" aria-label="Copy output text"><i class="ti ti-copy" aria-hidden="true"></i>Copy</button>
+        </div>
+      </div>
+      <textarea id="out" placeholder="Transformed text will appear here, or type directly…" aria-label="Output text"></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+const inp=document.getElementById('inp');
+const out=document.getElementById('out');
+let lang='en';
+
+function setLang(l){
+  lang=l;
+  document.getElementById('btn-en').classList.toggle('active',l==='en');
+  document.getElementById('btn-tr').classList.toggle('active',l==='tr');
+  document.getElementById('btn-en').setAttribute('aria-pressed',l==='en');
+  document.getElementById('btn-tr').setAttribute('aria-pressed',l==='tr');
+}
+
+function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px'}
+inp.addEventListener('input',()=>autoResize(inp));
+inp.addEventListener('keydown',()=>setTimeout(()=>autoResize(inp),0));
+out.addEventListener('input',()=>autoResize(out));
+out.addEventListener('keydown',()=>setTimeout(()=>autoResize(out),0));
+
+function removeExtraSpaces(text){
+  const paragraphs=text.split(/\n{2,}/);
+  return paragraphs.map(para=>
+    para.split('\n').map(l=>l.trim()).filter(l=>l.length>0).join(' ').replace(/[ \t]+/g,' ').trim()
+  ).join('\n\n');
+}
+
+function toTitleCase(text){
+  if(lang==='tr'){
+    return text.replace(/\S+/g,w=>{
+      const first=w.charAt(0);
+      const rest=w.slice(1);
+      let upper=first==='i'?'İ':first==='ı'?'I':first.toLocaleUpperCase('tr-TR');
+      return upper+rest.toLocaleLowerCase('tr-TR');
+    });
+  }
+  return text.replace(/\S+/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
+}
+function toUpper(t){return lang==='tr'?t.toLocaleUpperCase('tr-TR'):t.toUpperCase()}
+function toLower(t){return lang==='tr'?t.toLocaleLowerCase('tr-TR'):t.toLowerCase()}
+
+function getSource(){
+  // Use output if it has content, otherwise fall back to input
+  const outVal=out.value.trim();
+  return outVal.length>0 ? out.value : inp.value;
+}
+
+function transform(type){
+  let t=getSource();
+  if(!t.trim())return;
+  if(type==='upper') t=toUpper(t);
+  else if(type==='lower') t=toLower(t);
+  else if(type==='title') t=toTitleCase(t);
+  else if(type==='trim') t=removeExtraSpaces(t);
+  out.value=t;
+  autoResize(out);
+}
+
+function clearAll(){
+  inp.value='';out.value='';
+  inp.style.height='';out.style.height='';
+  inp.focus();
+}
+
+function copyOut(){
+  const val=out.value||inp.value;
+  if(!val)return;
+  navigator.clipboard.writeText(val).then(()=>{
+    const cf=document.getElementById('cf');
+    cf.style.opacity='1';
+    setTimeout(()=>cf.style.opacity='0',1500);
+  }).catch(()=>{out.select();document.execCommand('copy')});
+}
+
+autoResize(inp);
+</script>
