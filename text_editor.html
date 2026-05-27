@@ -44,7 +44,7 @@ body,html{background:var(--bg);font-family:var(--font);transition:background .25
 .lang-btn{padding:3px 10px;font-size:11px;font-weight:500;font-family:var(--font);background:transparent;border:none;cursor:pointer;color:var(--text3);transition:all .15s;-webkit-tap-highlight-color:transparent}
 .lang-btn.active{background:rgba(74,158,255,.18);color:var(--accent)}
 [data-theme="light"] .lang-btn.active{background:rgba(33,117,204,.15);color:var(--accent)}
-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:15px;font-family:var(--mono);color:var(--text);resize:none;overflow:hidden;line-height:1.65;outline:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s,background .25s,color .25s;caret-color:var(--accent)}
+textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:15px;font-family:var(--mono);color:var(--text);resize:none;overflow:hidden;line-height:1.65;outline:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s,background .25s,color .25s;caret-color:var(--accent);min-height:80px}
 textarea::placeholder{color:var(--text3)}
 textarea:focus{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-glow)}
 .btn-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
@@ -66,9 +66,10 @@ textarea:focus{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-glo
 .copy-ok{font-size:11px;color:var(--success);opacity:0;transition:opacity .3s;display:flex;align-items:center;gap:4px}
 
 @media(max-width:768px){
-  textarea{font-size:16px;padding:14px 16px;min-height:30vh}
+  textarea{font-size:16px;padding:14px 16px;min-height:80px}
   .btn{padding:10px 16px;font-size:14px}
   .content{padding:1rem 1rem 0}
+  .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 }
 </style>
 </head>
@@ -99,7 +100,8 @@ textarea:focus{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-glo
         <button class="btn btn-default" onclick="transform('lower')">Lowercase</button>
         <button class="btn btn-default" onclick="transform('title')">Title Case</button>
         <button class="btn btn-default" onclick="transform('trim')">Remove Extra Spaces</button>
-        <button class="btn btn-danger" onclick="clearAll()"><i class="ti ti-trash"></i>Clear All</button>
+        <button class="btn btn-accent" onclick="pasteIn()">Paste</button>
+        <button class="btn btn-danger" onclick="clearAll()">Clear All</button>
       </div>
     </div>
 
@@ -168,7 +170,7 @@ function removeExtraSpaces(text) {
   ).join('\n\n');
 }
 
-const EN_EXCEPTIONS = new Set(['of', 'on', 'and', 'in', 'at', 'to', 'for', or', 'nor']);
+const EN_EXCEPTIONS = new Set(['of', 'on', 'and', 'in', 'at', 'to', 'for', 'or', 'nor']);
 const TR_EXCEPTIONS = new Set(['ve']);
 
 function toTitleCase(text) {
@@ -218,6 +220,19 @@ function clearAll() {
   inp.value = ''; out.value = '';
   inp.style.height = ''; out.style.height = '';
   inp.focus();
+}
+
+function pasteIn() {
+  navigator.clipboard.readText().then(text => {
+    if (!text) return;
+    inp.value = text;
+    autoResize(inp);
+    inp.focus();
+  }).catch(() => {
+    inp.focus();
+    document.execCommand('paste');
+    autoResize(inp);
+  });
 }
 
 function copyOut() {
