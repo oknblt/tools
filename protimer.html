@@ -27,9 +27,6 @@
 
         * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; }
 
-#dualInputsRow { display: none; }
-#loopBadge { display: none; }
-
         body {
             font-family: 'DM Sans', system-ui, sans-serif;
             background: var(--bg);
@@ -192,7 +189,9 @@
             color: var(--text-mid);
         }
 
-        /* Loop counter badge */
+        /* Loop counter badge — hidden until dual ON */
+        #loopBadge { display: none; }
+        #dualInputsRow { display: none; }
         .loop-badge {
             background: rgba(0,212,170,0.12);
             border: 1px solid rgba(0,212,170,0.3);
@@ -738,7 +737,6 @@
     let dualActive = false;
     let dualPhase = 'work';
     let dualLoopCount = 0;
-    let cdStopRequested = false;
 
     // ── ELEMENTS ──
     const swPanel    = document.getElementById('swPanel');
@@ -969,22 +967,27 @@
     }
 
     // ── COUNTDOWN ──
+    // Use a generation counter: each new cdRunPhase call gets a unique gen.
+    // When stop is pressed we increment cdGen, so any pending setTimeout/setInterval
+    // from the old gen will see a mismatch and bail out.
+    let cdGen = 0;
+
     function cdStopFn() {
-        cdStopRequested = true;
+        cdGen++;                     // invalidate any running phase
         if (cdIntervalId) { clearInterval(cdIntervalId); cdIntervalId = null; }
         cdRunning = false;
         cdPanel.classList.remove('running');
     }
 
-    function cdRunPhase(ms) {
-        if (cdStopRequested) return;
+    function cdRunPhase(ms, gen) {
+        if (gen !== cdGen) return;   // stale call — a stop was issued
         cdCurrentMs = ms;
         cdRunning = true;
         cdPanel.classList.add('running');
         const t0 = Date.now();
         const init = ms;
         cdIntervalId = setInterval(() => {
-            if (cdStopRequested) {
+            if (gen !== cdGen) {     // stop was pressed mid-run
                 clearInterval(cdIntervalId); cdIntervalId = null;
                 cdRunning = false; cdPanel.classList.remove('running');
                 return;
@@ -996,7 +999,7 @@
                 clearInterval(cdIntervalId); cdIntervalId = null;
                 cdRunning = false; cdPanel.classList.remove('running');
                 notify();
-                if (!cdStopRequested && dualActive) {
+                if (gen === cdGen && dualActive) {
                     dualPhase = dualPhase === 'work' ? 'rest' : 'work';
                     if (dualPhase === 'work') {
                         dualLoopCount++;
@@ -1005,7 +1008,7 @@
                     updatePhaseBadge();
                     const nextMs = loadPhaseMs();
                     if (nextMs > 0) {
-                        setTimeout(() => { if (!cdStopRequested) cdRunPhase(nextMs); }, 300);
+                        setTimeout(() => cdRunPhase(nextMs, gen), 300);
                     }
                 }
                 return;
@@ -1016,7 +1019,6 @@
 
     function cdStartFn() {
         if (cdRunning) return;
-        cdStopRequested = false;
         let ms;
         if (dualActive) {
             ms = loadPhaseMs();
@@ -1025,7 +1027,7 @@
             ms = cdCurrentMs > 0 ? cdCurrentMs : readTimerMs();
             if (ms <= 0) { alert('Please set a countdown time.'); return; }
         }
-        cdRunPhase(ms);
+        cdRunPhase(ms, cdGen);
     }
 
     function cdResetFn() {
@@ -1040,11 +1042,14 @@
 
     // ── DUAL TOGGLE ──
     function updateLoopBadge() {
-        if (!dualActive) return;
-        loopBadge.style.display = '';
         loopBadge.textContent = dualLoopCount + ' loop' + (dualLoopCount !== 1 ? 's' : '');
-        loopBadge.classList.add('pulse');
-        loopBadge.addEventListener('animationend', () => loopBadge.classList.remove('pulse'), { once: true });
+        if (dualActive) {
+            loopBadge.style.display = '';
+            loopBadge.classList.add('pulse');
+            loopBadge.addEventListener('animationend', () => loopBadge.classList.remove('pulse'), { once: true });
+        } else {
+            loopBadge.style.display = 'none';
+        }
     }
 
     function updatePhaseBadge() {
@@ -1065,13 +1070,12 @@
     dualToggle.addEventListener('click', () => {
         if (cdRunning) return;
         dualActive = !dualActive;
-        cdStopRequested = false;
         if (dualActive) {
             dualToggle.classList.add('active');
             toggleLabel.textContent = 'ON';
             toggleLabel.classList.add('on');
             cdInputRow.classList.add('hidden');
-            dualInputsRow.style.display = 'flex';
+            document.getElementById('dualInputsRow').style.display = 'flex';
             loopBadge.style.display = '';
             dualPhase = 'work';
             dualLoopCount = 0;
@@ -1083,11 +1087,10 @@
             toggleLabel.textContent = 'OFF';
             toggleLabel.classList.remove('on');
             cdInputRow.classList.remove('hidden');
-            phaseBadge.classList.add('hidden');
-            dualInputsRow.style.display = 'none';
+            document.getElementById('dualInputsRow').style.display = 'none';
             loopBadge.style.display = 'none';
+            phaseBadge.classList.add('hidden');
             dualLoopCount = 0;
-            updateLoopBadge();
             cdCurrentMs = readTimerMs();
         }
         updateCdDisplay();
@@ -1118,6 +1121,9 @@
     document.addEventListener('click', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
 
     // ── INPUT EVENTS ──
+document.querySelectorAll('.time-input').forEach(inp => {
+    inp.addEventListener('focus', () => inp.select());
+});
     [hrsIn, minIn, secIn].forEach(inp => {
         inp.addEventListener('blur', () => {
             clampInput(inp, inp === hrsIn ? 99 : 59);
@@ -1154,7 +1160,6 @@
     updateSwDisplay();
     updateCdDisplay();
     renderLaps();
-    // updateLoopBadge();
 })();
 </script>
 </body>
