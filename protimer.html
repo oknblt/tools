@@ -980,14 +980,14 @@
     }
 
     function cdRunPhase(ms, gen) {
-        if (gen !== cdGen) return;   // stale call — a stop was issued
+        if (gen !== cdGen) return;
         cdCurrentMs = ms;
         cdRunning = true;
         cdPanel.classList.add('running');
         const t0 = Date.now();
         const init = ms;
         cdIntervalId = setInterval(() => {
-            if (gen !== cdGen) {     // stop was pressed mid-run
+            if (gen !== cdGen) {
                 clearInterval(cdIntervalId); cdIntervalId = null;
                 cdRunning = false; cdPanel.classList.remove('running');
                 return;
@@ -998,19 +998,23 @@
                 updateCdDisplay();
                 clearInterval(cdIntervalId); cdIntervalId = null;
                 cdRunning = false; cdPanel.classList.remove('running');
-                notify();
+
+                // Schedule next phase BEFORE notify so Safari audio doesn't block it
                 if (gen === cdGen && dualActive) {
                     dualPhase = dualPhase === 'work' ? 'rest' : 'work';
                     if (dualPhase === 'work') {
                         dualLoopCount++;
-                        updateLoopBadge();
                     }
+                    updateLoopBadge();
                     updatePhaseBadge();
                     const nextMs = loadPhaseMs();
                     if (nextMs > 0) {
-                        setTimeout(() => cdRunPhase(nextMs, gen), 300);
+                        setTimeout(() => cdRunPhase(nextMs, gen), 400);
                     }
                 }
+
+                // notify after scheduling so audio doesn't block setTimeout
+                notify();
                 return;
             }
             updateCdDisplay();
@@ -1044,7 +1048,7 @@
     function updateLoopBadge() {
         loopBadge.textContent = dualLoopCount + ' loop' + (dualLoopCount !== 1 ? 's' : '');
         if (dualActive) {
-            loopBadge.style.display = '';
+            loopBadge.style.removeProperty('display');
             loopBadge.classList.add('pulse');
             loopBadge.addEventListener('animationend', () => loopBadge.classList.remove('pulse'), { once: true });
         } else {
@@ -1076,7 +1080,6 @@
             toggleLabel.classList.add('on');
             cdInputRow.classList.add('hidden');
             document.getElementById('dualInputsRow').style.display = 'flex';
-            loopBadge.style.display = '';
             dualPhase = 'work';
             dualLoopCount = 0;
             updateLoopBadge();
@@ -1121,9 +1124,6 @@
     document.addEventListener('click', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
 
     // ── INPUT EVENTS ──
-document.querySelectorAll('.time-input').forEach(inp => {
-    inp.addEventListener('focus', () => inp.select());
-});
     [hrsIn, minIn, secIn].forEach(inp => {
         inp.addEventListener('blur', () => {
             clampInput(inp, inp === hrsIn ? 99 : 59);
