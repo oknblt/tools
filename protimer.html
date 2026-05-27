@@ -1048,7 +1048,7 @@
     function updateLoopBadge() {
         loopBadge.textContent = dualLoopCount + ' loop' + (dualLoopCount !== 1 ? 's' : '');
         if (dualActive) {
-            loopBadge.style.removeProperty('display');
+            loopBadge.style.display = 'inline-flex';
             loopBadge.classList.add('pulse');
             loopBadge.addEventListener('animationend', () => loopBadge.classList.remove('pulse'), { once: true });
         } else {
@@ -1124,9 +1124,6 @@
     document.addEventListener('click', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
 
     // ── INPUT EVENTS ──
-document.querySelectorAll('.time-input').forEach(inp => {
-    inp.addEventListener('focus', () => inp.select());
-});
     [hrsIn, minIn, secIn].forEach(inp => {
         inp.addEventListener('blur', () => {
             clampInput(inp, inp === hrsIn ? 99 : 59);
@@ -1141,6 +1138,9 @@ document.querySelectorAll('.time-input').forEach(inp => {
             clampInput(inp, inp === workMin || inp === restMin ? 99 : 59);
             if (!cdRunning && dualActive) { cdCurrentMs = loadPhaseMs(); updateCdDisplay(); }
         });
+    });
+    document.querySelectorAll('.time-input').forEach(inp => {
+        inp.addEventListener('focus', () => inp.select());
     });
 
     // ── BUTTON EVENTS ──
