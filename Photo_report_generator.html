@@ -627,7 +627,7 @@ function createBlockCell(parentRow, key, desc, comm) {
   cell.addEventListener('drop', e => {
     e.preventDefault();
     cell.classList.remove('drag-target');
-    if (dragSrcKey && dragSrcKey !== key) swapBlocks(dragSrcKey, key);
+    if (dragSrcKey && dragSrcKey !== key) insertBlock(dragSrcKey, key);
   });
 
   cell.appendChild(controls);
@@ -653,31 +653,35 @@ function onBlockDragEnd(e, key) {
   document.querySelectorAll('.drag-target').forEach(el => el.classList.remove('drag-target'));
 }
 
-function swapBlocks(keyA, keyB) {
-  // Swap photo store
-  const tempPhoto = photoStore[keyA];
-  photoStore[keyA] = photoStore[keyB];
-  photoStore[keyB] = tempPhoto;
+function insertBlock(srcKey, destKey) {
+  // Collect all blocks in order
+  const allBlocks = [];
+  for (let r = 1; r <= rowCount; r++) {
+    const rowEl = document.getElementById('row'+r);
+    if (!rowEl) continue;
+    for (let i = 0; i < 3; i++) {
+      const k = 'row'+r+'_'+i;
+      const cell = document.getElementById('cell_'+k);
+      if (!cell || cell.classList.contains('empty-cell')) continue;
+      allBlocks.push({
+        photo: photoStore[k] || null,
+        desc: (document.getElementById('desc_'+k)||{}).value || '',
+        comm: (document.getElementById('comm_'+k)||{}).value || '',
+        key: k,
+      });
+    }
+  }
 
-  // Swap images
-  const imgA = document.getElementById('img_'+keyA);
-  const imgB = document.getElementById('img_'+keyB);
-  const wrapA = document.getElementById('wrap_'+keyA);
-  const wrapB = document.getElementById('wrap_'+keyB);
-  const tempSrc = imgA.src;
-  const aHas = wrapA.classList.contains('has-image');
-  const bHas = wrapB.classList.contains('has-image');
-  imgA.src = imgB.src; imgB.src = tempSrc;
-  if (bHas) wrapA.classList.add('has-image'); else wrapA.classList.remove('has-image');
-  if (aHas) wrapB.classList.add('has-image'); else wrapB.classList.remove('has-image');
+  const srcIdx  = allBlocks.findIndex(b => b.key === srcKey);
+  const destIdx = allBlocks.findIndex(b => b.key === destKey);
+  if (srcIdx === -1 || destIdx === -1 || srcIdx === destIdx) return;
 
-  // Swap inputs
-  const descA = document.getElementById('desc_'+keyA);
-  const descB = document.getElementById('desc_'+keyB);
-  const commA = document.getElementById('comm_'+keyA);
-  const commB = document.getElementById('comm_'+keyB);
-  const td = descA.value; descA.value = descB.value; descB.value = td;
-  const tc = commA.value; commA.value = commB.value; commB.value = tc;
+  // Remove src from its position and insert before dest
+  const [moved] = allBlocks.splice(srcIdx, 1);
+  const newDestIdx = allBlocks.findIndex(b => b.key === destKey);
+  allBlocks.splice(newDestIdx, 0, moved);
+
+  rebuildFromBlocks(allBlocks);
 }
 
 /* ===================== DELETE BLOCK & COMPACT ===================== */
