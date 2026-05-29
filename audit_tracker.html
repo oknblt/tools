@@ -142,6 +142,13 @@ td.action-cell{padding:4px 8px;white-space:nowrap;width:60px;}
 .b-no{background:#fcebeb;color:#a32d2d;}
 .no-data{padding:50px 20px;text-align:center;color:var(--muted);}
 
+/* ── COL RESIZE HANDLE ── */
+.col-resize-handle{
+  position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;
+  z-index:5;background:transparent;user-select:none;touch-action:none;
+}
+.col-resize-handle:hover,.col-resize-handle.resizing{background:var(--accent);opacity:.4;}
+thead th{position:relative;}
 /* DRAG INDICATOR */
 thead th.drag-over{border-left:3px solid var(--accent);}
 thead th.dragging{opacity:.4;}
@@ -228,10 +235,13 @@ thead th.dragging{opacity:.4;}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 002-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Load
     </button>
     <button class="hbtn" onclick="document.getElementById('xlsxIn').click()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 002-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Import Excel
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 002-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Import
     </button>
     <button class="hbtn prim" onclick="exportExcel()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export Excel
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export
+    </button>
+    <button class="hbtn" onclick="exportPDF()" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>PDF
     </button>
   </div>
 </header>
@@ -419,6 +429,8 @@ let formVisible=true;
 let colOrder = FIELDS.slice();
 // hiddenCols: set of hidden keys
 let hiddenCols = new Set();
+// colWidths: key -> px width (overrides COL_DEFS default)
+let colWidths = {};
 // activeFilters: key -> {selected: Set | null, dateFrom, dateTo}
 let activeFilters = {};
 // drag state
@@ -544,6 +556,8 @@ function buildColManager(){
 }
 
 // ── TABLE HEADER ─────────────────────────────────────────────
+let resizingKey=null, resizeStartX=0, resizeStartW=0;
+
 function buildTableHeader(){
   const tr=document.getElementById('theadRow');
   tr.innerHTML='';
@@ -558,7 +572,9 @@ function buildTableHeader(){
     const def=COL_DEFS.find(c=>c.key===key);if(!def)return;
     const th=document.createElement('th');
     th.dataset.key=key;
-    th.style.minWidth=def.width+'px';
+    const w=colWidths[key]||def.width;
+    th.style.minWidth=w+'px';
+    th.style.width=w+'px';
     th.draggable=true;
     const hasF=!!(activeFilters[key]&&activeFilters[key].selected&&activeFilters[key].selected.size>0);
     const sortInd=sortField===key?(sortAsc?' ▲':' ▼'):'';
@@ -568,9 +584,14 @@ function buildTableHeader(){
       <span class="th-filter-btn${hasF?' has-filter':''}" onclick="openFilterPopup(event,'${key}')" title="Filter">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
       </span>
-    </div>`;
-    // drag
-    th.addEventListener('dragstart',e=>{dragSrcKey=key;th.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    </div>
+    <div class="col-resize-handle" data-key="${key}"></div>`;
+
+    // ── DESKTOP DRAG (column reorder) ──
+    th.addEventListener('dragstart',e=>{
+      if(e.target.classList.contains('col-resize-handle'))return;
+      dragSrcKey=key;th.classList.add('dragging');e.dataTransfer.effectAllowed='move';
+    });
     th.addEventListener('dragend',()=>{th.classList.remove('dragging');document.querySelectorAll('thead th').forEach(t=>t.classList.remove('drag-over'));});
     th.addEventListener('dragover',e=>{e.preventDefault();th.classList.add('drag-over');});
     th.addEventListener('dragleave',()=>th.classList.remove('drag-over'));
@@ -582,9 +603,107 @@ function buildTableHeader(){
       colOrder.splice(fromIdx,1);colOrder.splice(toIdx,0,dragSrcKey);
       buildColManager();buildTableHeader();renderTable();
     });
+
+    // ── RESIZE HANDLE ──
+    const handle=th.querySelector('.col-resize-handle');
+    // Mouse
+    handle.addEventListener('mousedown',e=>{
+      e.preventDefault();e.stopPropagation();
+      resizingKey=key;resizeStartX=e.clientX;resizeStartW=colWidths[key]||def.width;
+      handle.classList.add('resizing');
+      document.body.style.cursor='col-resize';
+      document.body.style.userSelect='none';
+    });
+    // Touch (mobile resize)
+    handle.addEventListener('touchstart',e=>{
+      e.stopPropagation();
+      resizingKey=key;resizeStartX=e.touches[0].clientX;resizeStartW=colWidths[key]||def.width;
+      handle.classList.add('resizing');
+    },{passive:true});
+
+    // ── MOBILE TOUCH DRAG (column reorder) ──
+    let touchDragKey=null, touchClone=null, touchOverKey=null;
+    th.addEventListener('touchstart',e=>{
+      if(e.target.classList.contains('col-resize-handle'))return;
+      // long-press to start drag
+      touchDragKey=null;
+      const startX=e.touches[0].clientX, startY=e.touches[0].clientY;
+      th._touchTimer=setTimeout(()=>{
+        touchDragKey=key;
+        th.classList.add('dragging');
+        // ghost clone
+        touchClone=th.cloneNode(true);
+        touchClone.style.cssText=`position:fixed;opacity:.7;pointer-events:none;z-index:9999;background:var(--accent-l);border:1px solid var(--accent);border-radius:4px;padding:4px 8px;font-size:10px;font-weight:700;color:var(--accent);white-space:nowrap;`;
+        touchClone.style.left=startX+'px';touchClone.style.top=startY-30+'px';
+        document.body.appendChild(touchClone);
+      },400);
+    },{passive:true});
+    th.addEventListener('touchmove',e=>{
+      clearTimeout(th._touchTimer);
+      if(!touchDragKey)return;
+      e.preventDefault();
+      const x=e.touches[0].clientX,y=e.touches[0].clientY;
+      if(touchClone){touchClone.style.left=x-20+'px';touchClone.style.top=y-30+'px';}
+      // find th under finger
+      const el=document.elementFromPoint(x,y);
+      const overTh=el?.closest('th[data-key]');
+      const overKey=overTh?.dataset?.key;
+      if(overKey&&overKey!==touchDragKey){
+        if(touchOverKey!==overKey){
+          document.querySelectorAll('thead th').forEach(t=>t.classList.remove('drag-over'));
+          overTh.classList.add('drag-over');
+          touchOverKey=overKey;
+        }
+      }
+    },{passive:false});
+    th.addEventListener('touchend',e=>{
+      clearTimeout(th._touchTimer);
+      if(touchClone){touchClone.remove();touchClone=null;}
+      th.classList.remove('dragging');
+      document.querySelectorAll('thead th').forEach(t=>t.classList.remove('drag-over'));
+      if(touchDragKey&&touchOverKey&&touchDragKey!==touchOverKey){
+        const fromIdx=colOrder.indexOf(touchDragKey),toIdx=colOrder.indexOf(touchOverKey);
+        if(fromIdx>=0&&toIdx>=0){
+          colOrder.splice(fromIdx,1);colOrder.splice(toIdx,0,touchDragKey);
+          buildColManager();buildTableHeader();renderTable();
+        }
+      }
+      touchDragKey=null;touchOverKey=null;
+    });
+
     tr.appendChild(th);
   });
 }
+
+// ── RESIZE MOUSE/TOUCH GLOBAL HANDLERS ────────────────────────
+document.addEventListener('mousemove',e=>{
+  if(!resizingKey)return;
+  const delta=e.clientX-resizeStartX;
+  const newW=Math.max(50,resizeStartW+delta);
+  colWidths[resizingKey]=newW;
+  const th=document.querySelector(`thead th[data-key="${resizingKey}"]`);
+  if(th){th.style.minWidth=newW+'px';th.style.width=newW+'px';}
+});
+document.addEventListener('mouseup',()=>{
+  if(!resizingKey)return;
+  document.querySelectorAll('.col-resize-handle').forEach(h=>h.classList.remove('resizing'));
+  document.body.style.cursor='';document.body.style.userSelect='';
+  resizingKey=null;
+});
+document.addEventListener('touchmove',e=>{
+  if(!resizingKey)return;
+  e.preventDefault();
+  const delta=e.touches[0].clientX-resizeStartX;
+  const newW=Math.max(50,resizeStartW+delta);
+  colWidths[resizingKey]=newW;
+  const th=document.querySelector(`thead th[data-key="${resizingKey}"]`);
+  if(th){th.style.minWidth=newW+'px';th.style.width=newW+'px';}
+},{passive:false});
+document.addEventListener('touchend',()=>{
+  if(!resizingKey)return;
+  document.querySelectorAll('.col-resize-handle').forEach(h=>h.classList.remove('resizing'));
+  resizingKey=null;
+});
 
 // ── FILTER POPUP ─────────────────────────────────────────────
 let fpOpen=false;
@@ -965,7 +1084,23 @@ function importExcel(ev){
 // ── JSON ─────────────────────────────────────────────────────
 function saveJSON(){
   if(!records.length){toast('No records to save.','warn');return;}
-  const blob=new Blob([JSON.stringify({version:3,records,colOrder,hiddenCols:[...hiddenCols]},null,2)],{type:'application/json'});
+  // Serialize activeFilters (Sets → arrays)
+  const filtersSerial={};
+  Object.entries(activeFilters).forEach(([k,f])=>{
+    filtersSerial[k]={selected:f.selected?[...f.selected]:null};
+  });
+  const state={
+    version:4,
+    records,
+    colOrder,
+    hiddenCols:[...hiddenCols],
+    colWidths,
+    sortField,
+    sortAsc,
+    activeFilters:filtersSerial,
+    formVisible
+  };
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download=`audit_records_${new Date().toISOString().slice(0,10)}.json`;a.click();
   toast('JSON saved.','success');
@@ -979,12 +1114,96 @@ function loadJSON(ev){
       records=Array.isArray(obj)?obj:(obj.records||[]);
       if(obj.colOrder)colOrder=obj.colOrder;
       if(obj.hiddenCols)hiddenCols=new Set(obj.hiddenCols);
+      if(obj.colWidths)colWidths=obj.colWidths;
+      if(obj.sortField!==undefined)sortField=obj.sortField;
+      if(obj.sortAsc!==undefined)sortAsc=obj.sortAsc;
+      if(obj.activeFilters){
+        activeFilters={};
+        Object.entries(obj.activeFilters).forEach(([k,f])=>{
+          activeFilters[k]={selected:f.selected?new Set(f.selected):null};
+        });
+      }
+      if(obj.formVisible!==undefined){
+        formVisible=obj.formVisible;
+        document.getElementById('formPanel').classList.toggle('collapsed',!formVisible);
+        document.getElementById('toggleBtn').classList.toggle('open',formVisible);
+        document.getElementById('toggleLabel').textContent=formVisible?'Hide':'Show';
+      }
       records.forEach(r=>{if(!r.id)r.id=Date.now()+Math.random();});
       clearForm();buildColManager();buildTableHeader();renderTable();
       toast(`Loaded ${records.length} records.`,'success');
-    } catch{toast('Error reading JSON.','warn');}
+    } catch(e){console.error(e);toast('Error reading JSON.','warn');}
   };
   reader.readAsText(file);ev.target.value='';
+}
+
+// ── PDF EXPORT ────────────────────────────────────────────────
+function exportPDF(){
+  if(!records.length){toast('No records to export.','warn');return;}
+  const data=sortData(filterData());
+  if(!data.length){toast('No records match current filters.','warn');return;}
+  const visCols=colOrder.filter(k=>!hiddenCols.has(k));
+
+  // Active filter summary
+  let filterDesc='';
+  const filterParts=[];
+  Object.entries(activeFilters).forEach(([k,f])=>{
+    if(!f.selected||!f.selected.size)return;
+    const def=COL_DEFS.find(c=>c.key===k);
+    const label=def?def.label:k;
+    if(def&&def.type==='date'){
+      // summarise years/months
+      const years=[...new Set([...f.selected].map(iso=>iso.slice(0,4)))].sort();
+      filterParts.push(`${label}: ${years.join(', ')}`);
+    } else {
+      filterParts.push(`${label}: ${[...f.selected].join(', ')}`);
+    }
+  });
+  if(filterParts.length)filterDesc=filterParts.join(' | ');
+
+  // Build HTML for print window
+  const colDefs=visCols.map(k=>COL_DEFS.find(c=>c.key===k));
+  const headerRow=colDefs.map(d=>`<th>${d.label}</th>`).join('');
+  const bodyRows=data.map(r=>{
+    const cells=visCols.map(k=>{
+      const def=COL_DEFS.find(c=>c.key===k);
+      let v='';
+      if(def.type==='date')v=fmtDate(r[k])||'—';
+      else v=(r[k]||'').toString().trim()||'—';
+      return`<td>${v}</td>`;
+    }).join('');
+    return`<tr>${cells}</tr>`;
+  }).join('');
+
+  const now=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <title>Audit Records – ${now}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;font-size:10px;color:#1a1f2e;padding:16px;}
+    h2{font-size:14px;font-weight:700;color:#1b4f8a;margin-bottom:2px;}
+    .meta{font-size:9px;color:#6b7280;margin-bottom:${filterDesc?'4px':'12px'};}
+    .filter-info{font-size:9px;color:#854f0b;background:#faeeda;padding:3px 8px;border-radius:4px;margin-bottom:10px;display:inline-block;}
+    table{width:100%;border-collapse:collapse;table-layout:fixed;}
+    thead th{background:#1b4f8a;color:#fff;padding:5px 6px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;word-break:break-word;}
+    tbody tr:nth-child(even){background:#f4f6fb;}
+    tbody tr:nth-child(odd){background:#fff;}
+    tbody td{padding:4px 6px;border-bottom:1px solid #e8ecf4;font-size:9px;word-break:break-word;vertical-align:top;}
+    @page{size:A4 landscape;margin:12mm 8mm;}
+    @media print{body{padding:0;}}
+  </style></head><body>
+  <h2>Audit Program – Records</h2>
+  <div class="meta">Generated: ${now} &nbsp;·&nbsp; ${data.length} record${data.length!==1?'s':''} &nbsp;·&nbsp; ${records.length} total</div>
+  ${filterDesc?`<div class="filter-info">🔍 Filters active: ${filterDesc}</div>`:''}
+  <table><thead><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody></table>
+  </body></html>`;
+
+  const win=window.open('','_blank','width=900,height=650');
+  if(!win){toast('Pop-up blocked. Allow pop-ups and try again.','warn');return;}
+  win.document.write(html);
+  win.document.close();
+  win.onload=()=>{win.focus();win.print();};
+  toast(`PDF ready – ${data.length} records.`,'success');
 }
 
 // ── TOAST ─────────────────────────────────────────────────────
