@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <title>Audit Program</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -43,15 +43,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
 .field textarea{resize:none;height:44px;}
 
 /* ── FORM ACTION BAR ── */
-.form-actions{display:flex;align-items:center;gap:6px;padding:6px 20px;background:var(--surface);border-bottom:1.5px solid var(--border);flex-shrink:0;}
+.form-actions{display:flex;align-items:center;gap:6px;padding:6px 20px;background:var(--surface);border-bottom:1.5px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
 .form-toggle-btn{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--accent);transition:background .12s;white-space:nowrap;}
 .form-toggle-btn:hover{background:var(--accent-l);}
 .form-toggle-btn svg{width:13px;height:13px;transition:transform .3s;}
 .form-toggle-btn.open svg{transform:rotate(180deg);}
-.pin-btn{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--r);cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .12s;}
-.pin-btn.pinned{background:var(--warn-l);color:var(--warn);border-color:#f0c070;}
-.pin-btn:hover{background:var(--surface2);}
-.pin-btn svg{width:11px;height:11px;}
 .edit-badge{font-size:10px;background:var(--warn-l);color:var(--warn);padding:2px 8px;border-radius:20px;font-weight:700;}
 .spacer{flex:1;}
 .btn{padding:5px 13px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;border:none;display:flex;align-items:center;gap:4px;transition:opacity .15s,transform .1s;white-space:nowrap;}
@@ -172,6 +168,49 @@ thead th.dragging{opacity:.4;}
 .modal-btns .mconfirm{background:var(--danger);color:#fff;border-color:var(--danger);}
 ::-webkit-scrollbar{width:6px;height:6px;}
 ::-webkit-scrollbar-thumb{background:#c5cad6;border-radius:4px;}
+
+/* ── DATE GROUP COLLAPSE ── */
+.fp-group{cursor:pointer;position:relative;}
+.fp-group .fp-collapse-icon{font-size:9px;color:var(--muted);margin-left:4px;display:inline-block;transition:transform .18s;user-select:none;}
+.fp-group.collapsed-group .fp-collapse-icon{transform:rotate(-90deg);}
+.fp-group-children{overflow:hidden;transition:max-height .22s cubic-bezier(.4,0,.2,1);}
+.fp-group-children.hidden{display:none;}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  body{height:auto;overflow-y:auto;overflow-x:hidden;min-height:100dvh;display:block;}
+  .app-header{
+    height:auto;padding:8px 12px;flex-wrap:nowrap;gap:6px;
+    position:sticky;top:0;z-index:100;
+  }
+  .brand h1{font-size:13px;white-space:nowrap;}
+  .brand small{display:none;}
+  .hactions{gap:4px;flex-shrink:0;}
+  .hbtn{padding:4px 7px;font-size:10px;gap:2px;}
+  .hbtn svg{display:none;}
+  .form-panel{
+    max-height:none!important;height:auto!important;
+    overflow:visible!important;
+    transition:none!important;
+  }
+  .form-panel.collapsed{max-height:0!important;overflow:hidden!important;opacity:0!important;}
+  .form-inner{padding:8px 12px 6px;}
+  .fsections{flex-direction:column;gap:10px;}
+  .fsec{flex:none!important;width:100%!important;}
+  .fsec .fgrid{grid-template-columns:1fr 1fr!important;}
+  .fsec .fgrid .field[style*="max-width"]{max-width:100%!important;}
+  .fgrid .field[style*="grid-column"]{grid-column:1/-1!important;}
+  .form-actions{padding:6px 12px;gap:5px;position:sticky;top:0;z-index:50;flex-wrap:nowrap;}
+  .table-area{display:block;overflow:visible;}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100vw;}
+  .col-manager-bar{overflow-x:auto;padding:5px 12px;flex-wrap:nowrap;white-space:nowrap;}
+  .filter-popup{width:240px;max-height:60vh;overflow-y:auto;}
+  .fp-list{max-height:140px;}
+  table{font-size:11px;}
+  thead th{font-size:10px;}
+  tbody td{padding:5px 8px;font-size:11px;}
+  .table-footer{position:sticky;bottom:0;background:var(--surface2);}
+}
 </style>
 </head>
 <body>
@@ -203,12 +242,12 @@ thead th.dragging{opacity:.4;}
 <div class="form-panel" id="formPanel">
   <div class="form-inner">
     <div class="fsections">
-      <div class="fsec" style="flex:1.1">
+      <div class="fsec" style="flex:0 0 auto;min-width:0;width:260px;">
         <div class="fsec-title">Schedule</div>
-        <div class="fgrid">
+        <div class="fgrid" style="grid-template-columns:1fr 1fr;">
           <div class="field"><label>Start Date</label><input type="date" id="f_startDate" onchange="calcDays()"/></div>
           <div class="field"><label>End Date</label><input type="date" id="f_endDate" onchange="calcDays()"/></div>
-          <div class="field"><label>Total Day (Auto)</label><input type="text" id="f_totalDay" readonly placeholder="Auto"/></div>
+          <div class="field" style="grid-column:1/-1;max-width:120px;"><label>Days (Auto)</label><input type="text" id="f_totalDay" readonly placeholder="—"/></div>
         </div>
       </div>
       <div class="fsec" style="flex:2.2">
@@ -240,7 +279,7 @@ thead th.dragging{opacity:.4;}
           <div class="field" style="grid-column:1/-1"><label>Factory Name</label><input type="text" id="f_factoryName" placeholder="Company / factory name"/></div>
           <div class="field"><label>City</label><input type="text" id="f_city" placeholder="e.g. Istanbul"/></div>
           <div class="field"><label>Sector</label><input type="text" id="f_sector" placeholder="Industry sector"/></div>
-          <div class="field" style="grid-column:1/-1"><label>Address</label><textarea id="f_address" placeholder="Full address"></textarea></div>
+          <div class="field" style="grid-column:1/-1"><label>Address</label><input type="text" id="f_address" placeholder="Full address"/></div>
         </div>
       </div>
       <div class="fsec" style="flex:1">
@@ -273,9 +312,6 @@ thead th.dragging{opacity:.4;}
   </button>
   <span id="editBadge" class="edit-badge" style="display:none">✏ Editing</span>
   <div class="spacer"></div>
-  <button class="pin-btn" id="pinBtn" onclick="togglePin()" title="Pin form open">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
-  </button>
   <button class="btn btn-clear" onclick="clearForm()">Clear</button>
   <button class="btn btn-del" id="btnDelete" style="display:none" onclick="document.getElementById('delModal').style.display='flex'">Delete</button>
   <button class="btn btn-primary" onclick="saveRecord()">
@@ -378,7 +414,7 @@ const XL_HEADERS = [
 // ── STATE ─────────────────────────────────────────────────────
 let records=[], editId=null;
 let sortField=null, sortAsc=true;
-let formPinned=false, formVisible=true;
+let formVisible=true;
 // colOrder: array of keys in display order
 let colOrder = FIELDS.slice();
 // hiddenCols: set of hidden keys
@@ -431,17 +467,12 @@ function calcDays(){
 
 // ── FORM TOGGLE ───────────────────────────────────────────────
 function toggleForm(){
-  if(formPinned)return;
   formVisible=!formVisible;
   document.getElementById('formPanel').classList.toggle('collapsed',!formVisible);
   document.getElementById('toggleBtn').classList.toggle('open',formVisible);
   document.getElementById('toggleLabel').textContent=formVisible?'Hide':'Show';
 }
-function togglePin(){
-  formPinned=!formPinned;
-  document.getElementById('pinBtn').classList.toggle('pinned',formPinned);
-  if(formPinned&&!formVisible){formVisible=true;document.getElementById('formPanel').classList.remove('collapsed');document.getElementById('toggleBtn').classList.add('open');document.getElementById('toggleLabel').textContent='Hide';}
-}
+function togglePin(){} // kept for compat, no-op
 
 // ── FORM HELPERS ──────────────────────────────────────────────
 function getFormData(){const o={};FIELDS.forEach(f=>{const el=document.getElementById('f_'+f);o[f]=el?el.value.trim():'';});return o;}
@@ -468,7 +499,7 @@ function saveRecord(){
     toast('Record added.','success');
   }
   clearForm();
-  if(!formPinned){formVisible=false;document.getElementById('formPanel').classList.add('collapsed');document.getElementById('toggleBtn').classList.remove('open');document.getElementById('toggleLabel').textContent='Show';}
+  {formVisible=false;document.getElementById('formPanel').classList.add('collapsed');document.getElementById('toggleBtn').classList.remove('open');document.getElementById('toggleLabel').textContent='Show';}
 }
 function editRecord(id){
   const rec=records.find(r=>r.id===id);if(!rec)return;
@@ -606,23 +637,17 @@ function fpRenderList(){
   const def=COL_DEFS.find(c=>c.key===fpCol);
   const q=(document.getElementById('fp-search').value||'').toLowerCase();
   const f=activeFilters[fpCol]||{};
-  // For date cols: sel is a Set of ISO strings (yyyy-mm-dd)
-  // For text cols: sel is a Set of display strings
   const sel=f.selected||null;
   const list=document.getElementById('fp-list');
 
   if(def.type==='date'){
-    // Build structure: year -> month -> [days]
-    // Each entry keyed by ISO yyyy-mm-dd
-    const isoSet={}; // iso -> count
+    const isoSet={};
     records.forEach(r=>{
       const iso=toISO(r[fpCol]);
       if(!iso)return;
       isoSet[iso]=(isoSet[iso]||0)+1;
     });
-    // Filter by search
     const allISO=Object.keys(isoSet).filter(iso=>!q||iso.includes(q)||fmtDate(iso).toLowerCase().includes(q));
-    // Group year -> month -> days
     const tree={};
     allISO.forEach(iso=>{
       const[y,m,d]=iso.split('-');
@@ -631,19 +656,30 @@ function fpRenderList(){
       tree[y][m].push({iso,count:isoSet[iso]});
     });
     const sortedYears=Object.keys(tree).sort((a,b)=>b-a);
-    let html='';
+    // Build DOM manually for collapse support
+    list.innerHTML='';
+    if(!sortedYears.length){list.innerHTML='<div style="padding:10px;font-size:12px;color:var(--muted);">No dates found</div>';return;}
     sortedYears.forEach(y=>{
       const months=Object.keys(tree[y]).sort((a,b)=>b-a);
-      // all ISOs under this year
       const yearISOs=months.flatMap(m=>tree[y][m].map(d=>d.iso));
       const yearAll=yearISOs.every(iso=>!sel||sel.has(iso));
       const yearSome=yearISOs.some(iso=>!sel||sel.has(iso));
       const yearCount=yearISOs.reduce((s,iso)=>s+isoSet[iso],0);
-      html+=`<div class="fp-group" data-level="year" data-key="${y}">
-        <input type="checkbox" data-scope="year" data-year="${y}" ${yearAll?'checked':''} ${(!yearAll&&yearSome)?'data-indeterminate="1"':''} onchange="fpGroupChange(this)"/>
-        <span style="font-weight:700;">Year ${y}</span>
-        <span style="margin-left:auto;font-size:10px;color:var(--muted)">(${yearCount})</span>
-      </div>`;
+
+      // Year row
+      const yearDiv=document.createElement('div');
+      yearDiv.className='fp-group';
+      yearDiv.dataset.level='year';
+      yearDiv.dataset.key=y;
+      yearDiv.innerHTML=`<input type="checkbox" data-scope="year" data-year="${y}" ${yearAll?'checked':''} ${(!yearAll&&yearSome)?'data-indeterminate="1"':''} onchange="fpGroupChange(this)"/><span style="font-weight:700;">Year ${y}</span><span style="margin-left:auto;font-size:10px;color:var(--muted)">(${yearCount})</span><span class="fp-collapse-icon">▾</span>`;
+      list.appendChild(yearDiv);
+
+      // Year children container
+      const yearChildren=document.createElement('div');
+      yearChildren.className='fp-group-children';
+      yearChildren.dataset.year=y;
+      list.appendChild(yearChildren);
+
       months.forEach(m=>{
         const days=tree[y][m].sort((a,b)=>b.iso.localeCompare(a.iso));
         const mISOs=days.map(d=>d.iso);
@@ -651,23 +687,47 @@ function fpRenderList(){
         const mSome=mISOs.some(iso=>!sel||sel.has(iso));
         const mCount=mISOs.reduce((s,iso)=>s+isoSet[iso],0);
         const mLabel=MONTHS_FULL[parseInt(m,10)-1]+' '+y;
-        html+=`<div class="fp-group fp-month" data-level="month" data-year="${y}" data-month="${m}">
-          <input type="checkbox" data-scope="month" data-year="${y}" data-month="${m}" ${mAll?'checked':''} ${(!mAll&&mSome)?'data-indeterminate="1"':''} onchange="fpGroupChange(this)"/>
-          <span style="padding-left:8px;">${mLabel}</span>
-          <span style="margin-left:auto;font-size:10px;color:var(--muted)">(${mCount})</span>
-        </div>`;
+
+        // Month row
+        const monthDiv=document.createElement('div');
+        monthDiv.className='fp-group fp-month';
+        monthDiv.dataset.level='month';
+        monthDiv.dataset.year=y;
+        monthDiv.dataset.month=m;
+        monthDiv.innerHTML=`<input type="checkbox" data-scope="month" data-year="${y}" data-month="${m}" ${mAll?'checked':''} ${(!mAll&&mSome)?'data-indeterminate="1"':''} onchange="fpGroupChange(this)"/><span style="padding-left:8px;">${mLabel}</span><span style="margin-left:auto;font-size:10px;color:var(--muted)">(${mCount})</span><span class="fp-collapse-icon">▾</span>`;
+        yearChildren.appendChild(monthDiv);
+
+        // Month children container
+        const monthChildren=document.createElement('div');
+        monthChildren.className='fp-group-children';
+        monthChildren.dataset.year=y;
+        monthChildren.dataset.month=m;
+        yearChildren.appendChild(monthChildren);
+
         days.forEach(({iso,count})=>{
           const[,, dd]=iso.split('-');
           const checked=(!sel||sel.has(iso));
-          html+=`<div class="fp-item fp-day">
-            <input type="checkbox" value="${iso}" data-scope="day" ${checked?'checked':''} onchange="fpDayChange()"/>
-            <span class="fp-item-label" style="padding-left:16px;">${parseInt(dd,10)} ${MONTHS[parseInt(m,10)-1]} ${y}</span>
-            <span class="fp-item-count">${count}</span>
-          </div>`;
+          const dayDiv=document.createElement('div');
+          dayDiv.className='fp-item fp-day';
+          dayDiv.innerHTML=`<input type="checkbox" value="${iso}" data-scope="day" ${checked?'checked':''} onchange="fpDayChange()"/><span class="fp-item-label" style="padding-left:16px;">${parseInt(dd,10)} ${MONTHS[parseInt(m,10)-1]} ${y}</span><span class="fp-item-count">${count}</span>`;
+          monthChildren.appendChild(dayDiv);
+        });
+
+        // Month toggle click
+        monthDiv.addEventListener('click',e=>{
+          if(e.target.tagName==='INPUT')return;
+          const isCollapsed=monthChildren.classList.toggle('hidden');
+          monthDiv.classList.toggle('collapsed-group',isCollapsed);
         });
       });
+
+      // Year toggle click
+      yearDiv.addEventListener('click',e=>{
+        if(e.target.tagName==='INPUT')return;
+        const isCollapsed=yearChildren.classList.toggle('hidden');
+        yearDiv.classList.toggle('collapsed-group',isCollapsed);
+      });
     });
-    list.innerHTML=html||'<div style="padding:10px;font-size:12px;color:var(--muted);">No dates found</div>';
     // set indeterminate state
     list.querySelectorAll('input[data-indeterminate="1"]').forEach(cb=>{cb.indeterminate=true;});
   } else {
