@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Audit Program</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f0f3f8;--surface:#fff;--surface2:#f4f6fb;--border:#d5dae6;--border-light:#e8ecf4;
+  --text:#1a1f2e;--muted:#6b7280;--accent:#1b4f8a;--accent-l:#e8f0fb;
+  --g2:#0f6e56;--g2-l:#e1f5ee;--warn:#854f0b;--warn-l:#faeeda;
+  --danger:#a32d2d;--danger-l:#fcebeb;
+  --r:8px;--rlg:12px;--font:'Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+
+/* ── HEADER ── */
+.app-header{background:var(--accent);color:#fff;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:48px;flex-shrink:0;box-shadow:0 2px 8px rgba(27,79,138,.22);z-index:50;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand svg{width:20px;height:20px;}
+.brand h1{font-size:14px;font-weight:600;}
+.brand small{font-size:10px;opacity:.6;margin-left:4px;}
+.hbtn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;padding:4px 11px;border-radius:var(--r);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;transition:background .15s;}
+.hbtn:hover{background:rgba(255,255,255,.22);}
+.hbtn.prim{background:#fff;color:var(--accent);font-weight:700;border-color:#fff;}
+.hbtn.prim:hover{background:#dce8f8;}
+.hactions{display:flex;gap:5px;}
+
+/* ── FORM PANEL ── */
+.form-panel{background:var(--surface);border-bottom:1.5px solid var(--border);flex-shrink:0;overflow:hidden;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .25s;max-height:240px;opacity:1;}
+.form-panel.collapsed{max-height:0;opacity:0;pointer-events:none;}
+.form-inner{padding:10px 20px 8px;}
+.fsections{display:flex;gap:14px;align-items:flex-start;}
+.fsec{flex:1;min-width:0;}
+.fsec-title{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;padding-bottom:4px;border-bottom:1.5px solid var(--accent-l);}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px;}
+.field label{display:block;font-size:10px;font-weight:500;color:var(--muted);margin-bottom:2px;}
+.field input,.field select,.field textarea{width:100%;padding:5px 8px;font-size:12px;font-family:var(--font);border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);transition:border-color .15s,box-shadow .15s;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(27,79,138,.10);}
+.field input[readonly]{background:var(--surface2);color:var(--accent);font-weight:700;cursor:default;}
+.field textarea{resize:none;height:44px;}
+
+/* ── FORM ACTION BAR ── */
+.form-actions{display:flex;align-items:center;gap:6px;padding:6px 20px;background:var(--surface);border-bottom:1.5px solid var(--border);flex-shrink:0;}
+.form-toggle-btn{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--accent);transition:background .12s;white-space:nowrap;}
+.form-toggle-btn:hover{background:var(--accent-l);}
+.form-toggle-btn svg{width:13px;height:13px;transition:transform .3s;}
+.form-toggle-btn.open svg{transform:rotate(180deg);}
+.pin-btn{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--r);cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .12s;}
+.pin-btn.pinned{background:var(--warn-l);color:var(--warn);border-color:#f0c070;}
+.pin-btn:hover{background:var(--surface2);}
+.pin-btn svg{width:11px;height:11px;}
+.edit-badge{font-size:10px;background:var(--warn-l);color:var(--warn);padding:2px 8px;border-radius:20px;font-weight:700;}
+.spacer{flex:1;}
+.btn{padding:5px 13px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;border:none;display:flex;align-items:center;gap:4px;transition:opacity .15s,transform .1s;white-space:nowrap;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{opacity:.88;}
+.btn-clear{background:var(--surface);color:var(--muted);border:1px solid var(--border);}
+.btn-clear:hover{background:var(--border-light);}
+.btn-del{background:var(--danger-l);color:var(--danger);border:1px solid #f7c1c1;}
+.btn-del:hover{background:#f7c1c1;}
+
+/* ── TABLE AREA ── */
+.table-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ── COL MANAGER BAR ── */
+.col-manager-bar{padding:5px 16px;background:var(--surface2);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:8px;flex-shrink:0;overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1),opacity .22s,padding .22s;max-height:40px;opacity:1;}
+.col-manager-bar.collapsed{max-height:0;opacity:0;pointer-events:none;padding-top:0;padding-bottom:0;border-bottom-width:0;}
+.col-manager-bar span{font-size:11px;color:var(--muted);}
+.col-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:var(--accent-l);color:var(--accent);border:1px solid #b5d4f4;cursor:pointer;user-select:none;transition:opacity .12s;}
+.col-tag.hidden-col{background:var(--surface);color:var(--muted);border-color:var(--border);opacity:.6;}
+.col-tag:hover{opacity:.8;}
+
+/* ── TABLE ── */
+.table-wrap{flex:1;overflow:auto;}
+table{width:max-content;min-width:100%;border-collapse:collapse;}
+
+/* TH with filter popup */
+thead th{background:var(--surface2);border-bottom:1.5px solid var(--border);padding:0;text-align:left;position:sticky;top:0;z-index:10;user-select:none;white-space:nowrap;}
+.th-inner{display:flex;align-items:center;gap:0;padding:7px 10px;cursor:pointer;}
+.th-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;flex:1;}
+thead th:hover .th-label{color:var(--accent);}
+thead th.sorted .th-label{color:var(--accent);}
+.sort-ind{font-size:9px;color:var(--accent);margin-left:2px;min-width:8px;}
+.th-filter-btn{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:4px;cursor:pointer;color:var(--muted);font-size:10px;transition:background .1s;flex-shrink:0;position:relative;}
+.th-filter-btn:hover{background:var(--border-light);color:var(--accent);}
+.th-filter-btn.has-filter{color:var(--accent);background:var(--accent-l);}
+.th-filter-btn svg{width:11px;height:11px;pointer-events:none;}
+
+/* Filter popup */
+.filter-popup{
+  position:fixed;z-index:1000;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rlg);box-shadow:0 8px 32px rgba(0,0,0,.15);
+  width:260px;padding:14px;display:none;flex-direction:column;gap:10px;
+}
+.filter-popup.open{display:flex;}
+.fp-title{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.07em;}
+.fp-sort-row{display:flex;gap:6px;}
+.fp-sort-btn{flex:1;padding:5px 8px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:background .12s;display:flex;align-items:center;justify-content:center;gap:4px;}
+.fp-sort-btn:hover{background:var(--accent-l);color:var(--accent);}
+.fp-sort-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.fp-search{width:100%;padding:6px 9px;font-size:12px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--font);}
+.fp-search:focus{outline:none;border-color:var(--accent);}
+.fp-list{max-height:200px;overflow-y:auto;border:1px solid var(--border-light);border-radius:var(--r);}
+/* date range */
+.fp-date-pair{display:flex;flex-direction:column;gap:6px;}
+.fp-date-pair label{font-size:10px;color:var(--muted);font-weight:600;}
+.fp-date-pair input{width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--font);}
+.fp-date-pair input:focus{outline:none;border-color:var(--accent);}
+/* checkbox item */
+.fp-item{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;transition:background .08s;font-size:12px;}
+.fp-item:hover{background:var(--accent-l);}
+.fp-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
+.fp-item-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fp-item-count{font-size:10px;color:var(--muted);}
+/* group header */
+.fp-group{background:var(--surface2);padding:5px 10px;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:6px;cursor:pointer;}
+.fp-month{background:#f8f9fc;font-weight:600;font-size:11px;text-transform:none;color:var(--text);padding-left:18px;}
+.fp-day{}
+.fp-group input[type=checkbox]{width:13px;height:13px;accent-color:var(--accent);}
+.fp-footer{display:flex;gap:6px;}
+.fp-foot-btn{flex:1;padding:5px 8px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:background .12s;}
+.fp-foot-btn:hover{background:var(--surface2);}
+.fp-foot-btn.apply{background:var(--accent);color:#fff;border-color:var(--accent);}
+.fp-foot-btn.apply:hover{opacity:.88;}
+
+tbody tr{border-bottom:1px solid var(--border-light);transition:background .08s;}
+tbody tr:hover{background:var(--accent-l);}
+tbody tr.selected{background:#dde8f7;}
+tbody td{padding:7px 10px;font-size:12px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
+/* Action cell */
+td.action-cell{padding:4px 8px;white-space:nowrap;width:60px;}
+.row-edit-btn,.row-del-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;cursor:pointer;border:none;background:transparent;transition:background .1s;}
+.row-edit-btn:hover{background:var(--accent-l);color:var(--accent);}
+.row-del-btn:hover{background:var(--danger-l);color:var(--danger);}
+.row-edit-btn svg,.row-del-btn svg{width:13px;height:13px;pointer-events:none;}
+
+.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;}
+.b-blue{background:var(--accent-l);color:var(--accent);}
+.b-green{background:var(--g2-l);color:var(--g2);}
+.b-amber{background:var(--warn-l);color:var(--warn);}
+.b-yes{background:#e1f5ee;color:#0f6e56;}
+.b-no{background:#fcebeb;color:#a32d2d;}
+.no-data{padding:50px 20px;text-align:center;color:var(--muted);}
+
+/* DRAG INDICATOR */
+thead th.drag-over{border-left:3px solid var(--accent);}
+thead th.dragging{opacity:.4;}
+
+/* ── TABLE FOOTER ── */
+.table-footer{padding:4px 16px;background:var(--surface2);border-top:1px solid var(--border-light);font-size:11px;color:var(--muted);flex-shrink:0;display:flex;align-items:center;gap:8px;}
+.filter-active-badge{font-size:10px;background:var(--accent);color:#fff;padding:1px 7px;border-radius:20px;font-weight:600;}
+.clear-filter-link{font-size:10px;color:var(--danger);cursor:pointer;font-weight:600;}
+.clear-filter-link:hover{text-decoration:underline;}
+
+/* ── TOAST / MODAL ── */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--text);color:#fff;padding:8px 14px;border-radius:var(--r);font-size:12px;font-weight:500;display:flex;align-items:center;gap:7px;box-shadow:0 4px 16px rgba(0,0,0,.15);animation:sup .2s ease;min-width:180px;}
+.toast.success{background:var(--g2);}
+.toast.warn{background:var(--warn);}
+@keyframes sup{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:flex;align-items:center;justify-content:center;}
+.modal{background:var(--surface);border-radius:var(--rlg);padding:24px 28px;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.15);}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:6px;}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:18px;}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;}
+.modal-btns button{padding:6px 16px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);}
+.modal-btns .mcancel{background:var(--surface);}
+.modal-btns .mconfirm{background:var(--danger);color:#fff;border-color:var(--danger);}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-thumb{background:#c5cad6;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+    <h1>Audit Program<small> Tracking &amp; Management</small></h1>
+  </div>
+  <div class="hactions">
+    <button class="hbtn" onclick="saveJSON()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Save
+    </button>
+    <button class="hbtn" onclick="document.getElementById('jsonIn').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 002-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Load
+    </button>
+    <button class="hbtn" onclick="document.getElementById('xlsxIn').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 002-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Import Excel
+    </button>
+    <button class="hbtn prim" onclick="exportExcel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export Excel
+    </button>
+  </div>
+</header>
+<input type="file" id="jsonIn" accept=".json" style="display:none" onchange="loadJSON(event)"/>
+<input type="file" id="xlsxIn" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)"/>
+
+<!-- FORM -->
+<div class="form-panel" id="formPanel">
+  <div class="form-inner">
+    <div class="fsections">
+      <div class="fsec" style="flex:1.1">
+        <div class="fsec-title">Schedule</div>
+        <div class="fgrid">
+          <div class="field"><label>Start Date</label><input type="date" id="f_startDate" onchange="calcDays()"/></div>
+          <div class="field"><label>End Date</label><input type="date" id="f_endDate" onchange="calcDays()"/></div>
+          <div class="field"><label>Total Day (Auto)</label><input type="text" id="f_totalDay" readonly placeholder="Auto"/></div>
+        </div>
+      </div>
+      <div class="fsec" style="flex:2.2">
+        <div class="fsec-title">Program Details</div>
+        <div class="fgrid">
+          <div class="field"><label>Program 1</label><input type="text" id="f_program1" placeholder="Program name"/></div>
+          <div class="field"><label>Program 2</label><input type="text" id="f_program2" placeholder="Program name"/></div>
+          <div class="field"><label>Scope</label><input type="text" id="f_scope" placeholder="Audit scope"/></div>
+          <div class="field"><label>Audit Type</label>
+            <select id="f_auditType">
+              <option value="">-- Select --</option>
+              <option>Initial</option><option>Reaudit</option><option>Follow-up</option>
+            </select>
+          </div>
+          <div class="field"><label>Brand</label><input type="text" id="f_brand" placeholder="Brand"/></div>
+          <div class="field"><label>Report No</label><input type="text" id="f_reportNo" placeholder="TR_FC_01"/></div>
+          <div class="field"><label>Man-day</label><input type="number" id="f_manday" placeholder="0.5" step="0.5" min="0"/></div>
+          <div class="field"><label>Report Writing</label>
+            <select id="f_reportWriting">
+              <option value="">-- Select --</option>
+              <option value="YES">YES</option><option value="NO">NO</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="fsec" style="flex:1.5">
+        <div class="fsec-title">Factory / Company</div>
+        <div class="fgrid">
+          <div class="field" style="grid-column:1/-1"><label>Factory Name</label><input type="text" id="f_factoryName" placeholder="Company / factory name"/></div>
+          <div class="field"><label>City</label><input type="text" id="f_city" placeholder="e.g. Istanbul"/></div>
+          <div class="field"><label>Sector</label><input type="text" id="f_sector" placeholder="Industry sector"/></div>
+          <div class="field" style="grid-column:1/-1"><label>Address</label><textarea id="f_address" placeholder="Full address"></textarea></div>
+        </div>
+      </div>
+      <div class="fsec" style="flex:1">
+        <div class="fsec-title">Auditors</div>
+        <div class="fgrid" style="grid-template-columns:1fr;">
+          <div class="field"><label>Lead or Team Auditor</label>
+            <select id="f_leadAuditor">
+              <option value="">-- Select --</option>
+              <option value="Lead Auditor">Lead Auditor</option>
+              <option value="Team Auditor">Team Auditor</option>
+            </select>
+          </div>
+          <div class="field"><label>Other Auditor</label><input type="text" id="f_otherAuditor" placeholder="Auditor 2"/></div>
+          <div class="field"><label>Other Auditor 2</label><input type="text" id="f_otherAuditor2" placeholder="Auditor 3"/></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FORM ACTION BAR -->
+<div class="form-actions">
+  <button class="form-toggle-btn open" id="toggleBtn" onclick="toggleForm()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+    <span id="toggleLabel">Hide</span>
+  </button>
+  <button class="form-toggle-btn" id="colToggleBtn" onclick="toggleColManager()" style="margin-left:2px;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
+    <span id="colToggleLabel">Show Columns</span>
+  </button>
+  <span id="editBadge" class="edit-badge" style="display:none">✏ Editing</span>
+  <div class="spacer"></div>
+  <button class="pin-btn" id="pinBtn" onclick="togglePin()" title="Pin form open">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/></svg>
+  </button>
+  <button class="btn btn-clear" onclick="clearForm()">Clear</button>
+  <button class="btn btn-del" id="btnDelete" style="display:none" onclick="document.getElementById('delModal').style.display='flex'">Delete</button>
+  <button class="btn btn-primary" onclick="saveRecord()">
+    <span id="btnLabel">Add</span>
+  </button>
+</div>
+
+<!-- TABLE AREA -->
+<div class="table-area">
+  <!-- Column visibility manager -->
+  <div class="col-manager-bar" id="colManagerBar">
+    <span>Columns:</span>
+    <!-- tags injected by JS -->
+  </div>
+
+  <div class="table-wrap">
+    <table id="auditTable">
+      <thead><tr id="theadRow"></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div id="noData" class="no-data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" width="44" height="44" style="opacity:.2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+      <p><strong>No records yet.</strong><br><span style="font-size:12px;">Fill the form above and click <em>Add</em>, or import an Excel file.</span></p>
+    </div>
+  </div>
+
+  <div class="table-footer">
+    <span id="recCount">0 records</span>
+    <span id="filterActiveBadge" class="filter-active-badge" style="display:none">Filtered</span>
+    <span id="clearFilterLink" class="clear-filter-link" style="display:none" onclick="clearAllFilters()">✕ Clear filters</span>
+  </div>
+</div>
+
+<!-- Filter popup (singleton, moved in DOM) -->
+<div class="filter-popup" id="filterPopup">
+  <div class="fp-title" id="fp-title">Column</div>
+  <div class="fp-sort-row">
+    <button class="fp-sort-btn" id="fp-sortAsc" onclick="fpSort('asc')">↑ Asc</button>
+    <button class="fp-sort-btn" id="fp-sortDesc" onclick="fpSort('desc')">↓ Desc</button>
+  </div>
+  <div id="fp-date-wrap" style="display:none">
+    <div class="fp-date-pair">
+      <label>From</label><input type="date" id="fp-dateFrom" onchange="fpApply()"/>
+      <label>To</label><input type="date" id="fp-dateTo" onchange="fpApply()"/>
+    </div>
+  </div>
+  <div id="fp-list-wrap" style="display:none;flex-direction:column;gap:6px;">
+    <input class="fp-search" id="fp-search" type="text" placeholder="Search…" oninput="fpRenderList()"/>
+    <div class="fp-list" id="fp-list"></div>
+  </div>
+  <div class="fp-footer">
+    <button class="fp-foot-btn" onclick="fpSelectAll()">All</button>
+    <button class="fp-foot-btn" onclick="fpSelectNone()">None</button>
+    <button class="fp-foot-btn apply" onclick="fpApply()">Apply</button>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div id="delModal" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3>Delete Record</h3>
+    <p>Are you sure you want to permanently delete this record?</p>
+    <div class="modal-btns">
+      <button class="mcancel" onclick="document.getElementById('delModal').style.display='none'">Cancel</button>
+      <button class="mconfirm" onclick="doDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── COLUMN DEFINITIONS ────────────────────────────────────────
+const COL_DEFS = [
+  {key:'startDate',  label:'Start Date',          type:'date', width:130},
+  {key:'endDate',    label:'End Date',             type:'date', width:130},
+  {key:'city',       label:'City',                 type:'text', width:100},
+  {key:'totalDay',   label:'Total Day',            type:'text', width:80},
+  {key:'program1',   label:'Program 1',            type:'text', width:110},
+  {key:'program2',   label:'Program 2',            type:'text', width:110},
+  {key:'scope',      label:'Scope',                type:'text', width:110},
+  {key:'auditType',  label:'Audit Type',           type:'select', width:110},
+  {key:'brand',      label:'Brand',                type:'text', width:90},
+  {key:'reportNo',   label:'Report No',            type:'text', width:100},
+  {key:'manday',     label:'Man-day',              type:'text', width:75},
+  {key:'reportWriting',label:'Report Writing',     type:'select', width:110},
+  {key:'factoryName',label:'Factory Name',         type:'text', width:160},
+  {key:'sector',     label:'Sector',               type:'text', width:100},
+  {key:'address',    label:'Address',              type:'text', width:150},
+  {key:'leadAuditor',label:'Lead / Team Auditor',  type:'text', width:140},
+  {key:'otherAuditor',label:'Other Auditor',       type:'text', width:130},
+  {key:'otherAuditor2',label:'Other Auditor 2',    type:'text', width:130},
+];
+
+const FIELDS = COL_DEFS.map(c=>c.key);
+const XL_HEADERS = [
+  'Start Date','End Date','City','Total Day','Program 1','Program 2','Scope',
+  'Audit Type','Brand','Report No','Man-day','Report Writing',
+  'Factory Name','Sector','Address','Lead or Team Auditor','Other Auditor','Other Auditor 2'
+];
+
+// ── STATE ─────────────────────────────────────────────────────
+let records=[], editId=null;
+let sortField=null, sortAsc=true;
+let formPinned=false, formVisible=true;
+// colOrder: array of keys in display order
+let colOrder = FIELDS.slice();
+// hiddenCols: set of hidden keys
+let hiddenCols = new Set();
+// activeFilters: key -> {selected: Set | null, dateFrom, dateTo}
+let activeFilters = {};
+// drag state
+let dragSrcKey=null;
+// popup state
+let fpCol=null;
+
+// ── DATE HELPERS ──────────────────────────────────────────────
+function excelSerial(s){return new Date(Math.round((s-25569)*86400*1000));}
+function fmtDate(val){
+  if(!val&&val!==0)return'—';
+  let d;
+  if(typeof val==='number')d=excelSerial(val);
+  else if(typeof val==='string'){
+    if(/^\d{4}-\d{2}-\d{2}$/.test(val)){const[y,m,dy]=val.split('-').map(Number);d=new Date(y,m-1,dy);}
+    else if(/^\d{1,2}[.\/-]\d{1,2}[.\/-]\d{4}$/.test(val)){const p=val.split(/[.\/-]/);d=new Date(+p[2],+p[1]-1,+p[0]);}
+    else d=new Date(val);
+  } else return'—';
+  if(!d||isNaN(d))return val.toString();
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+function toISO(val){
+  if(!val&&val!==0)return'';
+  let d;
+  if(typeof val==='number')d=excelSerial(val);
+  else if(typeof val==='string'){
+    if(/^\d{4}-\d{2}-\d{2}$/.test(val))return val;
+    if(/^\d{1,2}[.\/-]\d{1,2}[.\/-]\d{4}$/.test(val)){const p=val.split(/[.\/-]/);d=new Date(+p[2],+p[1]-1,+p[0]);}
+    else d=new Date(val);
+  } else return'';
+  if(!d||isNaN(d))return'';
+  return d.toISOString().slice(0,10);
+}
+function calcTotalDay(s,e){
+  if(!s||!e)return'';
+  const[sy,sm,sd]=s.split('-').map(Number);
+  const[ey,em,ed]=e.split('-').map(Number);
+  const diff=Math.round((new Date(ey,em-1,ed)-new Date(sy,sm-1,sd))/86400000)+1;
+  return diff>0?String(diff):'';
+}
+function calcDays(){
+  const s=document.getElementById('f_startDate').value;
+  const e=document.getElementById('f_endDate').value;
+  document.getElementById('f_totalDay').value=calcTotalDay(s,e);
+}
+
+// ── FORM TOGGLE ───────────────────────────────────────────────
+function toggleForm(){
+  if(formPinned)return;
+  formVisible=!formVisible;
+  document.getElementById('formPanel').classList.toggle('collapsed',!formVisible);
+  document.getElementById('toggleBtn').classList.toggle('open',formVisible);
+  document.getElementById('toggleLabel').textContent=formVisible?'Hide':'Show';
+}
+function togglePin(){
+  formPinned=!formPinned;
+  document.getElementById('pinBtn').classList.toggle('pinned',formPinned);
+  if(formPinned&&!formVisible){formVisible=true;document.getElementById('formPanel').classList.remove('collapsed');document.getElementById('toggleBtn').classList.add('open');document.getElementById('toggleLabel').textContent='Hide';}
+}
+
+// ── FORM HELPERS ──────────────────────────────────────────────
+function getFormData(){const o={};FIELDS.forEach(f=>{const el=document.getElementById('f_'+f);o[f]=el?el.value.trim():'';});return o;}
+function setFormData(rec){FIELDS.forEach(f=>{const el=document.getElementById('f_'+f);if(!el)return;if(f==='startDate'||f==='endDate')el.value=toISO(rec[f]);else el.value=rec[f]??'';});}
+function clearForm(){
+  FIELDS.forEach(f=>{const el=document.getElementById('f_'+f);if(el&&!el.readOnly)el.value='';});
+  document.getElementById('f_totalDay').value='';
+  editId=null;
+  document.getElementById('editBadge').style.display='none';
+  document.getElementById('btnDelete').style.display='none';
+  document.getElementById('btnLabel').textContent='Add';
+  renderTable();
+}
+function saveRecord(){
+  const data=getFormData();
+  if(!data.startDate&&!data.factoryName&&!data.reportNo){toast('Fill at least Start Date, Factory Name or Report No.','warn');return;}
+  data.totalDay=calcTotalDay(data.startDate,data.endDate);
+  if(editId!==null){
+    const i=records.findIndex(r=>r.id===editId);
+    if(i>-1)records[i]={...records[i],...data};
+    toast('Record updated.','success');
+  } else {
+    records.push({id:Date.now(),...data});
+    toast('Record added.','success');
+  }
+  clearForm();
+  if(!formPinned){formVisible=false;document.getElementById('formPanel').classList.add('collapsed');document.getElementById('toggleBtn').classList.remove('open');document.getElementById('toggleLabel').textContent='Show';}
+}
+function editRecord(id){
+  const rec=records.find(r=>r.id===id);if(!rec)return;
+  editId=id;setFormData(rec);
+  document.getElementById('editBadge').style.display='';
+  document.getElementById('btnDelete').style.display='';
+  document.getElementById('btnLabel').textContent='Update';
+  if(!formVisible){formVisible=true;document.getElementById('formPanel').classList.remove('collapsed');document.getElementById('toggleBtn').classList.add('open');document.getElementById('toggleLabel').textContent='Hide';}
+  renderTable();
+}
+let pendingDeleteId=null;
+function requestDelete(id){pendingDeleteId=id;document.getElementById('delModal').style.display='flex';}
+function doDelete(){
+  const id=pendingDeleteId??editId;
+  if(id===null)return;
+  records=records.filter(r=>r.id!==id);
+  if(id===editId)clearForm();
+  pendingDeleteId=null;
+  document.getElementById('delModal').style.display='none';
+  renderTable();toast('Record deleted.');
+}
+
+// ── COLUMN MANAGER ────────────────────────────────────────────
+function buildColManager(){
+  const bar=document.getElementById('colManagerBar');
+  // keep "Columns:" label
+  const tags=bar.querySelectorAll('.col-tag');
+  tags.forEach(t=>t.remove());
+  colOrder.forEach(key=>{
+    const def=COL_DEFS.find(c=>c.key===key);if(!def)return;
+    const tag=document.createElement('span');
+    tag.className='col-tag'+(hiddenCols.has(key)?' hidden-col':'');
+    tag.textContent=def.label;
+    tag.title='Click to show/hide';
+    tag.onclick=()=>{
+      if(hiddenCols.has(key))hiddenCols.delete(key);
+      else hiddenCols.add(key);
+      buildColManager();buildTableHeader();renderTable();
+    };
+    bar.appendChild(tag);
+  });
+}
+
+// ── TABLE HEADER ─────────────────────────────────────────────
+function buildTableHeader(){
+  const tr=document.getElementById('theadRow');
+  tr.innerHTML='';
+  // actions column
+  const thA=document.createElement('th');
+  thA.style.cssText='min-width:64px;width:64px;';
+  thA.innerHTML='<div class="th-inner"><span class="th-label">Actions</span></div>';
+  tr.appendChild(thA);
+  // data columns
+  colOrder.forEach(key=>{
+    if(hiddenCols.has(key))return;
+    const def=COL_DEFS.find(c=>c.key===key);if(!def)return;
+    const th=document.createElement('th');
+    th.dataset.key=key;
+    th.style.minWidth=def.width+'px';
+    th.draggable=true;
+    const hasF=!!(activeFilters[key]&&activeFilters[key].selected&&activeFilters[key].selected.size>0);
+    const sortInd=sortField===key?(sortAsc?' ▲':' ▼'):'';
+    if(sortField===key)th.classList.add('sorted');
+    th.innerHTML=`<div class="th-inner">
+      <span class="th-label" onclick="sortBy('${key}')">${def.label}<span class="sort-ind">${sortInd}</span></span>
+      <span class="th-filter-btn${hasF?' has-filter':''}" onclick="openFilterPopup(event,'${key}')" title="Filter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      </span>
+    </div>`;
+    // drag
+    th.addEventListener('dragstart',e=>{dragSrcKey=key;th.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    th.addEventListener('dragend',()=>{th.classList.remove('dragging');document.querySelectorAll('thead th').forEach(t=>t.classList.remove('drag-over'));});
+    th.addEventListener('dragover',e=>{e.preventDefault();th.classList.add('drag-over');});
+    th.addEventListener('dragleave',()=>th.classList.remove('drag-over'));
+    th.addEventListener('drop',e=>{
+      e.preventDefault();th.classList.remove('drag-over');
+      if(!dragSrcKey||dragSrcKey===key)return;
+      const fromIdx=colOrder.indexOf(dragSrcKey),toIdx=colOrder.indexOf(key);
+      if(fromIdx<0||toIdx<0)return;
+      colOrder.splice(fromIdx,1);colOrder.splice(toIdx,0,dragSrcKey);
+      buildColManager();buildTableHeader();renderTable();
+    });
+    tr.appendChild(th);
+  });
+}
+
+// ── FILTER POPUP ─────────────────────────────────────────────
+let fpOpen=false;
+function openFilterPopup(e,key){
+  e.stopPropagation();
+  const popup=document.getElementById('filterPopup');
+  if(fpOpen&&fpCol===key){closeFilterPopup();return;}
+  fpCol=key;fpOpen=true;
+  const def=COL_DEFS.find(c=>c.key===key);
+  document.getElementById('fp-title').textContent=def.label.toUpperCase();
+  document.getElementById('fp-sortAsc').classList.toggle('active',sortField===key&&sortAsc);
+  document.getElementById('fp-sortDesc').classList.toggle('active',sortField===key&&!sortAsc);
+  // All columns now use the list view (dates get hierarchical year>month>day)
+  document.getElementById('fp-date-wrap').style.display='none';
+  document.getElementById('fp-list-wrap').style.display='flex';
+  document.getElementById('fp-search').value='';
+  fpRenderList();
+  // position
+  const btn=e.currentTarget;
+  const rect=btn.getBoundingClientRect();
+  popup.style.display='flex';
+  const pw=270,ph=360;
+  let left=rect.left, top=rect.bottom+4;
+  if(left+pw>window.innerWidth)left=window.innerWidth-pw-8;
+  if(top+ph>window.innerHeight)top=rect.top-ph-4;
+  popup.style.left=left+'px';popup.style.top=top+'px';
+  popup.classList.add('open');
+}
+function closeFilterPopup(){
+  document.getElementById('filterPopup').classList.remove('open');
+  document.getElementById('filterPopup').style.display='none';
+  fpOpen=false;fpCol=null;
+}
+document.addEventListener('click',e=>{
+  if(fpOpen&&!document.getElementById('filterPopup').contains(e.target))closeFilterPopup();
+});
+function fpSort(dir){
+  if(fpCol){sortField=fpCol;sortAsc=dir==='asc';}
+  document.getElementById('fp-sortAsc').classList.toggle('active',dir==='asc');
+  document.getElementById('fp-sortDesc').classList.toggle('active',dir==='desc');
+  buildTableHeader();renderTable();
+}
+
+// month names for date grouping
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function fpRenderList(){
+  if(!fpCol)return;
+  const def=COL_DEFS.find(c=>c.key===fpCol);
+  const q=(document.getElementById('fp-search').value||'').toLowerCase();
+  const f=activeFilters[fpCol]||{};
+  // For date cols: sel is a Set of ISO strings (yyyy-mm-dd)
+  // For text cols: sel is a Set of display strings
+  const sel=f.selected||null;
+  const list=document.getElementById('fp-list');
+
+  if(def.type==='date'){
+    // Build structure: year -> month -> [days]
+    // Each entry keyed by ISO yyyy-mm-dd
+    const isoSet={}; // iso -> count
+    records.forEach(r=>{
+      const iso=toISO(r[fpCol]);
+      if(!iso)return;
+      isoSet[iso]=(isoSet[iso]||0)+1;
+    });
+    // Filter by search
+    const allISO=Object.keys(isoSet).filter(iso=>!q||iso.includes(q)||fmtDate(iso).toLowerCase().includes(q));
+    // Group year -> month -> days
+    const tree={};
+    allISO.forEach(iso=>{
+      const[y,m,d]=iso.split('-');
+      if(!tree[y])tree[y]={};
+      if(!tree[y][m])tree[y][m]=[];
+      tree[y][m].push({iso,count:isoSet[iso]});
+    });
+    const sortedYears=Object.keys(tree).sort((a,b)=>b-a);
+    let html='';
+    sortedYears.forEach(y=>{
+      const months=Object.keys(tree[y]).sort((a,b)=>b-a);
+      // all ISOs under this year
+      const yearISOs=months.flatMap(m=>tree[y][m].map(d=>d.iso));
+      const yearAll=yearISOs.every(iso=>!sel||sel.has(iso));
+      const yearSome=yearISOs.some(iso=>!sel||sel.has(iso));
+      const yearCount=yearISOs.reduce((s,iso)=>s+isoSet[iso],0);
+      html+=`<div class="fp-group" data-level="year" data-key="${y}">
+        <input type="checkbox" data-scope="year" data-year="${y}" ${yearAll?'checked':''} ${(!yearAll&&yearSome)?'data-indeterminate="1"':''} onchange="fpGroupChange(this)"/>
+        <span style="font-weight:700;">Year ${y}</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--muted)">(${yearCount})</span>
+      </div>`;
+      months.forEach(m=>{
+        const days=tree[y][m].sort((a,b)=>b.iso.localeCompare(a.iso));
+        const mISOs=days.map(d=>d.iso);
+        const mAll=mISOs.every(iso=>!sel||sel.has(iso));
+        const mSome=mISOs.some(iso=>!sel||sel.has(iso));
+        const mCount=mISOs.reduce((s,iso)=>s+isoSet[iso],0);
+        const mLabel=MONTHS_FULL[parseInt(m,10)-1]+' '+y;
+        html+=`<div class="fp-group fp-month" data-level="month" data-year="${y}" data-month="${m}">
+          <input type="checkbox" data-scope="month" data-year="${y}" data-month="${m}" ${mAll?'checked':''} ${(!mAll&&mSome)?'data-indeterminate="1"':''} onchange="fpGroupChange(this)"/>
+          <span style="padding-left:8px;">${mLabel}</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--muted)">(${mCount})</span>
+        </div>`;
+        days.forEach(({iso,count})=>{
+          const[,, dd]=iso.split('-');
+          const checked=(!sel||sel.has(iso));
+          html+=`<div class="fp-item fp-day">
+            <input type="checkbox" value="${iso}" data-scope="day" ${checked?'checked':''} onchange="fpDayChange()"/>
+            <span class="fp-item-label" style="padding-left:16px;">${parseInt(dd,10)} ${MONTHS[parseInt(m,10)-1]} ${y}</span>
+            <span class="fp-item-count">${count}</span>
+          </div>`;
+        });
+      });
+    });
+    list.innerHTML=html||'<div style="padding:10px;font-size:12px;color:var(--muted);">No dates found</div>';
+    // set indeterminate state
+    list.querySelectorAll('input[data-indeterminate="1"]').forEach(cb=>{cb.indeterminate=true;});
+  } else {
+    // plain list
+    const valMap={};
+    records.forEach(r=>{
+      const raw=r[fpCol];
+      // For reportWriting normalise to uppercase
+      let disp = fpCol==='reportWriting'
+        ? ((raw||'').toString().trim().toUpperCase()||'—')
+        : ((raw||'').toString().trim()||'—');
+      valMap[disp]=(valMap[disp]||0)+1;
+    });
+    let items=Object.entries(valMap).filter(([d])=>!q||d.toLowerCase().includes(q));
+    items.sort((a,b)=>a[0].localeCompare(b[0]));
+    list.innerHTML=items.map(([disp,count])=>`<div class="fp-item">
+      <input type="checkbox" value="${escQ(disp)}" ${(!sel||sel.has(disp))?'checked':''}/>
+      <span class="fp-item-label">${disp}</span>
+      <span class="fp-item-count">${count}</span>
+    </div>`).join('')||'<div style="padding:10px;font-size:12px;color:var(--muted);">No values</div>';
+  }
+}
+
+function escQ(s){return(s||'').replace(/"/g,'&quot;');}
+
+function fpGroupChange(cb){
+  const scope=cb.dataset.scope;
+  const list=document.getElementById('fp-list');
+  if(scope==='year'){
+    const y=cb.dataset.year;
+    list.querySelectorAll(`input[data-scope="month"][data-year="${y}"]`).forEach(c=>{c.checked=cb.checked;c.indeterminate=false;});
+    list.querySelectorAll(`input[data-scope="day"]`).forEach(c=>{
+      // belong to this year?
+      if(c.value.startsWith(y+'-'))c.checked=cb.checked;
+    });
+  } else if(scope==='month'){
+    const y=cb.dataset.year,m=cb.dataset.month;
+    list.querySelectorAll(`input[data-scope="day"]`).forEach(c=>{
+      if(c.value.startsWith(y+'-'+m+'-'))c.checked=cb.checked;
+    });
+    _updateYearCb(y);
+  }
+}
+
+function fpDayChange(){
+  const list=document.getElementById('fp-list');
+  // update month and year checkboxes
+  list.querySelectorAll('input[data-scope="month"]').forEach(mcb=>{
+    const y=mcb.dataset.year,m=mcb.dataset.month;
+    const days=[...list.querySelectorAll(`input[data-scope="day"]`)].filter(c=>c.value.startsWith(y+'-'+m+'-'));
+    const allC=days.every(c=>c.checked),someC=days.some(c=>c.checked);
+    mcb.checked=allC;mcb.indeterminate=!allC&&someC;
+  });
+  list.querySelectorAll('input[data-scope="year"]').forEach(ycb=>{_updateYearCb(ycb.dataset.year);});
+}
+
+function _updateYearCb(y){
+  const list=document.getElementById('fp-list');
+  const ycb=list.querySelector(`input[data-scope="year"][data-year="${y}"]`);
+  if(!ycb)return;
+  const days=[...list.querySelectorAll(`input[data-scope="day"]`)].filter(c=>c.value.startsWith(y+'-'));
+  const allC=days.every(c=>c.checked),someC=days.some(c=>c.checked);
+  ycb.checked=allC;ycb.indeterminate=!allC&&someC;
+}
+
+function fpSelectAll(){
+  document.querySelectorAll('#fp-list input[type=checkbox]').forEach(c=>{c.checked=true;c.indeterminate=false;});
+}
+function fpSelectNone(){
+  document.querySelectorAll('#fp-list input[type=checkbox]').forEach(c=>{c.checked=false;c.indeterminate=false;});
+}
+function fpApply(){
+  if(!fpCol)return;
+  const def=COL_DEFS.find(c=>c.key===fpCol);
+  if(def.type==='date'){
+    // collect checked day ISOs
+    const checked=new Set([...document.querySelectorAll('#fp-list input[data-scope="day"]:checked')].map(c=>c.value));
+    const total=[...document.querySelectorAll('#fp-list input[data-scope="day"]')].length;
+    if(checked.size===0||checked.size>=total){delete activeFilters[fpCol];}
+    else{activeFilters[fpCol]={selected:checked};}
+  } else {
+    const allDisp=new Set(records.map(r=>{
+      const raw=r[fpCol];
+      return fpCol==='reportWriting'?((raw||'').toString().trim().toUpperCase()||'—'):((raw||'').toString().trim()||'—');
+    }));
+    const checked=new Set([...document.querySelectorAll('#fp-list .fp-item input:checked')].map(c=>c.value));
+    if(checked.size>=allDisp.size){delete activeFilters[fpCol];}
+    else{activeFilters[fpCol]={selected:checked};}
+  }
+  buildTableHeader();renderTable();closeFilterPopup();
+}
+function clearAllFilters(){
+  activeFilters={};buildTableHeader();renderTable();
+}
+
+// ── RENDER TABLE ─────────────────────────────────────────────
+function filterData(){
+  return records.filter(r=>{
+    for(const key of Object.keys(activeFilters)){
+      const f=activeFilters[key];
+      const def=COL_DEFS.find(c=>c.key===key);
+      if(def.type==='date'){
+        // selected is a Set of ISO strings
+        if(f.selected){
+          const iso=toISO(r[key])||'';
+          if(!f.selected.has(iso))return false;
+        }
+      } else {
+        // text/select: selected is a Set of display strings
+        if(f.selected){
+          const raw=r[key];
+          const disp=key==='reportWriting'
+            ?((raw||'').toString().trim().toUpperCase()||'—')
+            :((raw||'').toString().trim()||'—');
+          if(!f.selected.has(disp))return false;
+        }
+      }
+    }
+    return true;
+  });
+}
+function sortData(data){
+  if(!sortField)return data;
+  return [...data].sort((a,b)=>{
+    let va=a[sortField]??'',vb=b[sortField]??'';
+    const def=COL_DEFS.find(c=>c.key===sortField);
+    if(def&&def.type==='date'){va=toISO(va);vb=toISO(vb);}
+    else if(!isNaN(va)&&!isNaN(vb)&&va!==''&&vb!==''){va=Number(va);vb=Number(vb);}
+    if(va<vb)return sortAsc?-1:1;
+    if(va>vb)return sortAsc?1:-1;
+    return 0;
+  });
+}
+function renderTable(){
+  const data=sortData(filterData());
+  const active=Object.keys(activeFilters).length>0;
+  document.getElementById('filterActiveBadge').style.display=active?'':'none';
+  document.getElementById('clearFilterLink').style.display=active?'':'none';
+  const tbody=document.getElementById('tableBody');
+  const noData=document.getElementById('noData');
+  if(data.length===0){tbody.innerHTML='';noData.style.display='';}
+  else{
+    noData.style.display='none';
+    const rwBadge=rw=>{
+      const v=(rw||'').toString().trim().toUpperCase();
+      return v==='YES'?'<span class="badge b-yes">YES</span>':v==='NO'?'<span class="badge b-no">NO</span>':(rw||'—');
+    };
+    tbody.innerHTML=data.map(r=>{
+      const visibleKeys=colOrder.filter(k=>!hiddenCols.has(k));
+      const cells=visibleKeys.map(key=>{
+        const def=COL_DEFS.find(c=>c.key===key);
+        let val;
+        if(def.type==='date') val=fmtDate(r[key]);
+        else if(key==='totalDay') val=r[key]?`<span class="badge b-blue">${r[key]}</span>`:'—';
+        else if(key==='auditType') val=r[key]?`<span class="badge b-amber">${r[key]}</span>`:'—';
+        else if(key==='reportNo') val=r[key]?`<span class="badge b-green">${r[key]}</span>`:'—';
+        else if(key==='reportWriting') val=rwBadge(r[key]);
+        else if(key==='factoryName') val=r[key]?`<strong>${r[key]}</strong>`:'—';
+        else if(key==='address') val=`<span title="${r[key]||''}">${(r[key]||'—').substring(0,30)}</span>`;
+        else val=(r[key]||'').toString().trim()||'—';
+        return `<td>${val}</td>`;
+      }).join('');
+      return `<tr class="${r.id===editId?'selected':''}">
+        <td class="action-cell">
+          <button class="row-edit-btn" onclick="editRecord(${r.id})" title="Edit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="row-del-btn" onclick="requestDelete(${r.id})" title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </td>
+        ${cells}
+      </tr>`;
+    }).join('');
+  }
+  const total=records.length,shown=data.length;
+  document.getElementById('recCount').textContent=active?`${shown} of ${total} records`:`${total} record${total!==1?'s':''}`;
+}
+
+function sortBy(key){
+  if(sortField===key)sortAsc=!sortAsc;else{sortField=key;sortAsc=true;}
+  buildTableHeader();renderTable();
+}
+
+// ── EXCEL EXPORT ─────────────────────────────────────────────
+function exportExcel(){
+  if(!records.length){toast('No records to export.','warn');return;}
+  const data=sortData(filterData());
+  const visCols=colOrder.filter(k=>!hiddenCols.has(k));
+  const headers=visCols.map(k=>COL_DEFS.find(c=>c.key===k).label);
+  const rows=data.map(r=>visCols.map(k=>{
+    if(k==='startDate'||k==='endDate')return fmtDate(r[k]);
+    return r[k]??'';
+  }));
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols']=headers.map(()=>({wch:20}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Audit Records');
+  XLSX.writeFile(wb,`audit_records_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Excel exported.','success');
+}
+
+// ── EXCEL IMPORT ─────────────────────────────────────────────
+function importExcel(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary',cellDates:false});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){toast('No data found.','warn');return;}
+      const headers=rows[0].map(h=>h.toString().trim());
+      const mapIdx=XL_HEADERS.map(h=>headers.indexOf(h));
+      let imported=0;
+      rows.slice(1).forEach(row=>{
+        if(row.every(c=>c===''))return;
+        const rec={id:Date.now()+Math.random()};
+        FIELDS.forEach((f,i)=>{
+          let val=mapIdx[i]>=0?row[mapIdx[i]]:'';
+          if(f==='startDate'||f==='endDate')val=toISO(val)||val;
+          if(f==='reportWriting'){const s=(val||'').toString().trim().toUpperCase();val=(s==='YES'||s==='NO')?s:val.toString();}
+          rec[f]=(val??'').toString();
+        });
+        rec.totalDay=calcTotalDay(rec.startDate,rec.endDate)||rec.totalDay;
+        records.push(rec);imported++;
+      });
+      buildTableHeader();renderTable();
+      toast(`Imported ${imported} records.`,'success');
+    } catch(err){toast('Error reading Excel file.','warn');console.error(err);}
+  };
+  reader.readAsBinaryString(file);ev.target.value='';
+}
+
+// ── JSON ─────────────────────────────────────────────────────
+function saveJSON(){
+  if(!records.length){toast('No records to save.','warn');return;}
+  const blob=new Blob([JSON.stringify({version:3,records,colOrder,hiddenCols:[...hiddenCols]},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`audit_records_${new Date().toISOString().slice(0,10)}.json`;a.click();
+  toast('JSON saved.','success');
+}
+function loadJSON(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const obj=JSON.parse(e.target.result);
+      records=Array.isArray(obj)?obj:(obj.records||[]);
+      if(obj.colOrder)colOrder=obj.colOrder;
+      if(obj.hiddenCols)hiddenCols=new Set(obj.hiddenCols);
+      records.forEach(r=>{if(!r.id)r.id=Date.now()+Math.random();});
+      clearForm();buildColManager();buildTableHeader();renderTable();
+      toast(`Loaded ${records.length} records.`,'success');
+    } catch{toast('Error reading JSON.','warn');}
+  };
+  reader.readAsText(file);ev.target.value='';
+}
+
+// ── TOAST ─────────────────────────────────────────────────────
+function toast(msg,type=''){
+  const t=document.createElement('div');
+  t.className='toast'+(type?' '+type:'');
+  t.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>${msg}`;
+  document.getElementById('toastWrap').appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+
+// ── COLUMN MANAGER TOGGLE ────────────────────────────────────
+let colManagerVisible = false;
+function toggleColManager(){
+  colManagerVisible = !colManagerVisible;
+  document.getElementById('colManagerBar').classList.toggle('collapsed', !colManagerVisible);
+  document.getElementById('colToggleLabel').textContent = colManagerVisible ? 'Hide Columns' : 'Show Columns';
+  document.getElementById('colToggleBtn').classList.toggle('open', colManagerVisible);
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+buildColManager();
+buildTableHeader();
+renderTable();
+// col manager hidden by default
+document.getElementById('colManagerBar').classList.add('collapsed');
+</script>
+</body>
+</html>
