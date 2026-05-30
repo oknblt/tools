@@ -184,8 +184,7 @@ thead th.dragging{opacity:.4;}
 .privacy-toggle .pt-emoji{font-size:14px;line-height:1;}
 
 /* ── GREEN HIGHLIGHT for Istanbul & duplicate factory ── */
-td.hl-green{background:#d4f5e4!important;color:#0a5c3a!important;font-weight:600;}
-td.hl-green strong{color:#0a5c3a!important;}
+.hl-badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;background:var(--g2-l);color:var(--g2);}
 
 /* ── DATE GROUP COLLAPSE ── */
 .fp-group{cursor:pointer;position:relative;}
@@ -248,10 +247,10 @@ td.hl-green strong{color:#0a5c3a!important;}
     <button class="hbtn" onclick="document.getElementById('xlsxIn').click()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 002-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Import
     </button>
-    <button class="hbtn prim" onclick="exportExcel()">
+    <button class="hbtn" onclick="exportExcel()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export
     </button>
-    <button class="hbtn" onclick="exportPDF()" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);">
+    <button class="hbtn" onclick="exportPDF()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>PDF
     </button>
   </div>
@@ -333,7 +332,6 @@ td.hl-green strong{color:#0a5c3a!important;}
     <span id="toggleLabel">Hide</span>
   </button>
   <button class="form-toggle-btn" id="colToggleBtn" onclick="toggleColManager()" style="margin-left:2px;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
     <span id="colToggleLabel">Columns</span>
   </button>
   <span id="editBadge" class="edit-badge" style="display:none">✏ Editing</span>
@@ -1041,7 +1039,7 @@ function renderTable(){
       const visibleKeys=colOrder.filter(k=>!hiddenCols.has(k));
       const cells=visibleKeys.map(key=>{
         const def=COL_DEFS.find(c=>c.key===key);
-        let val, hlGreen=false;
+        let val;
         if(def.type==='date') val=fmtDate(r[key]);
         else if(key==='totalDay') val=r[key]?`<span class="badge b-blue">${r[key]}</span>`:'—';
         else if(key==='auditType') val=r[key]?`<span class="badge b-amber">${r[key]}</span>`:'—';
@@ -1049,20 +1047,22 @@ function renderTable(){
         else if(key==='reportWriting') val=rwBadge(r[key]);
         else if(key==='city'){
           const raw=(r[key]||'').trim();
-          // Normalize Turkish İ → I before lowercasing to handle İstanbul and Istanbul
           const norm=raw.replace(/İ/g,'I').replace(/ı/g,'i').toLowerCase();
-          if(norm==='istanbul')hlGreen=true;
-          val=raw||'—';
+          if(norm==='istanbul'){
+            val=`<span class="hl-badge">${raw}</span>`;
+          } else {
+            val=raw||'—';
+          }
         }
         else if(key==='factoryName'){
           const raw=(r[key]||'').trim();
-          if(raw&&dupFactories.has(raw))hlGreen=true;
-          const display=privacyMode&&raw?maskFactory(raw):`<strong>${raw||'—'}</strong>`;
-          val=raw?display:'—';
+          const isdup=raw&&dupFactories.has(raw);
+          const display=privacyMode&&raw?maskFactory(raw):raw||'—';
+          val=isdup?`<span class="hl-badge">${display}</span>`:display||'—';
         }
         else if(key==='address') val=`<span title="${r[key]||''}">${(r[key]||'—').substring(0,30)}</span>`;
         else val=(r[key]||'').toString().trim()||'—';
-        return `<td${hlGreen?' class="hl-green"':''}>${val}</td>`;
+        return `<td>${val}</td>`;
       }).join('');
       return `<tr class="${r.id===editId?'selected':''}">
         <td class="action-cell">
@@ -1286,7 +1286,6 @@ let colManagerVisible = false;
 function toggleColManager(){
   colManagerVisible = !colManagerVisible;
   document.getElementById('colManagerBar').classList.toggle('collapsed', !colManagerVisible);
-  document.getElementById('colToggleLabel').textContent = colManagerVisible ? 'Hide Columns' : 'Columns';
   document.getElementById('colToggleBtn').classList.toggle('open', colManagerVisible);
 }
 
