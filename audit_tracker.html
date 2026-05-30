@@ -176,6 +176,17 @@ thead th.dragging{opacity:.4;}
 ::-webkit-scrollbar{width:6px;height:6px;}
 ::-webkit-scrollbar-thumb{background:#c5cad6;border-radius:4px;}
 
+/* ── PRIVACY TOGGLE ── */
+.privacy-toggle{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;padding:4px 10px;border-radius:var(--r);font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--border);background:var(--surface);transition:background .12s,color .12s;}
+.privacy-toggle:hover{background:var(--accent-l);color:var(--accent);}
+.privacy-toggle input[type=checkbox]{display:none;}
+.privacy-toggle.active{background:var(--accent-l);color:var(--accent);border-color:#b5d4f4;}
+.privacy-toggle .pt-emoji{font-size:14px;line-height:1;}
+
+/* ── GREEN HIGHLIGHT for Istanbul & duplicate factory ── */
+td.hl-green{background:#d4f5e4!important;color:#0a5c3a!important;font-weight:600;}
+td.hl-green strong{color:#0a5c3a!important;}
+
 /* ── DATE GROUP COLLAPSE ── */
 .fp-group{cursor:pointer;position:relative;}
 .fp-group .fp-collapse-icon{font-size:9px;color:var(--muted);margin-left:4px;display:inline-block;transition:transform .18s;user-select:none;}
@@ -323,11 +334,16 @@ thead th.dragging{opacity:.4;}
   </button>
   <button class="form-toggle-btn" id="colToggleBtn" onclick="toggleColManager()" style="margin-left:2px;">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
-    <span id="colToggleLabel">Show Columns</span>
+    <span id="colToggleLabel">Columns</span>
   </button>
   <span id="editBadge" class="edit-badge" style="display:none">✏ Editing</span>
   <div class="spacer"></div>
   <button class="btn btn-clear" onclick="clearForm()">Clear</button>
+  <label class="privacy-toggle" id="privacyToggle" title="Privacy">
+    <input type="checkbox" id="privacyCheck" onchange="togglePrivacy(this.checked)"/>
+    <span class="pt-emoji">🙈</span>
+    <span>Privacy</span>
+  </label>
   <button class="btn btn-del" id="btnDelete" style="display:none" onclick="document.getElementById('delModal').style.display='flex'">Delete</button>
   <button class="btn btn-primary" onclick="saveRecord()">
     <span id="btnLabel">Add</span>
@@ -355,6 +371,8 @@ thead th.dragging{opacity:.4;}
 
   <div class="table-footer">
     <span id="recCount">0 records</span>
+    <span id="totalDayStat" style="color:var(--accent);font-weight:600;font-size:11px;"></span>
+    <span id="totalMandayStat" style="color:var(--g2);font-weight:600;font-size:11px;"></span>
     <span id="filterActiveBadge" class="filter-active-badge" style="display:none">Filtered</span>
     <span id="clearFilterLink" class="clear-filter-link" style="display:none" onclick="clearAllFilters()">✕ Clear filters</span>
   </div>
@@ -442,6 +460,20 @@ let activeFilters = {};
 let dragSrcKey=null;
 // popup state
 let fpCol=null;
+// privacy mode
+let privacyMode=false;
+
+function togglePrivacy(on){
+  privacyMode=on;
+  document.getElementById('privacyToggle').classList.toggle('active',on);
+  renderTable();
+}
+
+function maskFactory(name){
+  if(!name||!privacyMode)return name;
+  const words=name.trim().split(/\s+/);
+  return words.map(w=>w.charAt(0)+'***').join(' ');
+}
 
 // ── DATE HELPERS ──────────────────────────────────────────────
 function excelSerial(s){return new Date(Math.round((s-25569)*86400*1000));}
@@ -995,24 +1027,42 @@ function renderTable(){
   if(data.length===0){tbody.innerHTML='';noData.style.display='';}
   else{
     noData.style.display='none';
+    // Build set of duplicate factory names (appear more than once in ALL records)
+    const factoryCount={};
+    records.forEach(r=>{const n=(r.factoryName||'').trim();if(n)factoryCount[n]=(factoryCount[n]||0)+1;});
+    const dupFactories=new Set(Object.keys(factoryCount).filter(n=>factoryCount[n]>1));
+
     const rwBadge=rw=>{
       const v=(rw||'').toString().trim().toUpperCase();
       return v==='YES'?'<span class="badge b-yes">YES</span>':v==='NO'?'<span class="badge b-no">NO</span>':(rw||'—');
     };
+    const isIstanbul=val=>/^i̇?stanbul$/i.test((val||'').trim().normalize('NFC').replace(/İ/g,'i̇').toLowerCase().replace(/ı/g,'i'));
     tbody.innerHTML=data.map(r=>{
       const visibleKeys=colOrder.filter(k=>!hiddenCols.has(k));
       const cells=visibleKeys.map(key=>{
         const def=COL_DEFS.find(c=>c.key===key);
-        let val;
+        let val, hlGreen=false;
         if(def.type==='date') val=fmtDate(r[key]);
         else if(key==='totalDay') val=r[key]?`<span class="badge b-blue">${r[key]}</span>`:'—';
         else if(key==='auditType') val=r[key]?`<span class="badge b-amber">${r[key]}</span>`:'—';
         else if(key==='reportNo') val=r[key]?`<span class="badge b-green">${r[key]}</span>`:'—';
         else if(key==='reportWriting') val=rwBadge(r[key]);
-        else if(key==='factoryName') val=r[key]?`<strong>${r[key]}</strong>`:'—';
+        else if(key==='city'){
+          const raw=(r[key]||'').trim();
+          // Normalize Turkish İ → I before lowercasing to handle İstanbul and Istanbul
+          const norm=raw.replace(/İ/g,'I').replace(/ı/g,'i').toLowerCase();
+          if(norm==='istanbul')hlGreen=true;
+          val=raw||'—';
+        }
+        else if(key==='factoryName'){
+          const raw=(r[key]||'').trim();
+          if(raw&&dupFactories.has(raw))hlGreen=true;
+          const display=privacyMode&&raw?maskFactory(raw):`<strong>${raw||'—'}</strong>`;
+          val=raw?display:'—';
+        }
         else if(key==='address') val=`<span title="${r[key]||''}">${(r[key]||'—').substring(0,30)}</span>`;
         else val=(r[key]||'').toString().trim()||'—';
-        return `<td>${val}</td>`;
+        return `<td${hlGreen?' class="hl-green"':''}>${val}</td>`;
       }).join('');
       return `<tr class="${r.id===editId?'selected':''}">
         <td class="action-cell">
@@ -1029,6 +1079,17 @@ function renderTable(){
   }
   const total=records.length,shown=data.length;
   document.getElementById('recCount').textContent=active?`${shown} of ${total} records`:`${total} record${total!==1?'s':''}`;
+  // Footer totals — only visible rows
+  const totalDay=data.reduce((s,r)=>{const v=parseInt(r.totalDay);return s+(isNaN(v)?0:v);},0);
+  const totalManday=data.reduce((s,r)=>{const v=parseFloat(r.manday);return s+(isNaN(v)?0:v);},0);
+  const dayEl=document.getElementById('totalDayStat');
+  const mdEl=document.getElementById('totalMandayStat');
+  if(data.length){
+    dayEl.textContent=`· Total Day: ${totalDay}`;
+    mdEl.textContent=`· Total Manday: ${totalManday%1===0?totalManday:totalManday.toFixed(1)}`;
+  } else {
+    dayEl.textContent='';mdEl.textContent='';
+  }
 }
 
 function sortBy(key){
@@ -1225,7 +1286,7 @@ let colManagerVisible = false;
 function toggleColManager(){
   colManagerVisible = !colManagerVisible;
   document.getElementById('colManagerBar').classList.toggle('collapsed', !colManagerVisible);
-  document.getElementById('colToggleLabel').textContent = colManagerVisible ? 'Hide Columns' : 'Show Columns';
+  document.getElementById('colToggleLabel').textContent = colManagerVisible ? 'Hide Columns' : 'Columns';
   document.getElementById('colToggleBtn').classList.toggle('open', colManagerVisible);
 }
 
