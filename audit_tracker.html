@@ -24,8 +24,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
 .brand small{font-size:10px;opacity:.6;margin-left:4px;}
 .hbtn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;padding:4px 11px;border-radius:var(--r);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;transition:background .15s;}
 .hbtn:hover{background:rgba(255,255,255,.22);}
-.hbtn.prim{background:#fff;color:var(--accent);font-weight:700;border-color:#fff;}
-.hbtn.prim:hover{background:#dce8f8;}
 .hactions{display:flex;gap:5px;}
 
 /* ── FORM PANEL ── */
@@ -48,7 +46,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
 .form-toggle-btn:hover{background:var(--accent-l);}
 .form-toggle-btn svg{width:13px;height:13px;transition:transform .3s;}
 .form-toggle-btn.open svg{transform:rotate(180deg);}
-.edit-badge{font-size:10px;background:var(--warn-l);color:var(--warn);padding:2px 8px;border-radius:20px;font-weight:700;}
 .spacer{flex:1;}
 .btn{padding:5px 13px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;border:none;display:flex;align-items:center;gap:4px;transition:opacity .15s,transform .1s;white-space:nowrap;}
 .btn:active{transform:scale(.97);}
@@ -251,7 +248,7 @@ thead th.dragging{opacity:.4;}
     <button class="hbtn" onclick="document.getElementById('xlsxIn').click()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 002-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Import
     </button>
-    <button class="hbtn prim" onclick="exportExcel()">
+    <button class="hbtn" onclick="exportExcel()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export
     </button>
     <button class="hbtn" onclick="exportPDF()" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);">
@@ -338,14 +335,13 @@ thead th.dragging{opacity:.4;}
   <button class="form-toggle-btn" id="colToggleBtn" onclick="toggleColManager()" style="margin-left:2px;">
     <span id="colToggleLabel">Columns</span>
   </button>
-  <span id="editBadge" class="edit-badge" style="display:none">✏ Editing</span>
   <div class="spacer"></div>
-  <button class="btn btn-clear" onclick="clearForm()">Clear</button>
   <label class="privacy-toggle" title="Hide factory names" style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:var(--r);padding:5px 10px;background:var(--surface);user-select:none;white-space:nowrap;">
     <input type="checkbox" id="privacyChk" onchange="togglePrivacy()" style="display:none"/>
     <span id="privacyEye" style="font-size:15px;line-height:1;">🙈</span>
     <span>Privacy</span>
   </label>
+  <button class="btn btn-clear" onclick="clearForm()">Clear</button>
   <button class="btn btn-del" id="btnDelete" style="display:none" onclick="document.getElementById('delModal').style.display='flex'">Delete</button>
   <button class="btn btn-primary" onclick="saveRecord()">
     <span id="btnLabel">Add</span>
@@ -518,7 +514,6 @@ function clearForm(){
   FIELDS.forEach(f=>{const el=document.getElementById('f_'+f);if(el&&!el.readOnly)el.value='';});
   document.getElementById('f_totalDay').value='';
   editId=null;
-  document.getElementById('editBadge').style.display='none';
   document.getElementById('btnDelete').style.display='none';
   document.getElementById('btnLabel').textContent='Add';
   renderTable();
@@ -541,7 +536,6 @@ function saveRecord(){
 function editRecord(id){
   const rec=records.find(r=>r.id===id);if(!rec)return;
   editId=id;setFormData(rec);
-  document.getElementById('editBadge').style.display='';
   document.getElementById('btnDelete').style.display='';
   document.getElementById('btnLabel').textContent='Update';
   if(!formVisible){formVisible=true;document.getElementById('formPanel').classList.remove('collapsed');document.getElementById('toggleBtn').classList.add('open');document.getElementById('toggleLabel').textContent='Hide';}
