@@ -184,7 +184,9 @@ thead th.dragging{opacity:.4;}
 .privacy-toggle .pt-emoji{font-size:14px;line-height:1;}
 
 /* ── GREEN HIGHLIGHT for Istanbul & duplicate factory ── */
-.hl-badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;background:var(--g2-l);color:var(--g2);}
+.hl-badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:12px;font-weight:600;background:var(--g2-l);color:var(--g2);}
+/* City and factory name cells: left-aligned, consistent font size */
+td[data-col="city"],td[data-col="factoryName"]{text-align:left;font-size:12px;font-weight:400;}
 
 /* ── DATE GROUP COLLAPSE ── */
 .fp-group{cursor:pointer;position:relative;}
@@ -334,7 +336,7 @@ thead th.dragging{opacity:.4;}
   <button class="form-toggle-btn" id="colToggleBtn" onclick="toggleColManager()" style="margin-left:2px;">
     <span id="colToggleLabel">Columns</span>
   </button>
-  <span id="editBadge" class="edit-badge" style="display:none">✏ Editing</span>
+  <span id="editBadge" style="display:none"></span>
   <div class="spacer"></div>
   <button class="btn btn-clear" onclick="clearForm()">Clear</button>
   <label class="privacy-toggle" id="privacyToggle" title="Privacy">
@@ -1053,12 +1055,14 @@ function renderTable(){
           } else {
             val=raw||'—';
           }
+          return `<td data-col="city">${val}</td>`;
         }
         else if(key==='factoryName'){
           const raw=(r[key]||'').trim();
           const isdup=raw&&dupFactories.has(raw);
           const display=privacyMode&&raw?maskFactory(raw):raw||'—';
           val=isdup?`<span class="hl-badge">${display}</span>`:display||'—';
+          return `<td data-col="factoryName">${val}</td>`;
         }
         else if(key==='address') val=`<span title="${r[key]||''}">${(r[key]||'—').substring(0,30)}</span>`;
         else val=(r[key]||'').toString().trim()||'—';
@@ -1105,6 +1109,7 @@ function exportExcel(){
   const headers=visCols.map(k=>COL_DEFS.find(c=>c.key===k).label);
   const rows=data.map(r=>visCols.map(k=>{
     if(k==='startDate'||k==='endDate')return fmtDate(r[k]);
+    if(k==='factoryName'&&privacyMode)return maskFactory((r[k]||'').trim())||r[k]??'';
     return r[k]??'';
   }));
   const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
@@ -1235,6 +1240,7 @@ function exportPDF(){
       const def=COL_DEFS.find(c=>c.key===k);
       let v='';
       if(def.type==='date')v=fmtDate(r[k])||'—';
+      else if(k==='factoryName'&&privacyMode)v=maskFactory((r[k]||'').trim())||'—';
       else v=(r[k]||'').toString().trim()||'—';
       return`<td>${v}</td>`;
     }).join('');
