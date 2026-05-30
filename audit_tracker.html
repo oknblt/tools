@@ -27,7 +27,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
 .hactions{display:flex;gap:5px;}
 
 /* ── FORM PANEL ── */
-.form-panel{background:var(--surface);border-bottom:1.5px solid var(--border);flex-shrink:0;overflow:hidden;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .25s;max-height:240px;opacity:1;}
+.form-panel{background:var(--surface);border-bottom:1.5px solid var(--border);flex-shrink:0;overflow:hidden;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .25s;max-height:290px;opacity:1;}
 .form-panel.collapsed{max-height:0;opacity:0;pointer-events:none;}
 .form-inner{padding:10px 20px 8px;}
 .fsections{display:flex;gap:14px;align-items:flex-start;}
@@ -196,6 +196,10 @@ thead th.dragging{opacity:.4;}
 /* ── MOBILE FORM BUTTONS ── */
 .mobile-form-btns{display:none;}
 
+/* ── DESKTOP FORM BUTTONS (under Other 2) ── */
+.desktop-form-btns{display:flex;gap:6px;align-items:center;margin-top:4px;}
+.desktop-form-btns .btn{flex:1;}
+
 /* ── WEEK STRIPE ── */
 tbody tr.week-stripe{background:#e0e0e0;}
 tbody tr.week-stripe:hover{background:#e4e8f4;}
@@ -241,6 +245,8 @@ tbody tr.week-stripe.selected{background:#ccd8ef;}
   .mobile-form-btns .btn{flex:1;}
   /* Hide desktop-only action bar buttons on mobile */
   .desktop-action-btns{display:none!important;}
+  /* Hide desktop form buttons on mobile */
+  .desktop-form-btns{display:none!important;}
 }
 </style>
 </head>
@@ -321,7 +327,7 @@ tbody tr.week-stripe.selected{background:#ccd8ef;}
           <div class="field" style="grid-column:1/-1"><label>Address</label><input type="text" id="f_address" placeholder="Full address"/></div>
         </div>
       </div>
-      <div class="fsec" style="flex:1">
+      <div class="fsec" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
         <div class="fsec-title">Auditors</div>
         <div class="fgrid" style="grid-template-columns:1fr;">
           <div class="field"><label>Lead / Team</label>
@@ -334,6 +340,12 @@ tbody tr.week-stripe.selected{background:#ccd8ef;}
           <div class="fgrid" style="grid-template-columns:1fr 1fr;gap:6px;">
             <div class="field"><label>Other</label><input type="text" id="f_otherAuditor" placeholder="Auditor 2"/></div>
             <div class="field"><label>Other 2</label><input type="text" id="f_otherAuditor2" placeholder="Auditor 3"/></div>
+          </div>
+          <!-- Desktop-only: Clear + Add buttons inline under Other 2 -->
+          <div class="desktop-form-btns">
+            <button class="btn btn-clear" onclick="clearForm()">Clear</button>
+            <button class="btn btn-del" id="btnDeleteDesktop" style="display:none" onclick="document.getElementById('delModal').style.display='flex'">Delete</button>
+            <button class="btn btn-primary" onclick="saveRecord()"><span id="btnLabelDesktop">Add</span></button>
           </div>
           <!-- Mobile-only: Clear + Add buttons inline under Other 2 -->
           <div class="mobile-form-btns">
@@ -362,14 +374,6 @@ tbody tr.week-stripe.selected{background:#ccd8ef;}
     <span id="privacyEye" style="font-size:15px;line-height:1;">🙈</span>
     <span>Privacy</span>
   </label>
-  <div class="spacer"></div>
-  <span class="desktop-action-btns" style="display:contents;">
-    <button class="btn btn-clear" onclick="clearForm()">Clear</button>
-    <button class="btn btn-del" id="btnDelete" style="display:none" onclick="document.getElementById('delModal').style.display='flex'">Delete</button>
-    <button class="btn btn-primary" onclick="saveRecord()">
-      <span id="btnLabel">Add</span>
-    </button>
-  </span>
 </div>
 
 <!-- TABLE AREA -->
@@ -542,8 +546,8 @@ function clearForm(){
   FIELDS.forEach(f=>{const el=document.getElementById('f_'+f);if(el&&!el.readOnly)el.value='';});
   document.getElementById('f_totalDay').value='';
   editId=null;
-  ['btnDelete','btnDeleteMobile'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
-  ['btnLabel','btnLabelMobile'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='Add';});
+  ['btnDeleteDesktop','btnDeleteMobile'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['btnLabelDesktop','btnLabelMobile'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='Add';});
   renderTable();
 }
 function saveRecord(){
@@ -564,8 +568,8 @@ function saveRecord(){
 function editRecord(id){
   const rec=records.find(r=>r.id===id);if(!rec)return;
   editId=id;setFormData(rec);
-  ['btnDelete','btnDeleteMobile'].forEach(bid=>{const el=document.getElementById(bid);if(el)el.style.display='';});
-  ['btnLabel','btnLabelMobile'].forEach(bid=>{const el=document.getElementById(bid);if(el)el.textContent='Update';});
+  ['btnDeleteDesktop','btnDeleteMobile'].forEach(bid=>{const el=document.getElementById(bid);if(el)el.style.display='';});
+  ['btnLabelDesktop','btnLabelMobile'].forEach(bid=>{const el=document.getElementById(bid);if(el)el.textContent='Update';});
   if(!formVisible){formVisible=true;document.getElementById('formPanel').classList.remove('collapsed');document.getElementById('toggleBtn').classList.add('open');document.getElementById('toggleLabel').textContent='Hide';}
   renderTable();
 }
