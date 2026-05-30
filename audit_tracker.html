@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <title>Audit Program</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
 :root{
   --bg:#f0f3f8;--surface:#fff;--surface2:#f4f6fb;--border:#d5dae6;--border-light:#e8ecf4;
@@ -193,7 +193,12 @@ thead th.dragging{opacity:.4;}
 .fp-group-children{overflow:hidden;transition:max-height .22s cubic-bezier(.4,0,.2,1);}
 .fp-group-children.hidden{display:none;}
 
-/* ── MOBILE ── */
+/* ── WEEK STRIPE ── */
+tbody tr.week-stripe{background:#f0f2f7;}
+tbody tr.week-stripe:hover{background:#e4e8f4;}
+tbody tr.week-stripe.selected{background:#ccd8ef;}
+
+
 @media(max-width:768px){
   body{height:auto;overflow-y:auto;overflow-x:hidden;min-height:100dvh;display:block;}
   .app-header{
@@ -471,7 +476,12 @@ function fmtDate(val){
     else d=new Date(val);
   } else return'—';
   if(!d||isNaN(d))return val.toString();
-  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dd=String(d.getDate()).padStart(2,'0');
+  const mm=String(d.getMonth()+1).padStart(2,'0');
+  const yyyy=d.getFullYear();
+  const dow=days[d.getDay()];
+  return`${dd}.${mm}.${yyyy} ${dow}`;
 }
 function toISO(val){
   if(!val&&val!==0)return'';
@@ -485,20 +495,19 @@ function toISO(val){
   if(!d||isNaN(d))return'';
   return d.toISOString().slice(0,10);
 }
-function calcTotalDay(s,e){
-  if(!s||!e)return'';
-  const[sy,sm,sd]=s.split('-').map(Number);
-  const[ey,em,ed]=e.split('-').map(Number);
-  const diff=Math.round((new Date(ey,em-1,ed)-new Date(sy,sm-1,sd))/86400000)+1;
-  return diff>0?String(diff):'';
+
+// ── FORM TOGGLE ───────────────────────────────────────────────
+function calcTotalDay(startISO, endISO){
+  if(!startISO||!endISO)return'';
+  const s=new Date(startISO), e=new Date(endISO);
+  if(isNaN(s)||isNaN(e)||e<s)return'';
+  return String(Math.round((e-s)/(86400*1000))+1);
 }
 function calcDays(){
   const s=document.getElementById('f_startDate').value;
   const e=document.getElementById('f_endDate').value;
-  document.getElementById('f_totalDay').value=calcTotalDay(s,e);
+  document.getElementById('f_totalDay').value=calcTotalDay(s,e)||'';
 }
-
-// ── FORM TOGGLE ───────────────────────────────────────────────
 function toggleForm(){
   formVisible=!formVisible;
   document.getElementById('formPanel').classList.toggle('collapsed',!formVisible);
@@ -961,6 +970,22 @@ function clearAllFilters(){
   activeFilters={};buildTableHeader();renderTable();
 }
 
+// ── WEEK KEY HELPER ───────────────────────────────────────────
+// Returns a string "YYYY-WNN" representing ISO week of a date value
+function isoWeekKey(val){
+  const iso=toISO(val);
+  if(!iso)return null;
+  const [y,m,d]=iso.split('-').map(Number);
+  const dt=new Date(y,m-1,d);
+  // ISO week: Thursday of the week determines the year
+  const tmp=new Date(dt);
+  tmp.setHours(0,0,0,0);
+  tmp.setDate(tmp.getDate()+3-(tmp.getDay()+6)%7);
+  const week1=new Date(tmp.getFullYear(),0,4);
+  const weekNum=1+Math.round(((tmp-week1)/86400000-3+(week1.getDay()+6)%7)/7);
+  return`${tmp.getFullYear()}-W${String(weekNum).padStart(2,'0')}`;
+}
+
 // ── RENDER TABLE ─────────────────────────────────────────────
 function filterData(){
   return records.filter(r=>{
@@ -1025,8 +1050,8 @@ function factoryHighlight(name, factoryCount, seenFactories){
   const key=name.trim().toLowerCase();
   const isDup=(factoryCount[key]||0)>1;
   seenFactories.add(key);
-  if(isDup) return`<strong><span class="hl-green">${escHTML(name)}</span></strong>`;
-  return`<strong>${escHTML(name)}</strong>`;
+  if(isDup) return`<span class="hl-green">${escHTML(name)}</span>`;
+  return escHTML(name);
 }
 
 function renderTable(){
@@ -1063,7 +1088,20 @@ function renderTable(){
     const factoryCount={};
     data.forEach(r=>{const k=(r.factoryName||'').trim().toLowerCase();if(k)factoryCount[k]=(factoryCount[k]||0)+1;});
     const seenFactories=new Set();
-    tbody.innerHTML=data.map(r=>{
+
+    // Week stripe: alternating band per ISO week in display order.
+    // Band starts at 1 so the very first week group gets the grey stripe.
+    let weekBand=1, lastWeekKey='';
+    const weekBands=data.map(r=>{
+      const wk=isoWeekKey(r.startDate)||isoWeekKey(r.endDate)||'';
+      if(wk&&wk!==lastWeekKey){
+        weekBand=1-weekBand;
+        lastWeekKey=wk;
+      }
+      return weekBand;
+    });
+
+    tbody.innerHTML=data.map((r,i)=>{
       const visibleKeys=colOrder.filter(k=>!hiddenCols.has(k));
       const cells=visibleKeys.map(key=>{
         const def=COL_DEFS.find(c=>c.key===key);
@@ -1076,14 +1114,15 @@ function renderTable(){
         else if(key==='city') val=istanbulHighlight(r[key]);
         else if(key==='factoryName'){
           const displayName=privacyMode?maskFactory(r[key]):r[key];
-          if(privacyMode) val=displayName?`<strong>${escHTML(displayName)}</strong>`:'—';
+          if(privacyMode) val=displayName?escHTML(displayName):'—';
           else val=factoryHighlight(r[key],factoryCount,seenFactories);
         }
         else if(key==='address') val=`<span title="${escHTML(r[key]||'')}">${escHTML((r[key]||'—').substring(0,30))}</span>`;
         else val=escHTML((r[key]||'').toString().trim()||'—');
         return `<td>${val}</td>`;
       }).join('');
-      return `<tr class="${r.id===editId?'selected':''}">
+      const stripeClass=weekBands[i]===1?'week-stripe':'';
+      return `<tr class="${[r.id===editId?'selected':'',stripeClass].filter(Boolean).join(' ')}">
         <td class="action-cell">
           <button class="row-edit-btn" onclick="editRecord(${r.id})" title="Edit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1116,8 +1155,40 @@ function exportExcel(){
     if(k==='factoryName'&&privacyMode)return maskFactory(r[k]);
     return r[k]??'';
   }));
+
+  // Compute week band per row
+  let xlBand=1,xlLastWk='';
+  const xlBands=data.map(r=>{
+    const wk=isoWeekKey(r.startDate)||isoWeekKey(r.endDate)||'';
+    if(wk&&wk!==xlLastWk){xlBand=1-xlBand;xlLastWk=wk;}
+    return xlBand;
+  });
+
   const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
   ws['!cols']=headers.map(()=>({wch:20}));
+
+  // Apply grey fill to stripe rows (band===1). Row 1 = header, data starts at row 2.
+  const greyFill={patternType:'solid',fgColor:{rgb:'EEF0F6'}};
+  const headerFill={patternType:'solid',fgColor:{rgb:'1B4F8A'}};
+  const colCount=headers.length;
+
+  // Style header row
+  for(let c=0;c<colCount;c++){
+    const addr=XLSX.utils.encode_cell({r:0,c});
+    if(!ws[addr])ws[addr]={v:headers[c],t:'s'};
+    ws[addr].s={fill:headerFill,font:{bold:true,color:{rgb:'FFFFFF'}},alignment:{horizontal:'center'}};
+  }
+  // Style data rows
+  xlBands.forEach((band,i)=>{
+    if(band!==1)return;
+    for(let c=0;c<colCount;c++){
+      const addr=XLSX.utils.encode_cell({r:i+1,c});
+      if(!ws[addr])ws[addr]={v:'',t:'s'};
+      if(!ws[addr].s)ws[addr].s={};
+      ws[addr].s.fill=greyFill;
+    }
+  });
+
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Audit Records');
   XLSX.writeFile(wb,`audit_records_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -1130,21 +1201,44 @@ function importExcel(ev){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      const wb=XLSX.read(e.target.result,{type:'binary',cellDates:false});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
+      const ws=wb.Sheets['Program']||wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
       if(rows.length<2){toast('No data found.','warn');return;}
-      const headers=rows[0].map(h=>h.toString().trim());
-      const mapIdx=XL_HEADERS.map(h=>headers.indexOf(h));
+      const headers=rows[0].map(h=>(h||'').toString().trim());
+      // Map each FIELD key to its column index by header name
+      const headerMap={
+        startDate:'Start Date', endDate:'End Date', city:'City', totalDay:'Day',
+        program1:'Program', program2:'Program 2', scope:'Scope', auditType:'Type',
+        brand:'Brand', reportNo:'Report No', manday:'Manday', reportWriting:'Report',
+        factoryName:'Factory Name', sector:'Sector', address:'Address',
+        leadAuditor:'Lead / Team', otherAuditor:'Other', otherAuditor2:'Other 2'
+      };
+      const mapIdx={};
+      FIELDS.forEach(f=>{
+        const hdr=headerMap[f]||f;
+        mapIdx[f]=headers.indexOf(hdr);
+      });
+      const trMonths={'Ocak':'01','Şubat':'02','Mart':'03','Nisan':'04','Mayıs':'05',
+        'Haziran':'06','Temmuz':'07','Ağustos':'08','Eylül':'09','Ekim':'10','Kasım':'11','Aralık':'12'};
       let imported=0;
       rows.slice(1).forEach(row=>{
-        if(row.every(c=>c===''))return;
+        if(!row||row.every(c=>c===''||c===null||c===undefined))return;
         const rec={id:Date.now()+Math.random()};
-        FIELDS.forEach((f,i)=>{
-          let val=mapIdx[i]>=0?row[mapIdx[i]]:'';
-          if(f==='startDate'||f==='endDate')val=toISO(val)||val;
-          if(f==='reportWriting'){const s=(val||'').toString().trim().toUpperCase();val=(s==='YES'||s==='NO')?s:val.toString();}
-          rec[f]=(val??'').toString();
+        FIELDS.forEach(f=>{
+          let val=mapIdx[f]>=0?row[mapIdx[f]]:'';
+          if(f==='startDate'||f==='endDate'){
+            if(typeof val==='number'){
+              val=toISO(val);
+            } else if(typeof val==='string'&&val.trim()){
+              val=val.trim().replace(/(\d{1,2})\s+(\w+)\s+(\d{4}).*/,(_,d,m,y)=>{
+                const mo=trMonths[m];return mo?`${y}-${mo}-${d.padStart(2,'0')}`:_;
+              });
+              val=toISO(val)||val;
+            } else val='';
+          }
+          if(f==='reportWriting'){const s=(val||'').toString().trim().toUpperCase();val=(s==='YES'||s==='NO')?s:'';}
+          rec[f]=(val??'').toString().trim();
         });
         rec.totalDay=calcTotalDay(rec.startDate,rec.endDate)||rec.totalDay;
         records.push(rec);imported++;
@@ -1153,7 +1247,7 @@ function importExcel(ev){
       toast(`Imported ${imported} records.`,'success');
     } catch(err){toast('Error reading Excel file.','warn');console.error(err);}
   };
-  reader.readAsBinaryString(file);ev.target.value='';
+  reader.readAsArrayBuffer(file);ev.target.value='';
 }
 
 // ── JSON ─────────────────────────────────────────────────────
@@ -1239,7 +1333,16 @@ function exportPDF(){
   // Build HTML for print window
   const colDefs=visCols.map(k=>COL_DEFS.find(c=>c.key===k));
   const headerRow=colDefs.map(d=>`<th>${d.label}</th>`).join('');
-  const bodyRows=data.map(r=>{
+
+  // Compute week stripes for PDF rows
+  let pdfBand=0,pdfLastWk=null;
+  const pdfBands=data.map(r=>{
+    const wk=isoWeekKey(r.startDate)||isoWeekKey(r.endDate)||null;
+    if(wk!==pdfLastWk&&wk!==null){if(pdfLastWk!==null)pdfBand=1-pdfBand;pdfLastWk=wk;}
+    return pdfBand;
+  });
+
+  const bodyRows=data.map((r,i)=>{
     const cells=visCols.map(k=>{
       const def=COL_DEFS.find(c=>c.key===k);
       let v='';
@@ -1248,7 +1351,7 @@ function exportPDF(){
       else v=(r[k]||'').toString().trim()||'—';
       return`<td>${v}</td>`;
     }).join('');
-    return`<tr>${cells}</tr>`;
+    return`<tr class="${pdfBands[i]===1?'ws':''}">${cells}</tr>`;
   }).join('');
 
   const now=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
@@ -1262,8 +1365,8 @@ function exportPDF(){
     .filter-info{font-size:9px;color:#854f0b;background:#faeeda;padding:3px 8px;border-radius:4px;margin-bottom:10px;display:inline-block;}
     table{width:100%;border-collapse:collapse;table-layout:fixed;}
     thead th{background:#1b4f8a;color:#fff;padding:5px 6px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;word-break:break-word;}
-    tbody tr:nth-child(even){background:#f4f6fb;}
-    tbody tr:nth-child(odd){background:#fff;}
+    tbody tr{background:#fff;}
+    tbody tr.ws{background:#eff1f7;}
     tbody td{padding:4px 6px;border-bottom:1px solid #e8ecf4;font-size:9px;word-break:break-word;vertical-align:top;}
     @page{size:A4 landscape;margin:12mm 8mm;}
     @media print{body{padding:0;}}
@@ -1278,7 +1381,8 @@ function exportPDF(){
   if(!win){toast('Pop-up blocked. Allow pop-ups and try again.','warn');return;}
   win.document.write(html);
   win.document.close();
-  win.onload=()=>{win.focus();win.print();};
+  win.focus();
+  win.print();
   toast(`PDF ready – ${data.length} records.`,'success');
 }
 
