@@ -811,8 +811,28 @@ function fpRenderList(){
   const list=document.getElementById('fp-list');
 
   if(def.type==='date'){
+    // Cross-filter: use records filtered by all OTHER active filters
+    const crossFiltered = records.filter(r=>{
+      for(const key of Object.keys(activeFilters)){
+        if(key===fpCol) continue; // skip own column
+        const af=activeFilters[key];
+        const colDef=COL_DEFS.find(c=>c.key===key);
+        if(!af.selected) continue;
+        if(colDef.type==='date'){
+          const iso=toISO(r[key])||'';
+          if(!af.selected.has(iso)) return false;
+        } else {
+          const raw=r[key];
+          const disp=key==='reportWriting'
+            ?((raw||'').toString().trim().toUpperCase()||'—')
+            :((raw||'').toString().trim()||'—');
+          if(!af.selected.has(disp)) return false;
+        }
+      }
+      return true;
+    });
     const isoSet={};
-    records.forEach(r=>{
+    crossFiltered.forEach(r=>{
       const iso=toISO(r[fpCol]);
       if(!iso)return;
       isoSet[iso]=(isoSet[iso]||0)+1;
@@ -902,9 +922,28 @@ function fpRenderList(){
     // set indeterminate state
     list.querySelectorAll('input[data-indeterminate="1"]').forEach(cb=>{cb.indeterminate=true;});
   } else {
-    // plain list
+    // plain list — cross-filter: exclude own column's filter
+    const crossFiltered = records.filter(r=>{
+      for(const key of Object.keys(activeFilters)){
+        if(key===fpCol) continue;
+        const af=activeFilters[key];
+        const colDef=COL_DEFS.find(c=>c.key===key);
+        if(!af.selected) continue;
+        if(colDef.type==='date'){
+          const iso=toISO(r[key])||'';
+          if(!af.selected.has(iso)) return false;
+        } else {
+          const raw=r[key];
+          const disp=key==='reportWriting'
+            ?((raw||'').toString().trim().toUpperCase()||'—')
+            :((raw||'').toString().trim()||'—');
+          if(!af.selected.has(disp)) return false;
+        }
+      }
+      return true;
+    });
     const valMap={};
-    records.forEach(r=>{
+    crossFiltered.forEach(r=>{
       const raw=r[fpCol];
       // For reportWriting normalise to uppercase
       let disp = fpCol==='reportWriting'
