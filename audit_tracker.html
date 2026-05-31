@@ -846,9 +846,10 @@ function fpRenderList(){
 
       // Year children container
       const yearChildren=document.createElement('div');
-      yearChildren.className='fp-group-children';
+      yearChildren.className='fp-group-children hidden';
       yearChildren.dataset.year=y;
       list.appendChild(yearChildren);
+      yearDiv.classList.add('collapsed-group');
 
       months.forEach(m=>{
         const days=tree[y][m].sort((a,b)=>b.iso.localeCompare(a.iso));
