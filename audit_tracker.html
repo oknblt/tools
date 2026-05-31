@@ -293,23 +293,28 @@ tbody tr.week-stripe.selected{background:#ccd8ef;}
       <div class="fsec" style="flex:2.2">
         <div class="fsec-title">Program Details</div>
         <div class="fgrid">
-          <div class="field"><label>Program</label>     
-          <select id="f_program1">
-	  <option value="">-- Select --</option>
-	  <option>AMAZON</option><option>BSCI</option><option>CHEMMAP</option><option>FDM</option><option>GOTS/TE</option><option>HIGG</option><option>HUGO BOSS</option><option>ICS COC</option><option>ICS ENV</option><option>MSA-C</option><option>MSA-E</option><option>SEDEX</option><option>SLCP</option>
+         <div class="field"><label>Program</label>     
+         <select id="f_program1">
+      <option value="">-- Select --</option>
+      <option>AMAZON</option><option>BSCI</option><option>CHEMMAP</option><option>FDM</option><option>GOTS/TE</option><option>HIGG</option><option>HUGO BOSS</option><option>ICS COC</option><option>ICS ENV</option><option>MSA-C</option><option>MSA-E</option><option>SMETA</option><option>SLCP</option>
           </select>
-          </div>
+     </div>
           <div class="field"><label>Program 2</label><input type="text" id="f_program2" placeholder="Program name"/></div>
-          <div class="field"><label>Scope</label><input type="text" id="f_scope" placeholder="Audit scope"/></div>
+
+          <div class="field"><label>Scope</label>
+<select id="f_scope">
+      <option value="">-- Select --</option>
+      <option>4P</option><option>SPA</option><option>Small factory</option></select>
+</div>
           <div class="field"><label>Type</label>
             <select id="f_auditType">
               <option value="">-- Select --</option>
-              <option>Initial</option><option>Reaudit</option><option>Follow-up</option>
+              <option>Initial</option><option>Reaudit</option><option>Periodic</option><option>Follow-up</option>
             </select>
           </div>
           <div class="field"><label>Brand</label><input type="text" id="f_brand" placeholder="Brand"/></div>
           <div class="field"><label>Report No</label><input type="text" id="f_reportNo" placeholder="TR_FC_01"/></div>
-          <div class="field"><label>Manday</label><input type="number" id="f_manday" placeholder="0.5" step="0.5" min="0"/></div>
+          <div class="field"><label>Manday</label><input type="number" id="f_manday" placeholder="1.5" step="0.5" min="0"/></div>
           <div class="field"><label>Report</label>
             <select id="f_reportWriting">
               <option value="">-- Select --</option>
@@ -319,11 +324,130 @@ tbody tr.week-stripe.selected{background:#ccd8ef;}
         </div>
       </div>
       <div class="fsec" style="flex:1.5">
-        <div class="fsec-title">Factory / Company</div>
+        <div class="fsec-title">Factory/Company</div>
         <div class="fgrid">
           <div class="field" style="grid-column:1/-1"><label>Factory Name</label><input type="text" id="f_factoryName" placeholder="Company / factory name"/></div>
-          <div class="field"><label>City</label><input type="text" id="f_city" placeholder="e.g. Istanbul"/></div>
-          <div class="field"><label>Sector</label><input type="text" id="f_sector" placeholder="Industry sector"/></div>
+
+<div class="field"><label>City</label>
+  <select id="f_city">
+    <option value="">-- Select --</option>
+    <option value="İstanbul">İstanbul</option>
+    <option value="Adana">Adana</option>
+    <option value="Adıyaman">Adıyaman</option>
+    <option value="Afyonkarahisar">Afyonkarahisar</option>
+    <option value="Amasya">Amasya</option>
+    <option value="Ankara">Ankara</option>
+    <option value="Antalya">Antalya</option>
+    <option value="Aydın">Aydın</option>
+    <option value="Balıkesir">Balıkesir</option>
+    <option value="Bartın">Bartın</option>
+    <option value="Batman">Batman</option>
+    <option value="Bilecik">Bilecik</option>
+    <option value="Bitlis">Bitlis</option>
+    <option value="Bolu">Bolu</option>
+    <option value="Bursa">Bursa</option>
+    <option value="Çorum">Çorum</option>
+    <option value="Denizli">Denizli</option>
+    <option value="Diyarbakır">Diyarbakır</option>
+    <option value="Düzce">Düzce</option>
+    <option value="Edirne">Edirne</option>
+    <option value="Eskişehir">Eskişehir</option>
+    <option value="Gaziantep">Gaziantep</option>
+    <option value="Hatay">Hatay</option>
+    <option value="Isparta">Isparta</option>
+    <option value="İzmir">İzmir</option>
+    <option value="Kahramanmaraş">Kahramanmaraş</option>
+    <option value="Karaman">Karaman</option>
+    <option value="Karabük">Karabük</option>
+    <option value="Kastamonu">Kastamonu</option>
+    <option value="Kayseri">Kayseri</option>
+    <option value="Kırıkkale">Kırıkkale</option>
+    <option value="Kırklareli">Kırklareli</option>
+    <option value="Kocaeli">Kocaeli</option>
+    <option value="Konya">Konya</option>
+    <option value="Kütahya">Kütahya</option>
+    <option value="Malatya">Malatya</option>
+    <option value="Manisa">Manisa</option>
+    <option value="Mardin">Mardin</option>
+    <option value="Mersin">Mersin</option>
+    <option value="Muğla">Muğla</option>
+    <option value="Muş">Muş</option>
+    <option value="Ordu">Ordu</option>
+    <option value="Osmaniye">Osmaniye</option>
+    <option value="Sakarya">Sakarya</option>
+    <option value="Samsun">Samsun</option>
+    <option value="Sinop">Sinop</option>
+    <option value="Sivas">Sivas</option>
+    <option value="Şanlıurfa">Şanlıurfa</option>
+    <option value="Şırnak">Şırnak</option>
+    <option value="Tekirdağ">Tekirdağ</option>
+    <option value="Tokat">Tokat</option>
+    <option value="Trabzon">Trabzon</option>
+    <option value="Uşak">Uşak</option>
+    <option value="Van">Van</option>
+    <option value="Yalova">Yalova</option>
+    <option value="Yozgat">Yozgat</option>
+    <option value="Zonguldak">Zonguldak</option>
+  </select>
+</div>
+
+<div class="field">
+  <label>Sector</label>
+  <select id="f_sector">
+    <option value="">-- Select --</option>
+    <option value="Textile">Textile</option>
+    <option value="Advertisement">Advertisement</option>
+    <option value="Architecture">Architecture</option>
+    <option value="Automotive">Automotive</option>
+    <option value="Bag Manufacturing">Bag Manufacturing</option>
+    <option value="Balloon Production">Balloon Production</option>
+    <option value="Button">Button</option>
+    <option value="Carpet">Carpet</option>
+    <option value="Ceramic">Ceramic</option>
+    <option value="Chemical">Chemical</option>
+    <option value="Cleaning">Cleaning</option>
+    <option value="Cosmetic">Cosmetic</option>
+    <option value="Electronic">Electronic</option>
+    <option value="Enamel">Enamel</option>
+    <option value="Energy">Energy</option>
+    <option value="Food">Food</option>
+    <option value="Footwear">Footwear</option>
+    <option value="Furniture">Furniture</option>
+    <option value="Glass Industry">Glass Industry</option>
+    <option value="Hanger">Hanger</option>
+    <option value="Jewelry">Jewelry</option>
+    <option value="Label">Label</option>
+    <option value="Leather Industry">Leather Industry</option>
+    <option value="Logistics">Logistics</option>
+    <option value="Medical">Medical</option>
+    <option value="Metal Industry">Metal Industry</option>
+    <option value="Mine">Mine</option>
+    <option value="Organization">Organization</option>
+    <option value="Other">Other</option>
+    <option value="Packaging">Packaging</option>
+    <option value="Paper">Paper</option>
+    <option value="Paper Packaging">Paper Packaging</option>
+    <option value="Plastic">Plastic</option>
+    <option value="Plastic Hanger">Plastic Hanger</option>
+    <option value="Plastic Household Products">Plastic Household Products</option>
+    <option value="Plastic Kitchenware">Plastic Kitchenware</option>
+    <option value="Plastic Package">Plastic Package</option>
+    <option value="Plastic Raw Material Paint">Plastic Raw Material Paint</option>
+    <option value="Printery">Printery</option>
+    <option value="Rail System">Rail System</option>
+    <option value="Slipper">Slipper</option>
+    <option value="Sock">Sock</option>
+    <option value="Stationery">Stationery</option>
+    <option value="Telecommunication">Telecommunication</option>
+    <option value="Tire Industry">Tire Industry</option>
+    <option value="Toys">Toys</option>
+    <option value="Waste Recycling">Waste Recycling</option>
+    <option value="White Goods">White Goods</option>
+    <option value="Wooden Pallet Manufacturing">Wooden Pallet Manufacturing</option>
+    <option value="Zipper">Zipper</option>
+  </select>
+</div>
+
           <div class="field" style="grid-column:1/-1"><label>Address</label><input type="text" id="f_address" placeholder="Full address"/></div>
         </div>
       </div>
