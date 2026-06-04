@@ -364,10 +364,12 @@
             "Habertürk":     { url: "https://tv.ensonhaber.com/haberturk/haberturk.m3u8",   source: "IPTV" },
             "Haber Global":  { url: "https://tv.ensonhaber.com/haberglobal/haberglobal.m3u8", source: "IPTV" },
 	    "TV 100":        { url: "https://tv100-live.daioncdn.net/tv100/tv100_1080p.m3u8", source: "IPTV" },
-            "Bloomberg HT":  { url: "https://ciner.daioncdn.net/bloomberght/bloomberght.m3u8", source: "IPTV" },
+	    "DW-TV English":        { url: "https://tv100-live.daioncdn.net/tv100/tv100_1080p.m3u8", source: "IPTV" },
+            "Bloomberg":  { url: "https://liveprodusphoenixeast.akamaized.net/USPhx-HD/Channel-TX-USPhx-AWS-virginia-1/Source-USPhx-16k-1-s6lk2-BP-07-02-81ykIWnsMsg_live.m3u8", source: "IPTV" },
+	    "Wonder":  { url: "https://liveprodusphoenixeast.akamaized.net/USPhx-HD/Channel-TX-USPhx-AWS-virginia-1/Source-USPhx-16k-1-s6lk2-BP-07-02-81ykIWnsMsg_live.m3u8", source: "IPTV" },	
             "CNN Türk":      { url: "https://dsmartgo-live.ercdn.net/dsmartgo/cnnturk/cnnturk.isml/cnnturk.m3u8", source: "IPTV" },
             "Tele 1":        { url: "https://tele1-live.ercdn.net/tele1/tele1.m3u8",        source: "IPTV" },
-            "Beyaz TV":      { url: "https://beyaztv.daioncdn.net/beyaztv/beyaztv.m3u8?app=fcd5c66b-da9d-44ba-a410-4f34805c397d&ce=3", source: "IPTV" },
+            
             
             // ---- TRT (Official, most reliable) ----
             "TRT 1":         { url: "https://tv-trt1.medya.trt.com.tr/master.m3u8",          source: "TRT" },
@@ -380,7 +382,9 @@
             "TRT World":     { url: "https://tv-trtworld.medya.trt.com.tr/master.m3u8",      source: "TRT" },
 
             // ---- National (often token-protected, may break) ----
+	    "NOW":           { url: "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv.m3u8", source: "IPTV" },
 	    "360":           { url: "https://turkmedya-live.ercdn.net/tv360/tv360.m3u8",    source: "IPTV" },
+            "Beyaz TV":      { url: "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_1080p.m3u8", source: "IPTV" },
             "Show TV":       { url: "https://ciner-live.daioncdn.net/showtv/showtv.m3u8",   source: "IPTV" },
             "Star TV":       { url: "https://dogus-live.daioncdn.net/startv/startv.m3u8",  source: "IPTV" },
             "Kanal D":       { url: "https://live.duhnet.tv/S2/HLS_LIVE/kanalddainp/playlist.m3u8", source: "IPTV" },
@@ -395,18 +399,19 @@
             "Sports TV":     { url: "https://live.sportstv.com.tr/hls/low/sportstv_hd/index.m3u8", source: "IPTV" },
 
             // ---- Entertainment ----
-            "TLC":           { url: "https://dygvideo.dygdigital.com/live/hls/tlctvdai",    source: "IPTV" },
+            "NR1":           { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e17cd6360b_1/playlist.m3u8",    source: "IPTV" },
+	    "TLC":           { url: "https://dygvideo.dygdigital.com/live/hls/tlctvdai",    source: "IPTV" },
             "DMAX":          { url: "https://dygvideo.dygdigital.com/live/hls/dmaxdai",     source: "IPTV" },
             "A2":            { url: "https://trkvz-live.daioncdn.net/a2tv/a2tv.m3u8",       source: "IPTV" }
         };
 
         // ---- Channel groupings (for the dropdown) ----
         const CHANNEL_GROUPS = [
-            { label: "📰 News",           channels: ["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100","Bloomberg HT","CNN Türk","Tele 1",,"Beyaz TV"] },
+            { label: "📰 News",           channels: ["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100", "DW-TV English", "Bloomberg", "Wonder", "CNN Türk","Tele 1"] },
             { label: "📡 TRT (Official)", channels: ["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yıldız","TRT Belgesel","TRT Müzik","TRT World"] },
-            { label: "📺 National",       channels: ["360","Show TV","Star TV","Kanal D","ATV","Now TV","TV8","Teve2"] },
+            { label: "📺 National",       channels: ["NOW", "360","Beyaz TV", "Show TV","Star TV","Kanal D","ATV","Now TV","TV8","Teve2"] },
             { label: "⚽ Sports",         channels: ["A Spor","HT Spor","Sports TV"] },
-            { label: "🎬 Entertainment",  channels: ["TLC","DMAX","A2"] }
+            { label: "🎬 Entertainment",  channels: ["NR1", "TLC","DMAX","A2"] }
         ];
 
         // ---- State ----
