@@ -366,7 +366,11 @@
 	    "TV 100":        { url: "https://tv100-live.daioncdn.net/tv100/tv100_1080p.m3u8", source: "IPTV" },
 	    "DW TV English": { url: "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8", source: "IPTV" },
             "Bloomberg":     { url: "https://liveprodusphoenixeast.akamaized.net/USPhx-HD/Channel-TX-USPhx-AWS-virginia-1/Source-USPhx-16k-1-s6lk2-BP-07-02-81ykIWnsMsg_live.m3u8", source: "IPTV" },
-	    "Wonder":        { url: "https://wonder-samsung-uk.amagi.tv/playlist.m3u8", source: "IPTV" },	
+	    "Wonder":        { url: "https://wonder-samsung-uk.amagi.tv/playlist.m3u8", source: "IPTV" },
+            "France 24 English":  { url: "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_5000.m3u8",    source: "IPTV" },
+            "France 24 French":   { url: "https://live.france24.com/hls/live/2037179/F24_FR_HI_HLS/master_5000.m3u8",   source: "IPTV" },
+
+	
             "CNN Türk":      { url: "https://dsmartgo-live.ercdn.net/dsmartgo/cnnturk/cnnturk.isml/cnnturk.m3u8", source: "IPTV" },
             "Tele 1":        { url: "https://tele1-live.ercdn.net/tele1/tele1.m3u8",        source: "IPTV" },
             
@@ -384,6 +388,7 @@
             // ---- National (often token-protected, may break) ----
 	    "NOW":           { url: "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv.m3u8", source: "IPTV" },
 	    "360":           { url: "https://turkmedya-live.ercdn.net/tv360/tv360.m3u8",    source: "IPTV" },
+	    "BRTV":           { url: "https:////live.artidijitalmedya.com/artidijital_brtv/brtv/playlist.m3u8",    source: "IPTV" },
             "Beyaz TV":      { url: "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_1080p.m3u8", source: "IPTV" },
             "Show TV":       { url: "https://ciner-live.daioncdn.net/showtv/showtv.m3u8",   source: "IPTV" },
             "Star TV":       { url: "https://dogus-live.daioncdn.net/startv/startv.m3u8",  source: "IPTV" },
@@ -399,6 +404,7 @@
 
             // ---- Entertainment ----
             "NR1":           { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e17cd6360b_1/playlist.m3u8",    source: "IPTV" },
+            "NR1 Dance":           { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8",    source: "IPTV" },
 	    "TLC":           { url: "https://dygvideo.dygdigital.com/live/hls/tlctvdai",    source: "IPTV" },
             "DMAX":          { url: "https://dygvideo.dygdigital.com/live/hls/dmaxdai",     source: "IPTV" },
             "A2":            { url: "https://trkvz-live.daioncdn.net/a2tv/a2tv.m3u8",       source: "IPTV" }
@@ -406,11 +412,11 @@
 
         // ---- Channel groupings (for the dropdown) ----
         const CHANNEL_GROUPS = [
-            { label: "📰 News",           channels: ["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100", "DW TV English", "Bloomberg", "Wonder", "CNN Türk","Tele 1"] },
+            { label: "📰 News",           channels: ["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100", "DW TV English", "Bloomberg", "Wonder", "France 24 English", "France 24 French", "CNN Türk","Tele 1"] },
             { label: "📡 TRT (Official)", channels: ["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yıldız","TRT Belgesel","TRT Müzik","TRT World"] },
-            { label: "📺 National",       channels: ["NOW", "360","Beyaz TV", "Show TV","Star TV","Kanal D","ATV","Now TV","TV8","Teve2"] },
+            { label: "📺 National",       channels: ["NOW", "360","BRTV", "Beyaz TV", "Show TV","Star TV","Kanal D","ATV","Now TV","TV8","Teve2"] },
             { label: "⚽ Sports",         channels: ["A Spor","HT Spor","Sports TV"] },
-            { label: "🎬 Entertainment",  channels: ["NR1", "TLC","DMAX","A2"] }
+            { label: "🎬 Entertainment",  channels: ["NR1", "NR1 Dance", "TLC","DMAX","A2"] }
         ];
 
         // ---- State ----
