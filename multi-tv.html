@@ -291,26 +291,62 @@
         optgroup { font-weight: bold; background: #333; }
         option { background: #444; padding: 5px; }
 
-        /* iOS hint banner (one-line, dismissible) */
-        .ios-hint {
-            background: rgba(255, 152, 0, 0.15);
-            border-left: 3px solid #ff9800;
-            padding: 6px 10px;
-            font-size: 11px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
+        /* iOS hint removed */
+
+        /* ---------- Channel Nav Bar (1x1 only) ---------- */
+        .channel-nav {
+            display: none;
             flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 5px 10px;
+            background: #111;
+            border-top: 1px solid #2a2a2a;
         }
 
-        .ios-hint button {
-            background: transparent;
-            border: none;
-            color: white;
-            font-size: 16px;
+        .channel-nav.visible {
+            display: flex;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.75);
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            padding: 0 4px;
+            font-size: 14px;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+            flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .nav-btn:active, .nav-btn:hover {
+            background: rgba(102,126,234,0.35);
+            border-color: rgba(102,126,234,0.6);
+            color: #fff;
+        }
+
+        .nav-btn.nav-edge {
+            width: 30px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .nav-channel-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.55);
+            min-width: 90px;
+            text-align: center;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* Smaller header on narrow phones */
@@ -331,8 +367,8 @@
                 <div class="info-pill">
                     🟢 <span id="activeChannels">0 active</span>
                 </div>
-                <button class="btn btn-layout" data-layout="1x1" onclick="setGrid('1x1', this)">1</button>
-                <button class="btn btn-layout active" data-layout="1x2" onclick="setGrid('1x2', this)">1×2</button>
+                <button class="btn btn-layout active" data-layout="1x1" onclick="setGrid('1x1', this)">1</button>
+                <button class="btn btn-layout" data-layout="1x2" onclick="setGrid('1x2', this)">1×2</button>
                 <button class="btn btn-layout" data-layout="2x2" onclick="setGrid('2x2', this)">2×2</button>
                 <button class="btn btn-action" onclick="muteAll()">🔇 Mute All</button>
                 <button class="btn btn-action" onclick="refreshAll()">🔄</button>
@@ -340,12 +376,16 @@
         </div>
     </div>
 
-    <div class="ios-hint" id="iosHint" style="display:none;">
-        <span>ℹ️ On iPhone: tap a screen to unmute. Only one stream can play audio at a time.</span>
-        <button onclick="document.getElementById('iosHint').style.display='none'">✕</button>
-    </div>
+    <div id="gridContainer" class="grid-container grid-1x1"></div>
 
-    <div id="gridContainer" class="grid-container grid-1x2"></div>
+    <!-- Channel navigation bar — only visible in 1x1 mode -->
+    <div class="channel-nav" id="channelNav">
+        <button class="nav-btn nav-edge" onclick="navChannel('first')" title="First channel">&#8676;</button>
+        <button class="nav-btn" onclick="navChannel('prev')" title="Previous channel">&#8592;</button>
+        <span class="nav-channel-label" id="navLabel">–</span>
+        <button class="nav-btn" onclick="navChannel('next')" title="Next channel">&#8594;</button>
+        <button class="nav-btn nav-edge" onclick="navChannel('last')" title="Last channel">&#8677;</button>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
@@ -433,17 +473,28 @@
         ];
 
         // ---- State ----
-        let currentGrid = '1x2';
+        let currentGrid = '1x1';
         let tvBoxes = [];
         // Soloed box index — only this one has audio. -1 = all muted.
         let soloIndex = -1;
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+        // ---- Flat ordered channel list (mirrors CHANNEL_GROUPS order) ----
+        function getFlatChannelList() {
+            const list = [];
+            for (const group of CHANNEL_GROUPS) {
+                for (const name of group.channels) {
+                    if (TV_CHANNELS[name] && TV_CHANNELS[name].url) list.push(name);
+                }
+            }
+            return list;
+        }
+
         // ---- Init ----
         function init() {
-            if (isIOS) document.getElementById('iosHint').style.display = 'flex';
-            createTVBoxes(2); // start with 1x2
+            createTVBoxes(1); // start with 1x1
+            updateChannelNav();
         }
 
         function generateChannelOptions() {
@@ -628,6 +679,7 @@
 
             updateActiveChannels();
             updateMuteButtons();
+            updateChannelNav();
         }
 
         // Solo audio toggle: only one stream has audio at a time (iOS-friendly).
@@ -696,7 +748,7 @@
             // Preserve currently-watched channels across layout changes
             const previous = tvBoxes.map(b => b.currentChannel);
             const counts = { '1x1': 1, '1x2': 2, '2x2': 4 };
-            const newCount = counts[layout] || 2;
+            const newCount = counts[layout] || 1;
             createTVBoxes(newCount);
             // Restore channels into the new boxes (as many as fit)
             for (let i = 0; i < Math.min(newCount, previous.length); i++) {
@@ -705,11 +757,73 @@
                     changeChannel(i, previous[i]);
                 }
             }
+            updateChannelNav();
         }
 
         function updateActiveChannels() {
             const n = tvBoxes.filter(b => b.currentChannel).length;
             document.getElementById('activeChannels').textContent = `${n} active`;
+            updateChannelNav();
+        }
+
+        function updateChannelNav() {
+            const nav = document.getElementById('channelNav');
+            const label = document.getElementById('navLabel');
+            if (currentGrid === '1x1') {
+                nav.classList.add('visible');
+                const ch = tvBoxes[0] ? tvBoxes[0].currentChannel : null;
+                label.textContent = ch || '–';
+            } else {
+                nav.classList.remove('visible');
+            }
+        }
+
+        // Navigate channels in 1x1 mode, skipping non-working streams quickly
+        async function navChannel(direction) {
+            if (currentGrid !== '1x1' || !tvBoxes[0]) return;
+            const flat = getFlatChannelList();
+            if (!flat.length) return;
+            const current = tvBoxes[0].currentChannel;
+            let idx = current ? flat.indexOf(current) : -1;
+
+            if (direction === 'first') { idx = 0; }
+            else if (direction === 'last') { idx = flat.length - 1; }
+            else if (direction === 'next') { idx = (idx + 1) % flat.length; }
+            else if (direction === 'prev') { idx = (idx - 1 + flat.length) % flat.length; }
+
+            // Try up to all channels to skip broken ones
+            const startIdx = idx;
+            let tried = 0;
+            while (tried < flat.length) {
+                const candidate = flat[idx];
+                const works = await probeChannel(candidate);
+                if (works) {
+                    tvBoxes[0].select.value = candidate;
+                    changeChannel(0, candidate);
+                    return;
+                }
+                // Skip broken — move in same direction
+                if (direction === 'prev') { idx = (idx - 1 + flat.length) % flat.length; }
+                else { idx = (idx + 1) % flat.length; }
+                tried++;
+                if (idx === startIdx) break;
+            }
+            // Fallback: just switch anyway
+            tvBoxes[0].select.value = flat[idx];
+            changeChannel(0, flat[idx]);
+        }
+
+        // Quick probe: try to fetch just the manifest with a short timeout
+        function probeChannel(channelName) {
+            const ch = TV_CHANNELS[channelName];
+            if (!ch || !ch.url) return Promise.resolve(false);
+            return new Promise(resolve => {
+                const controller = new AbortController();
+                const timer = setTimeout(() => { controller.abort(); resolve(false); }, 3500);
+                fetch(ch.url, { method: 'HEAD', signal: controller.signal, mode: 'no-cors' })
+                    .then(() => { clearTimeout(timer); resolve(true); })
+                    .catch(() => { clearTimeout(timer); resolve(false); });
+            });
         }
 
         // Kick off
