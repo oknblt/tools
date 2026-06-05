@@ -493,7 +493,9 @@
 
         // ---- Init ----
         function init() {
-            createTVBoxes(1); // start with 1x1
+            createTVBoxes(1);
+            drumBuild();
+            drumAttachEvents();
             updateChannelNav();
         }
 
@@ -560,24 +562,26 @@
             const box = tvBoxes[boxIndex];
             const channel = TV_CHANNELS[channelName];
 
-            // Clean up previous
-            if (box.hls) { try { box.hls.destroy(); } catch(e){} box.hls = null; }
-            if (box.video) { try { box.video.pause(); box.video.src = ''; } catch(e){} }
+            // Keep old video alive until new one is ready (seamless swap)
+            const oldHls   = box.hls;
+            const oldVideo = box.video;
 
-            // Reset screen but preserve overlay buttons
-            box.screen.innerHTML = `
-                <div class="overlay-controls">
-                    <button class="overlay-btn" id="mute-${boxIndex}" onclick="toggleSolo(${boxIndex})">🔇</button>
-                    <button class="overlay-btn" onclick="fullscreen(${boxIndex})">⛶</button>
-                </div>
-            `;
-            box.muteBtn = box.screen.querySelector(`#mute-${boxIndex}`);
+            box.hls   = null;
+            box.video = null;
 
             if (!channel || !channelName) {
-                const ph = document.createElement('div');
-                ph.className = 'placeholder';
-                ph.textContent = '📺 Select a channel';
-                box.screen.appendChild(ph);
+                // Tear down old stream
+                if (oldHls)   { try { oldHls.destroy(); }                       catch(_){} }
+                if (oldVideo) { try { oldVideo.pause(); oldVideo.src = ''; }     catch(_){} }
+                // Reset screen
+                box.screen.innerHTML = `
+                    <div class="overlay-controls">
+                        <button class="overlay-btn" id="mute-${boxIndex}" onclick="toggleSolo(${boxIndex})">🔇</button>
+                        <button class="overlay-btn" onclick="fullscreen(${boxIndex})">⛶</button>
+                    </div>
+                    <div class="placeholder">📺 Select a channel</div>
+                `;
+                box.muteBtn = box.screen.querySelector(`#mute-${boxIndex}`);
                 box.currentChannel = null;
                 box.badge.style.display = 'none';
                 if (soloIndex === boxIndex) soloIndex = -1;
@@ -586,31 +590,39 @@
                 return;
             }
 
-            // Loading indicator
-            const loading = document.createElement('div');
-            loading.className = 'loading';
-            loading.innerHTML = `<div class="spinner"></div><div>Loading…</div><small style="color:#999;">${channelName}</small>`;
-            box.screen.appendChild(loading);
+            // Make sure overlay buttons exist (keep them from old state if possible)
+            if (!box.screen.querySelector('.overlay-controls')) {
+                const ov = document.createElement('div');
+                ov.className = 'overlay-controls';
+                ov.innerHTML = `
+                    <button class="overlay-btn" id="mute-${boxIndex}" onclick="toggleSolo(${boxIndex})">🔇</button>
+                    <button class="overlay-btn" onclick="fullscreen(${boxIndex})">⛶</button>
+                `;
+                box.screen.prepend(ov);
+            }
+            box.muteBtn = box.screen.querySelector(`#mute-${boxIndex}`);
 
             box.badge.textContent = channel.source;
             box.badge.className = 'channel-badge ' + (channel.source === 'TRT' ? '' : 'iptv');
             box.badge.style.display = 'inline-block';
 
-            // Build video element
+            // Build new video element — hidden until ready
             const video = document.createElement('video');
-            video.controls = false;
-            video.autoplay = true;
-            video.muted = true;          // ALWAYS start muted (iOS autoplay req + multi-stream)
+            video.controls   = false;
+            video.autoplay   = true;
+            video.muted      = true;
             video.playsInline = true;
-            video.preload = 'auto';
+            video.preload    = 'auto';
             video.setAttribute('playsinline', '');
             video.setAttribute('webkit-playsinline', '');
-            video.style.display = 'none'; // Hide until ready, so loading stays visible
-
-            // Tap to toggle solo audio (mobile-friendly: tapping the screen unmutes it)
+            video.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity 0.25s;';
             video.addEventListener('click', () => toggleSolo(boxIndex));
 
             const showError = (msg) => {
+                // Only show error if this video is still the active one
+                if (box.video !== video) return;
+                if (oldHls)   { try { oldHls.destroy(); }                   catch(_){} }
+                if (oldVideo) { try { oldVideo.pause(); oldVideo.src=''; }  catch(_){} }
                 box.screen.innerHTML = `
                     <div class="overlay-controls">
                         <button class="overlay-btn" id="mute-${boxIndex}" onclick="toggleSolo(${boxIndex})">🔇</button>
@@ -626,12 +638,22 @@
             };
 
             const onReady = () => {
-                if (loading.parentNode) loading.parentNode.removeChild(loading);
-                video.style.display = 'block';
-                video.play().catch(() => { /* user gesture needed; first tap will start it */ });
+                if (box.video !== video) {
+                    // A newer channel was requested — discard this one
+                    try { video.pause(); video.src = ''; } catch(_){}
+                    return;
+                }
+                // Tear down old stream now that new one is ready
+                if (oldHls)   { try { oldHls.destroy(); }                   catch(_){} }
+                if (oldVideo) { try { oldVideo.pause(); oldVideo.src=''; }  catch(_){} oldVideo.remove(); }
+                // Remove any leftover loading / placeholder / error nodes
+                box.screen.querySelectorAll('.loading, .placeholder, .error-message').forEach(n => n.remove());
+                // Fade in
+                video.style.opacity = '1';
+                video.play().catch(() => {});
+                updateMuteButtons();
             };
 
-            // HLS.js for browsers that support MSE
             if (window.Hls && Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
@@ -659,12 +681,11 @@
                     }
                 });
                 box.hls = hls;
-            }
-            // Native HLS (Safari, iOS)
-            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = channel.url;
                 video.addEventListener('loadedmetadata', onReady);
                 video.addEventListener('error', () => showError('Video could not be loaded'));
+                box.hls = null;
             } else {
                 showError('Your browser does not support HLS playback');
                 return;
@@ -674,7 +695,6 @@
             box.video = video;
             box.currentChannel = channelName;
 
-            // Auto-solo this one if no other has audio (best UX when user adds first stream)
             if (soloIndex === -1) soloIndex = boxIndex;
 
             updateActiveChannels();
@@ -766,19 +786,140 @@
             updateChannelNav();
         }
 
+        // ---- Drum-roll picker state ----
+        const ITEM_H = 38;
+        let drumChannels = [];
+        let drumIdx = 0;
+        let drumDragging = false;
+        let drumStartY = 0;
+        let drumStartOffset = 0;
+        let drumOffset = 0;
+        let drumCommitTimer = null;
+
+        function drumBuild() {
+            drumChannels = getFlatChannelList();
+            const track = document.getElementById('drumTrack');
+            if (!track) return;
+            track.innerHTML = '';
+            const pad = 1;
+            for (let p = 0; p < pad; p++) {
+                const ghost = document.createElement('div');
+                ghost.className = 'drum-item';
+                track.appendChild(ghost);
+            }
+            drumChannels.forEach((name, i) => {
+                const el = document.createElement('div');
+                el.className = 'drum-item';
+                el.textContent = name;
+                el.dataset.idx = i;
+                el.addEventListener('click', () => { drumGoTo(i, true); drumCommit(i); });
+                track.appendChild(el);
+            });
+            for (let p = 0; p < pad; p++) {
+                const ghost = document.createElement('div');
+                ghost.className = 'drum-item';
+                track.appendChild(ghost);
+            }
+            drumGoTo(0, false);
+        }
+
+        function drumGoTo(idx, animate) {
+            idx = ((idx % drumChannels.length) + drumChannels.length) % drumChannels.length;
+            drumIdx = idx;
+            const pad = 1;
+            drumOffset = -((pad + idx) * ITEM_H);
+            const track = document.getElementById('drumTrack');
+            if (!track) return;
+            if (animate) { track.classList.remove('no-transition'); }
+            else         { track.classList.add('no-transition'); }
+            track.style.transform = `translateY(${drumOffset}px)`;
+            drumHighlight(idx);
+        }
+
+        function drumHighlight(idx) {
+            const track = document.getElementById('drumTrack');
+            if (!track) return;
+            track.querySelectorAll('.drum-item[data-idx]').forEach(el => {
+                const i = parseInt(el.dataset.idx);
+                const d = Math.abs(i - idx);
+                el.classList.toggle('active', d === 0);
+                el.classList.toggle('near',   d === 1);
+            });
+        }
+
+        function drumSetActive(channelName) {
+            const idx = drumChannels.indexOf(channelName);
+            if (idx >= 0) drumGoTo(idx, true);
+        }
+
+        function drumCommit(idx) {
+            const name = drumChannels[idx];
+            if (name && currentGrid === '1x1' && tvBoxes[0] && name !== tvBoxes[0].currentChannel) {
+                tvBoxes[0].select.value = name;
+                changeChannel(0, name);
+            }
+        }
+
+        function drumPointerStart(e) {
+            drumDragging = true;
+            drumStartY = e.touches ? e.touches[0].clientY : e.clientY;
+            drumStartOffset = drumOffset;
+            const track = document.getElementById('drumTrack');
+            if (track) track.classList.add('no-transition');
+            clearTimeout(drumCommitTimer);
+            e.preventDefault();
+        }
+
+        function drumPointerMove(e) {
+            if (!drumDragging) return;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            const delta = y - drumStartY;
+            const pad = 1;
+            const minOff = -((pad + drumChannels.length - 1) * ITEM_H);
+            const maxOff = -(pad * ITEM_H);
+            drumOffset = Math.max(minOff, Math.min(maxOff, drumStartOffset + delta));
+            const track = document.getElementById('drumTrack');
+            if (track) track.style.transform = `translateY(${drumOffset}px)`;
+            const nearIdx = Math.round((-drumOffset / ITEM_H) - pad);
+            drumHighlight(Math.max(0, Math.min(drumChannels.length - 1, nearIdx)));
+            e.preventDefault();
+        }
+
+        function drumPointerEnd(e) {
+            if (!drumDragging) return;
+            drumDragging = false;
+            const pad = 1;
+            let snapped = Math.round((-drumOffset / ITEM_H) - pad);
+            snapped = Math.max(0, Math.min(drumChannels.length - 1, snapped));
+            drumGoTo(snapped, true);
+            // Debounce 350ms — old video stays visible until new one is ready
+            clearTimeout(drumCommitTimer);
+            drumCommitTimer = setTimeout(() => drumCommit(snapped), 350);
+        }
+
+        function drumAttachEvents() {
+            const picker = document.getElementById('drumPicker');
+            if (!picker) return;
+            picker.addEventListener('touchstart',  drumPointerStart, { passive: false });
+            picker.addEventListener('touchmove',   drumPointerMove,  { passive: false });
+            picker.addEventListener('touchend',    drumPointerEnd,   { passive: false });
+            picker.addEventListener('mousedown',   drumPointerStart);
+            window.addEventListener('mousemove',   drumPointerMove);
+            window.addEventListener('mouseup',     drumPointerEnd);
+        }
+
         function updateChannelNav() {
             const nav = document.getElementById('channelNav');
-            const label = document.getElementById('navLabel');
             if (currentGrid === '1x1') {
                 nav.classList.add('visible');
                 const ch = tvBoxes[0] ? tvBoxes[0].currentChannel : null;
-                label.textContent = ch || '–';
+                if (ch) drumSetActive(ch);
             } else {
                 nav.classList.remove('visible');
             }
         }
 
-        // Navigate channels in 1x1 mode, skipping non-working streams quickly
+        // Navigate channels in 1x1 mode, skipping non-working streams
         async function navChannel(direction) {
             if (currentGrid !== '1x1' || !tvBoxes[0]) return;
             const flat = getFlatChannelList();
@@ -791,7 +932,6 @@
             else if (direction === 'next') { idx = (idx + 1) % flat.length; }
             else if (direction === 'prev') { idx = (idx - 1 + flat.length) % flat.length; }
 
-            // Try up to all channels to skip broken ones
             const startIdx = idx;
             let tried = 0;
             while (tried < flat.length) {
@@ -800,17 +940,17 @@
                 if (works) {
                     tvBoxes[0].select.value = candidate;
                     changeChannel(0, candidate);
+                    drumGoTo(idx, true);
                     return;
                 }
-                // Skip broken — move in same direction
                 if (direction === 'prev') { idx = (idx - 1 + flat.length) % flat.length; }
                 else { idx = (idx + 1) % flat.length; }
                 tried++;
                 if (idx === startIdx) break;
             }
-            // Fallback: just switch anyway
             tvBoxes[0].select.value = flat[idx];
             changeChannel(0, flat[idx]);
+            drumGoTo(idx, true);
         }
 
         // Quick probe: try to fetch just the manifest with a short timeout
