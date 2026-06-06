@@ -300,7 +300,8 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
-            padding: 5px 10px;
+            padding: 6px 10px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
             background: #111;
             border-top: 1px solid #2a2a2a;
         }
@@ -313,14 +314,14 @@
             background: rgba(255,255,255,0.07);
             border: 1px solid rgba(255,255,255,0.15);
             color: rgba(255,255,255,0.75);
-            width: 34px;
-            height: 34px;
+            width: 36px;
+            height: 36px;
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 15px;
             transition: background 0.15s, color 0.15s, border-color 0.15s;
             flex-shrink: 0;
             -webkit-tap-highlight-color: transparent;
@@ -334,20 +335,69 @@
 
         .nav-btn.nav-edge {
             width: 30px;
-            font-size: 12px;
-            opacity: 0.7;
+            font-size: 11px;
+            opacity: 0.65;
         }
 
-        .nav-channel-label {
-            font-size: 12px;
-            color: rgba(255,255,255,0.55);
-            min-width: 90px;
-            text-align: center;
-            letter-spacing: 0.03em;
+        /* ---- Drum-roll picker ---- */
+        .drum-picker {
+            flex: 1;
+            max-width: 210px;
+            height: 36px;
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: grab;
+        }
+        .drum-picker::before,
+        .drum-picker::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0;
+            height: 10px;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .drum-picker::before { top: 0;    background: linear-gradient(to bottom, #111, transparent); }
+        .drum-picker::after  { bottom: 0; background: linear-gradient(to top,   #111, transparent); }
+        .drum-sel {
+            position: absolute;
+            top: 50%; left: 0; right: 0;
+            transform: translateY(-50%);
+            height: 28px;
+            background: rgba(102,126,234,0.15);
+            border-top: 1px solid rgba(102,126,234,0.4);
+            border-bottom: 1px solid rgba(102,126,234,0.4);
+            border-radius: 5px;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .drum-track {
+            position: absolute;
+            left: 0; right: 0;
+            top: 0;
+            will-change: transform;
+        }
+        .drum-track.animated {
+            transition: transform 0.2s cubic-bezier(0.25,0.46,0.45,0.94);
+        }
+        .drum-item {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11.5px;
+            color: rgba(255,255,255,0.3);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            padding: 0 6px;
+            z-index: 1;
         }
+        .drum-item.active { color: #fff; font-size: 12.5px; font-weight: 600; }
+        .drum-item.near   { color: rgba(255,255,255,0.6); }
 
         /* Smaller header on narrow phones */
         @media (max-width: 480px) {
@@ -380,11 +430,14 @@
 
     <!-- Channel navigation bar — only visible in 1x1 mode -->
     <div class="channel-nav" id="channelNav">
-        <button class="nav-btn nav-edge" onclick="navChannel('first')" title="First channel">&#8676;</button>
-        <button class="nav-btn" onclick="navChannel('prev')" title="Previous channel">&#8592;</button>
-        <span class="nav-channel-label" id="navLabel">–</span>
-        <button class="nav-btn" onclick="navChannel('next')" title="Next channel">&#8594;</button>
-        <button class="nav-btn nav-edge" onclick="navChannel('last')" title="Last channel">&#8677;</button>
+        <button class="nav-btn nav-edge" onclick="navChannel('first')" title="İlk kanal">&#8676;</button>
+        <button class="nav-btn" onclick="navChannel('prev')" title="Önceki">&#8592;</button>
+        <div class="drum-picker" id="drumPicker">
+            <div class="drum-sel"></div>
+            <div class="drum-track" id="drumTrack"></div>
+        </div>
+        <button class="nav-btn" onclick="navChannel('next')" title="Sonraki">&#8594;</button>
+        <button class="nav-btn nav-edge" onclick="navChannel('last')" title="Son kanal">&#8677;</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -562,26 +615,21 @@
             const box = tvBoxes[boxIndex];
             const channel = TV_CHANNELS[channelName];
 
-            // Keep old video alive until new one is ready (seamless swap)
-            const oldHls   = box.hls;
-            const oldVideo = box.video;
+            // Destroy previous player cleanly
+            if (box.hls)   { try { box.hls.destroy(); } catch(_){} box.hls = null; }
+            if (box.video) { try { box.video.pause(); box.video.src = ''; } catch(_){} box.video = null; }
 
-            box.hls   = null;
-            box.video = null;
+            // Rebuild screen (keeps overlay controls intact via innerHTML)
+            box.screen.innerHTML = `
+                <div class="overlay-controls">
+                    <button class="overlay-btn" id="mute-${boxIndex}" onclick="toggleSolo(${boxIndex})" title="Ses">🔇</button>
+                    <button class="overlay-btn" onclick="fullscreen(${boxIndex})" title="Tam ekran">⛶</button>
+                </div>
+            `;
+            box.muteBtn = box.screen.querySelector(`#mute-${boxIndex}`);
 
             if (!channel || !channelName) {
-                // Tear down old stream
-                if (oldHls)   { try { oldHls.destroy(); }                       catch(_){} }
-                if (oldVideo) { try { oldVideo.pause(); oldVideo.src = ''; }     catch(_){} }
-                // Reset screen
-                box.screen.innerHTML = `
-                    <div class="overlay-controls">
-                        <button class="overlay-btn" id="mute-${boxIndex}" onclick="toggleSolo(${boxIndex})">🔇</button>
-                        <button class="overlay-btn" onclick="fullscreen(${boxIndex})">⛶</button>
-                    </div>
-                    <div class="placeholder">📺 Select a channel</div>
-                `;
-                box.muteBtn = box.screen.querySelector(`#mute-${boxIndex}`);
+                box.screen.insertAdjacentHTML('beforeend', '<div class="placeholder">📺 Kanal seçin</div>');
                 box.currentChannel = null;
                 box.badge.style.display = 'none';
                 if (soloIndex === boxIndex) soloIndex = -1;
@@ -590,104 +638,69 @@
                 return;
             }
 
-            // Make sure overlay buttons exist (keep them from old state if possible)
-            if (!box.screen.querySelector('.overlay-controls')) {
-                const ov = document.createElement('div');
-                ov.className = 'overlay-controls';
-                ov.innerHTML = `
-                    <button class="overlay-btn" id="mute-${boxIndex}" onclick="toggleSolo(${boxIndex})">🔇</button>
-                    <button class="overlay-btn" onclick="fullscreen(${boxIndex})">⛶</button>
-                `;
-                box.screen.prepend(ov);
-            }
-            box.muteBtn = box.screen.querySelector(`#mute-${boxIndex}`);
+            // Loading indicator
+            box.screen.insertAdjacentHTML('beforeend',
+                `<div class="loading"><div class="spinner"></div><div>Yükleniyor…</div><small style="color:#999">${channelName}</small></div>`
+            );
 
             box.badge.textContent = channel.source;
-            box.badge.className = 'channel-badge ' + (channel.source === 'TRT' ? '' : 'iptv');
+            box.badge.className   = 'channel-badge ' + (channel.source === 'TRT' ? '' : 'iptv');
             box.badge.style.display = 'inline-block';
 
-            // Build new video element — hidden until ready
             const video = document.createElement('video');
             video.controls   = false;
             video.autoplay   = true;
-            video.muted      = true;
+            video.muted      = true;   // always start muted; updateMuteButtons corrects it after ready
             video.playsInline = true;
             video.preload    = 'auto';
             video.setAttribute('playsinline', '');
             video.setAttribute('webkit-playsinline', '');
-            video.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity 0.25s;';
+            video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:none;';
             video.addEventListener('click', () => toggleSolo(boxIndex));
 
+            // Tag this request so stale callbacks from a previous channel can be ignored
+            const reqId = Date.now();
+            box._reqId = reqId;
+
             const showError = (msg) => {
-                // Only show error if this video is still the active one
-                if (box.video !== video) return;
-                if (oldHls)   { try { oldHls.destroy(); }                   catch(_){} }
-                if (oldVideo) { try { oldVideo.pause(); oldVideo.src=''; }  catch(_){} }
-                box.screen.innerHTML = `
-                    <div class="overlay-controls">
-                        <button class="overlay-btn" id="mute-${boxIndex}" onclick="toggleSolo(${boxIndex})">🔇</button>
-                        <button class="overlay-btn" onclick="fullscreen(${boxIndex})">⛶</button>
-                    </div>
-                    <div class="error-message">
-                        ❌ ${msg}<br>
-                        <small>The channel may be off air or geo-restricted</small><br>
-                        <button onclick="changeChannel(${boxIndex}, '${channelName}')">🔄 Retry</button>
-                    </div>
-                `;
-                box.muteBtn = box.screen.querySelector(`#mute-${boxIndex}`);
+                if (box._reqId !== reqId) return;
+                box.screen.querySelector('.loading')?.remove();
+                box.screen.insertAdjacentHTML('beforeend', `
+                    <div class="error-message">❌ ${msg}<br>
+                    <small>Kanal yayında olmayabilir</small><br>
+                    <button onclick="changeChannel(${boxIndex},'${channelName}')">🔄 Tekrar dene</button></div>
+                `);
             };
 
             const onReady = () => {
-                if (box.video !== video) {
-                    // A newer channel was requested — discard this one
-                    try { video.pause(); video.src = ''; } catch(_){}
-                    return;
-                }
-                // Tear down old stream now that new one is ready
-                if (oldHls)   { try { oldHls.destroy(); }                   catch(_){} }
-                if (oldVideo) { try { oldVideo.pause(); oldVideo.src=''; }  catch(_){} oldVideo.remove(); }
-                // Remove any leftover loading / placeholder / error nodes
-                box.screen.querySelectorAll('.loading, .placeholder, .error-message').forEach(n => n.remove());
-                // Fade in
-                video.style.opacity = '1';
+                if (box._reqId !== reqId) { try { video.pause(); video.src=''; } catch(_){} return; }
+                box.screen.querySelector('.loading')?.remove();
+                video.style.display = 'block';
                 video.play().catch(() => {});
-                updateMuteButtons();
+                updateMuteButtons(); // apply correct mute state now that video is live
             };
 
             if (window.Hls && Hls.isSupported()) {
-                const hls = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: false,
-                    backBufferLength: 30,
-                    maxBufferLength: 20,
-                    manifestLoadingTimeOut: 12000,
-                    manifestLoadingMaxRetry: 3,
-                    levelLoadingTimeOut: 12000,
-                    fragLoadingTimeOut: 20000,
-                    fragLoadingMaxRetry: 4
-                });
+                const hls = new Hls({ enableWorker:true, lowLatencyMode:false,
+                    backBufferLength:30, maxBufferLength:20,
+                    manifestLoadingTimeOut:12000, manifestLoadingMaxRetry:2,
+                    levelLoadingTimeOut:12000, fragLoadingTimeOut:20000, fragLoadingMaxRetry:3 });
                 hls.loadSource(channel.url);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, onReady);
                 hls.on(Hls.Events.ERROR, (e, data) => {
                     if (!data.fatal) return;
-                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                        try { hls.startLoad(); } catch(_){}
-                    } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                        try { hls.recoverMediaError(); } catch(_){}
-                    } else {
-                        try { hls.destroy(); } catch(_){}
-                        showError('Failed to load stream');
-                    }
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) { try { hls.startLoad(); } catch(_){} }
+                    else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) { try { hls.recoverMediaError(); } catch(_){} }
+                    else { try { hls.destroy(); } catch(_){} showError('Yayın yüklenemedi'); }
                 });
                 box.hls = hls;
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = channel.url;
-                video.addEventListener('loadedmetadata', onReady);
-                video.addEventListener('error', () => showError('Video could not be loaded'));
-                box.hls = null;
+                video.addEventListener('loadedmetadata', onReady, { once: true });
+                video.addEventListener('error', () => showError('Video yüklenemedi'), { once: true });
             } else {
-                showError('Your browser does not support HLS playback');
+                showError('Tarayıcı HLS desteklemiyor');
                 return;
             }
 
@@ -695,10 +708,12 @@
             box.video = video;
             box.currentChannel = channelName;
 
+            // Only auto-solo when nothing is playing yet (don't override user's mute state)
             if (soloIndex === -1) soloIndex = boxIndex;
 
             updateActiveChannels();
-            updateMuteButtons();
+            // Do NOT call updateMuteButtons here — video isn't ready yet.
+            // onReady will call it once the stream actually starts.
             updateChannelNav();
         }
 
@@ -786,8 +801,8 @@
             updateChannelNav();
         }
 
-        // ---- Drum-roll picker state ----
-        const ITEM_H = 38;
+        // ---- Drum-roll picker ----
+        const ITEM_H = 36;
         let drumChannels = [];
         let drumIdx = 0;
         let drumDragging = false;
@@ -801,72 +816,58 @@
             const track = document.getElementById('drumTrack');
             if (!track) return;
             track.innerHTML = '';
-            const pad = 1;
-            for (let p = 0; p < pad; p++) {
-                const ghost = document.createElement('div');
-                ghost.className = 'drum-item';
-                track.appendChild(ghost);
-            }
+            // 1 ghost above and below so the first/last items can be centred
+            const ghost = () => { const d=document.createElement('div'); d.className='drum-item'; return d; };
+            track.appendChild(ghost());
             drumChannels.forEach((name, i) => {
                 const el = document.createElement('div');
                 el.className = 'drum-item';
                 el.textContent = name;
-                el.dataset.idx = i;
-                el.addEventListener('click', () => { drumGoTo(i, true); drumCommit(i); });
+                el.dataset.idx = String(i);
                 track.appendChild(el);
             });
-            for (let p = 0; p < pad; p++) {
-                const ghost = document.createElement('div');
-                ghost.className = 'drum-item';
-                track.appendChild(ghost);
-            }
-            drumGoTo(0, false);
+            track.appendChild(ghost());
+            drumSetTo(0, false);
         }
 
-        function drumGoTo(idx, animate) {
-            idx = ((idx % drumChannels.length) + drumChannels.length) % drumChannels.length;
+        function drumSetTo(idx, animate) {
+            idx = Math.max(0, Math.min(drumChannels.length - 1, idx));
             drumIdx = idx;
-            const pad = 1;
-            drumOffset = -((pad + idx) * ITEM_H);
+            drumOffset = -((1 + idx) * ITEM_H); // 1 = pad items before
             const track = document.getElementById('drumTrack');
             if (!track) return;
-            if (animate) { track.classList.remove('no-transition'); }
-            else         { track.classList.add('no-transition'); }
+            if (animate) track.classList.add('animated');
+            else         track.classList.remove('animated');
             track.style.transform = `translateY(${drumOffset}px)`;
             drumHighlight(idx);
         }
 
         function drumHighlight(idx) {
-            const track = document.getElementById('drumTrack');
-            if (!track) return;
-            track.querySelectorAll('.drum-item[data-idx]').forEach(el => {
-                const i = parseInt(el.dataset.idx);
-                const d = Math.abs(i - idx);
+            document.getElementById('drumTrack')?.querySelectorAll('.drum-item[data-idx]').forEach(el => {
+                const d = Math.abs(parseInt(el.dataset.idx) - idx);
                 el.classList.toggle('active', d === 0);
                 el.classList.toggle('near',   d === 1);
             });
         }
 
         function drumSetActive(channelName) {
-            const idx = drumChannels.indexOf(channelName);
-            if (idx >= 0) drumGoTo(idx, true);
+            const i = drumChannels.indexOf(channelName);
+            if (i >= 0) drumSetTo(i, true);
         }
 
         function drumCommit(idx) {
             const name = drumChannels[idx];
-            if (name && currentGrid === '1x1' && tvBoxes[0] && name !== tvBoxes[0].currentChannel) {
-                tvBoxes[0].select.value = name;
-                changeChannel(0, name);
-            }
+            if (!name || !tvBoxes[0] || name === tvBoxes[0].currentChannel) return;
+            tvBoxes[0].select.value = name;
+            changeChannel(0, name);
         }
 
         function drumPointerStart(e) {
             drumDragging = true;
             drumStartY = e.touches ? e.touches[0].clientY : e.clientY;
             drumStartOffset = drumOffset;
-            const track = document.getElementById('drumTrack');
-            if (track) track.classList.add('no-transition');
             clearTimeout(drumCommitTimer);
+            document.getElementById('drumTrack')?.classList.remove('animated');
             e.preventDefault();
         }
 
@@ -874,96 +875,61 @@
             if (!drumDragging) return;
             const y = e.touches ? e.touches[0].clientY : e.clientY;
             const delta = y - drumStartY;
-            const pad = 1;
-            const minOff = -((pad + drumChannels.length - 1) * ITEM_H);
-            const maxOff = -(pad * ITEM_H);
+            const minOff = -((1 + drumChannels.length - 1) * ITEM_H);
+            const maxOff = -(1 * ITEM_H);
             drumOffset = Math.max(minOff, Math.min(maxOff, drumStartOffset + delta));
             const track = document.getElementById('drumTrack');
             if (track) track.style.transform = `translateY(${drumOffset}px)`;
-            const nearIdx = Math.round((-drumOffset / ITEM_H) - pad);
-            drumHighlight(Math.max(0, Math.min(drumChannels.length - 1, nearIdx)));
+            const near = Math.max(0, Math.min(drumChannels.length-1, Math.round((-drumOffset/ITEM_H) - 1)));
+            drumHighlight(near);
             e.preventDefault();
         }
 
-        function drumPointerEnd(e) {
+        function drumPointerEnd() {
             if (!drumDragging) return;
             drumDragging = false;
-            const pad = 1;
-            let snapped = Math.round((-drumOffset / ITEM_H) - pad);
-            snapped = Math.max(0, Math.min(drumChannels.length - 1, snapped));
-            drumGoTo(snapped, true);
-            // Debounce 350ms — old video stays visible until new one is ready
+            let snapped = Math.max(0, Math.min(drumChannels.length-1, Math.round((-drumOffset/ITEM_H) - 1)));
+            drumSetTo(snapped, true);
             clearTimeout(drumCommitTimer);
-            drumCommitTimer = setTimeout(() => drumCommit(snapped), 350);
+            drumCommitTimer = setTimeout(() => drumCommit(snapped), 300);
         }
 
         function drumAttachEvents() {
             const picker = document.getElementById('drumPicker');
             if (!picker) return;
-            picker.addEventListener('touchstart',  drumPointerStart, { passive: false });
-            picker.addEventListener('touchmove',   drumPointerMove,  { passive: false });
-            picker.addEventListener('touchend',    drumPointerEnd,   { passive: false });
-            picker.addEventListener('mousedown',   drumPointerStart);
-            window.addEventListener('mousemove',   drumPointerMove);
-            window.addEventListener('mouseup',     drumPointerEnd);
+            picker.addEventListener('touchstart', drumPointerStart, { passive: false });
+            picker.addEventListener('touchmove',  drumPointerMove,  { passive: false });
+            picker.addEventListener('touchend',   drumPointerEnd,   { passive: false });
+            picker.addEventListener('mousedown',  drumPointerStart);
+            window.addEventListener('mousemove',  drumPointerMove);
+            window.addEventListener('mouseup',    drumPointerEnd);
         }
 
         function updateChannelNav() {
             const nav = document.getElementById('channelNav');
             if (currentGrid === '1x1') {
                 nav.classList.add('visible');
-                const ch = tvBoxes[0] ? tvBoxes[0].currentChannel : null;
+                const ch = tvBoxes[0]?.currentChannel;
                 if (ch) drumSetActive(ch);
             } else {
                 nav.classList.remove('visible');
             }
         }
 
-        // Navigate channels in 1x1 mode, skipping non-working streams
-        async function navChannel(direction) {
+        function navChannel(direction) {
             if (currentGrid !== '1x1' || !tvBoxes[0]) return;
             const flat = getFlatChannelList();
             if (!flat.length) return;
             const current = tvBoxes[0].currentChannel;
-            let idx = current ? flat.indexOf(current) : -1;
-
-            if (direction === 'first') { idx = 0; }
-            else if (direction === 'last') { idx = flat.length - 1; }
-            else if (direction === 'next') { idx = (idx + 1) % flat.length; }
-            else if (direction === 'prev') { idx = (idx - 1 + flat.length) % flat.length; }
-
-            const startIdx = idx;
-            let tried = 0;
-            while (tried < flat.length) {
-                const candidate = flat[idx];
-                const works = await probeChannel(candidate);
-                if (works) {
-                    tvBoxes[0].select.value = candidate;
-                    changeChannel(0, candidate);
-                    drumGoTo(idx, true);
-                    return;
-                }
-                if (direction === 'prev') { idx = (idx - 1 + flat.length) % flat.length; }
-                else { idx = (idx + 1) % flat.length; }
-                tried++;
-                if (idx === startIdx) break;
-            }
-            tvBoxes[0].select.value = flat[idx];
-            changeChannel(0, flat[idx]);
-            drumGoTo(idx, true);
-        }
-
-        // Quick probe: try to fetch just the manifest with a short timeout
-        function probeChannel(channelName) {
-            const ch = TV_CHANNELS[channelName];
-            if (!ch || !ch.url) return Promise.resolve(false);
-            return new Promise(resolve => {
-                const controller = new AbortController();
-                const timer = setTimeout(() => { controller.abort(); resolve(false); }, 3500);
-                fetch(ch.url, { method: 'HEAD', signal: controller.signal, mode: 'no-cors' })
-                    .then(() => { clearTimeout(timer); resolve(true); })
-                    .catch(() => { clearTimeout(timer); resolve(false); });
-            });
+            let idx = current ? flat.indexOf(current) : 0;
+            if (direction === 'first')     idx = 0;
+            else if (direction === 'last') idx = flat.length - 1;
+            else if (direction === 'next') idx = (idx + 1) % flat.length;
+            else if (direction === 'prev') idx = (idx - 1 + flat.length) % flat.length;
+            const name = flat[idx];
+            tvBoxes[0].select.value = name;
+            changeChannel(0, name);
+            drumSetTo(idx, true);
         }
 
         // Kick off
