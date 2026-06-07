@@ -99,15 +99,7 @@
             background: #ddd;
         }
 
-        .info-pill {
-            background: rgba(76, 175, 80, 0.25);
-            padding: 6px 10px;
-            border-radius: 14px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+        /* info-pill removed */
 
         /* ---------- Grid ---------- */
         .grid-container {
@@ -399,12 +391,55 @@
         .drum-item.active { color: #fff; font-size: 12.5px; font-weight: 600; }
         .drum-item.near   { color: rgba(255,255,255,0.6); }
 
-        /* Smaller header on narrow phones */
-        @media (max-width: 480px) {
-            .header h1 { font-size: 14px; }
-            .header h1 span:not(:first-child) { display: none; }
-            .btn { padding: 6px 10px; font-size: 12px; }
-            .info-pill { font-size: 11px; padding: 4px 8px; }
+        /* ---------- Voice command ---------- */
+        .btn-voice {
+            background: rgba(255,255,255,0.12);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 18px;
+            min-height: 36px;
+            cursor: pointer;
+            transition: background 0.15s, box-shadow 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .btn-voice.listening {
+            background: rgba(220,50,50,0.7);
+            border-color: #f66;
+            box-shadow: 0 0 0 3px rgba(220,50,50,0.3);
+            animation: pulse-mic 1.2s ease-in-out infinite;
+        }
+        @keyframes pulse-mic {
+            0%,100% { box-shadow: 0 0 0 3px rgba(220,50,50,0.3); }
+            50%      { box-shadow: 0 0 0 7px rgba(220,50,50,0.1); }
+        }
+        /* Voice toast */
+        #voiceToast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(20,20,30,0.92);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 22px;
+            font-size: 13px;
+            border: 1px solid rgba(102,126,234,0.4);
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+            z-index: 999;
+            max-width: 80vw;
+            text-align: center;
+        }
+        #voiceToast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
     </style>
 </head>
@@ -414,19 +449,20 @@
             <h1>📺 <span>Multi TV Viewer</span></h1>
 <span class="brand-tag">Bulut Projects</span>
             <div class="controls">
-                <div class="info-pill">
-                    🟢 <span id="activeChannels">0 active</span>
-                </div>
                 <button class="btn btn-layout active" data-layout="1x1" onclick="setGrid('1x1', this)">1</button>
                 <button class="btn btn-layout" data-layout="1x2" onclick="setGrid('1x2', this)">1×2</button>
                 <button class="btn btn-layout" data-layout="2x2" onclick="setGrid('2x2', this)">2×2</button>
                 <button class="btn btn-action" onclick="muteAll()">🔇 Mute All</button>
                 <button class="btn btn-action" onclick="refreshAll()">🔄</button>
+                <button class="btn-voice" id="voiceBtn" onclick="toggleVoice()" title="Sesli komut">🎙</button>
             </div>
         </div>
     </div>
 
     <div id="gridContainer" class="grid-container grid-1x1"></div>
+
+    <!-- Hidden button: clicked programmatically so remote fullscreen works as a real user gesture -->
+    <button id="fsProxy" onclick="fullscreen(0)" style="position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;top:0;left:0;" aria-hidden="true"></button>
 
     <!-- Channel navigation bar — only visible in 1x1 mode -->
     <div class="channel-nav" id="channelNav">
@@ -439,6 +475,8 @@
         <button class="nav-btn" onclick="navChannel('next')" title="Sonraki">&#8594;</button>
         <button class="nav-btn nav-edge" onclick="navChannel('last')" title="Son kanal">&#8677;</button>
     </div>
+
+    <div id="voiceToast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
@@ -530,8 +568,8 @@
         // ---- State ----
         let currentGrid = '1x1';
         let tvBoxes = [];
-        // Soloed box index — only this one has audio. -1 = all muted.
         let soloIndex = -1;
+        let userMutedAll = false; // true = user explicitly muted all; don't auto-unmute on channel change
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -678,8 +716,12 @@
                 if (box._reqId !== reqId) { try { video.pause(); video.src=''; } catch(_){} return; }
                 box.screen.querySelector('.loading')?.remove();
                 video.style.display = 'block';
+                // Apply correct mute state BEFORE play() so audio starts correctly
+                const shouldUnmute = (soloIndex === boxIndex);
+                video.muted = !shouldUnmute;
                 video.play().catch(() => {});
-                updateMuteButtons(); // apply correct mute state now that video is live
+                // Then sync all button visuals
+                requestAnimationFrame(() => updateMuteButtons());
             };
 
             if (window.Hls && Hls.isSupported()) {
@@ -710,8 +752,8 @@
             box.video = video;
             box.currentChannel = channelName;
 
-            // Only auto-solo when nothing is playing yet (don't override user's mute state)
-            if (soloIndex === -1) soloIndex = boxIndex;
+            // Auto-solo only on very first channel load AND user hasn't explicitly muted
+            if (soloIndex === -1 && !userMutedAll) soloIndex = boxIndex;
 
             updateActiveChannels();
             // Do NOT call updateMuteButtons here — video isn't ready yet.
@@ -722,9 +764,11 @@
         // Solo audio toggle: only one stream has audio at a time (iOS-friendly).
         function toggleSolo(boxIndex) {
             if (soloIndex === boxIndex) {
-                soloIndex = -1; // mute everyone
+                soloIndex = -1;
+                userMutedAll = true;
             } else {
                 soloIndex = boxIndex;
+                userMutedAll = false;
             }
             updateMuteButtons();
         }
@@ -734,14 +778,11 @@
                 const isSolo = (soloIndex === i);
                 if (box.video) {
                     box.video.muted = !isSolo;
-                    if (isSolo) {
-                        // Re-trigger play in case iOS paused it on unmute
-                        box.video.play().catch(() => {});
-                    }
+                    if (isSolo) box.video.play().catch(() => {});
                 }
                 if (box.muteBtn) {
                     box.muteBtn.textContent = isSolo ? '🔊' : '🔇';
-                    box.muteBtn.style.background = isSolo ? 'rgba(191, 196, 197,0.85)' : 'rgba(0,0,0,0.6)';
+                    box.muteBtn.style.background = isSolo ? 'rgba(191,196,197,0.85)' : 'rgba(0,0,0,0.6)';
                 }
             });
         }
@@ -750,7 +791,7 @@
             const box = tvBoxes[boxIndex];
             if (!box.video) return;
             const v = box.video;
-            // iOS Safari uses webkitEnterFullscreen on the <video> directly
+            // iOS Safari needs webkitEnterFullscreen on the video element directly
             if (v.webkitEnterFullscreen) {
                 v.webkitEnterFullscreen();
             } else if (v.requestFullscreen) {
@@ -762,8 +803,16 @@
             }
         }
 
+        // Called by WebSocket remote — clicks a real hidden button so browser
+        // treats it as a genuine user gesture (required for fullscreen API).
+        function remoteFullscreen() {
+            const btn = document.getElementById('fsProxy');
+            if (btn) btn.click();
+        }
+
         function muteAll() {
             soloIndex = -1;
+            userMutedAll = true;
             updateMuteButtons();
         }
 
@@ -798,8 +847,6 @@
         }
 
         function updateActiveChannels() {
-            const n = tvBoxes.filter(b => b.currentChannel).length;
-            document.getElementById('activeChannels').textContent = `${n} active`;
             updateChannelNav();
         }
 
@@ -934,6 +981,309 @@
             drumSetTo(idx, true);
         }
 
+        // ================================================================
+        // WEBSOCKET REMOTE CONTROL
+        // ================================================================
+        let ws = null;
+        let wsReconnectTimer = null;
+
+        function wsConnect() {
+            const host = location.hostname;
+            const port = 8765;
+            try {
+                ws = new WebSocket(`ws://${host}:${port}`);
+                ws.onopen = () => {
+                    ws.send(JSON.stringify({ type: 'register', role: 'tv' }));
+                    showToast('📡 Kumanda bağlantısı hazır', 2000);
+                };
+                ws.onmessage = (e) => {
+                    try { handleRemoteCommand(JSON.parse(e.data)); } catch(_){}
+                };
+                ws.onclose = () => {
+                    ws = null;
+                    wsReconnectTimer = setTimeout(wsConnect, 4000);
+                };
+                ws.onerror = () => { try { ws.close(); } catch(_){} };
+            } catch(_) {}
+        }
+
+        function handleRemoteCommand(cmd) {
+            switch(cmd.action) {
+                case 'next':          navChannel('next'); showToast('⏭ Sonraki kanal'); break;
+                case 'prev':          navChannel('prev'); showToast('⏮ Önceki kanal'); break;
+                case 'first':         navChannel('first'); showToast('⏮⏮ İlk kanal'); break;
+                case 'last':          navChannel('last'); showToast('⏭⏭ Son kanal'); break;
+                case 'mute':          muteAll(); showToast('🔇 Ses kapatıldı'); break;
+                case 'unmute':
+                    if (soloIndex === -1) { soloIndex = 0; userMutedAll = false; updateMuteButtons(); }
+                    showToast('🔊 Ses açıldı'); break;
+                case 'pause':
+                    tvBoxes.forEach(b => { if (b.video) b.video.pause(); });
+                    showToast('⏸ Durduruldu'); break;
+                case 'play':
+                    tvBoxes.forEach(b => { if (b.video) b.video.play().catch(()=>{}); });
+                    showToast('▶ Devam ediyor'); break;
+                case 'fullscreen':    remoteFullscreen(); break;
+                case 'seek':
+                    tvBoxes.forEach(b => {
+                        if (b.video && isFinite(b.video.duration))
+                            b.video.currentTime = Math.max(0, Math.min(b.video.duration, b.video.currentTime + (cmd.delta||0)));
+                    });
+                    showToast((cmd.delta > 0 ? '⏩ ' : '⏪ ') + Math.abs(cmd.delta) + 'sn'); break;
+                case 'channel':
+                    if (cmd.name) {
+                        const flat = getFlatChannelList();
+                        const idx = flat.indexOf(cmd.name);
+                        if (idx >= 0) {
+                            tvBoxes[0] && changeChannel(0, cmd.name);
+                            if (tvBoxes[0]) tvBoxes[0].select.value = cmd.name;
+                            drumSetTo(idx, true);
+                            showToast('📺 ' + cmd.name);
+                        }
+                    }
+                    break;
+                case 'layout':
+                    if (cmd.layout) {
+                        const btn = document.querySelector(`[data-layout="${cmd.layout}"]`);
+                        setGrid(cmd.layout, btn);
+                        showToast('📐 ' + cmd.layout);
+                    }
+                    break;
+            }
+        }
+
+        // Start WS connection (TV mode)
+        wsConnect();
+
+        // ================================================================
+        // VOICE COMMAND ENGINE
+        // ================================================================
+        let recognition = null;
+        let voiceActive = false;
+        let toastTimer  = null;
+
+        function showToast(msg, duration = 2500) {
+            const t = document.getElementById('voiceToast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), duration);
+        }
+
+        // Seek step in seconds for rewind/forward on live streams (moves playback head)
+        const SEEK_STEP = 10;
+
+        // Channel aliases: words/phrases that map to channel names.
+        // Keys are lowercase trigger words, values are exact TV_CHANNELS keys.
+        const VOICE_CHANNEL_ALIASES = {};
+        (function buildAliases() {
+            for (const name of Object.keys(TV_CHANNELS)) {
+                if (!name) continue;
+                const key = name.toLowerCase();
+                VOICE_CHANNEL_ALIASES[key] = name;
+                // Also map just the first word if multi-word ("haber global" → "haber global" & "habertürk" etc.)
+            }
+            // Manual extra aliases
+            const extras = {
+                'halk':         'Halk TV',
+                'ntv':          'NTV',
+                'sözcü':        'Sözcü TV',
+                'sozcu':        'Sözcü TV',
+                'haberturk':    'Habertürk',
+                'habertürk':    'Habertürk',
+                'haber türk':   'Habertürk',
+                'haber global': 'Haber Global',
+                'global':       'Haber Global',
+                'tv yüz':       'TV 100',
+                'bloomberg ht': 'Bloomberg HT',
+                'bbc':          'BBC News',
+                'bbc news':     'BBC News',
+                'dw':           'DW TV English',
+                'france 24':    'France 24 English',
+                'france':       'France 24 English',
+                'sky':          'Sky News',
+                'sky news':     'Sky News',
+                'tele bir':     'Tele 1',
+                'tele 1':       'Tele 1',
+                'cnn':          'CNN Türk',
+                'cnn türk':     'CNN Türk',
+                'trt':          'TRT 1',
+                'trt bir':      'TRT 1',
+                'trt 1':        'TRT 1',
+                'trt iki':      'TRT 2',
+                'trt 2':        'TRT 2',
+                'trt haber':    'TRT Haber',
+                'trt spor':     'TRT Spor',
+                'trt belgesel': 'TRT Belgesel',
+                'trt müzik':    'TRT Müzik',
+                'trt world':    'TRT World',
+                'now':          'NOW',
+                'kanal d':      'Kanal D',
+                'show':         'Show TV',
+                'show tv':      'Show TV',
+                'atv':          'ATV',
+                'tv sekiz':     'TV8',
+                'tv 8':         'TV8',
+                'teve':         'Teve2',
+                'teve iki':     'Teve2',
+                'beyaz':        'Beyaz TV',
+                'star':         'Star TV',
+                'star tv':      'Star TV',
+                'ht spor':      'HT Spor',
+                'a spor':       'A Spor',
+                'aspor':        'A Spor',
+                'sports tv':    'Sports TV',
+                'red bull':     'Redbull TV',
+                'redbull':      'Redbull TV',
+                'dmax':         'DMAX',
+                'tlc':          'TLC',
+            };
+            Object.assign(VOICE_CHANNEL_ALIASES, extras);
+        })();
+
+        function matchChannel(transcript) {
+            const t = transcript.toLowerCase().trim();
+            // Direct alias lookup (longest match first)
+            const keys = Object.keys(VOICE_CHANNEL_ALIASES).sort((a,b) => b.length - a.length);
+            for (const k of keys) {
+                if (t.includes(k)) return VOICE_CHANNEL_ALIASES[k];
+            }
+            return null;
+        }
+
+        function handleVoiceCommand(transcript) {
+            const t = transcript.toLowerCase().trim();
+            showToast('🎙 "' + transcript + '"', 3000);
+
+            // --- Mute / Ses kapat ---
+            if (/ses kapat|mute|sustur|kapat sesi/.test(t)) {
+                muteAll(); showToast('🔇 Ses kapatıldı'); return;
+            }
+            // --- Unmute / Ses aç ---
+            if (/ses aç|unmute|sesi aç|aç sesi/.test(t)) {
+                if (soloIndex === -1) {
+                    soloIndex = 0;
+                    updateMuteButtons();
+                }
+                showToast('🔊 Ses açıldı'); return;
+            }
+            // --- Sonraki kanal ---
+            if (/sonraki|next|ileri kanal|kanal ileri/.test(t)) {
+                navChannel('next'); showToast('⏭ Sonraki kanal'); return;
+            }
+            // --- Önceki kanal ---
+            if (/önceki|previous|geri kanal|kanal geri/.test(t)) {
+                navChannel('prev'); showToast('⏮ Önceki kanal'); return;
+            }
+            // --- İlk kanal ---
+            if (/ilk kanal|first channel|başa git|en başa/.test(t)) {
+                navChannel('first'); showToast('⏮⏮ İlk kanal'); return;
+            }
+            // --- Son kanal ---
+            if (/son kanal|last channel|en sona/.test(t)) {
+                navChannel('last'); showToast('⏭⏭ Son kanal'); return;
+            }
+            // --- Yayını durdur / Pause ---
+            if (/durdur|pause|beklet|dur/.test(t)) {
+                tvBoxes.forEach(b => { if (b.video) b.video.pause(); });
+                showToast('⏸ Durduruldu'); return;
+            }
+            // --- Yayına devam et / Play ---
+            if (/devam|play|oynat|başlat/.test(t)) {
+                tvBoxes.forEach(b => { if (b.video) b.video.play().catch(()=>{}); });
+                showToast('▶ Devam ediyor'); return;
+            }
+            // --- Tam ekran ---
+            if (/tam ekran|fullscreen|full screen/.test(t)) {
+                fullscreen(0); showToast('⛶ Tam ekran'); return;
+            }
+            // --- Geri sar ---
+            if (/geri sar|rewind|geri al/.test(t)) {
+                tvBoxes.forEach(b => { if (b.video && isFinite(b.video.duration)) b.video.currentTime = Math.max(0, b.video.currentTime - SEEK_STEP); });
+                showToast(`⏪ ${SEEK_STEP}sn geri`); return;
+            }
+            // --- İleri sar ---
+            if (/ileri sar|forward|ilerle/.test(t)) {
+                tvBoxes.forEach(b => { if (b.video && isFinite(b.video.duration)) b.video.currentTime = Math.min(b.video.duration, b.video.currentTime + SEEK_STEP); });
+                showToast(`⏩ ${SEEK_STEP}sn ileri`); return;
+            }
+            // --- Kanal değiştir ---
+            const ch = matchChannel(t);
+            if (ch) {
+                if (currentGrid === '1x1') {
+                    navChannel._switch(ch);
+                } else {
+                    // Switch first (focused) box in multi-view
+                    tvBoxes[0].select.value = ch;
+                    changeChannel(0, ch);
+                }
+                showToast('📺 ' + ch);
+                return;
+            }
+            // Anlaşılmadı
+            showToast('❓ Komut anlaşılamadı');
+        }
+
+        // Helper used by voice for 1x1 channel switch (also updates drum)
+        navChannel._switch = function(channelName) {
+            const flat = getFlatChannelList();
+            const idx  = flat.indexOf(channelName);
+            if (idx < 0) return;
+            if (tvBoxes[0]) { tvBoxes[0].select.value = channelName; changeChannel(0, channelName); }
+            drumSetTo(idx, true);
+        };
+
+        function initVoice() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                showToast('⚠ Tarayıcı sesli komutu desteklemiyor', 4000);
+                return null;
+            }
+            const r = new SpeechRecognition();
+            r.lang = 'tr-TR';           // primary: Turkish
+            r.continuous = false;
+            r.interimResults = false;
+            r.maxAlternatives = 3;
+
+            r.onresult = (e) => {
+                // Try all alternatives
+                for (let i = 0; i < e.results[0].length; i++) {
+                    const t = e.results[0][i].transcript;
+                    handleVoiceCommand(t);
+                    break; // first (most confident) alternative is enough
+                }
+            };
+            r.onerror = (e) => {
+                if (e.error === 'no-speech') { showToast('🎙 Ses algılanamadı'); }
+                else if (e.error === 'not-allowed') { showToast('⚠ Mikrofon izni reddedildi', 4000); }
+                else { showToast('⚠ Hata: ' + e.error); }
+                stopVoice();
+            };
+            r.onend = () => stopVoice();
+            return r;
+        }
+
+        function toggleVoice() {
+            if (voiceActive) { stopVoice(); return; }
+            if (!recognition) recognition = initVoice();
+            if (!recognition) return;
+            try {
+                recognition.start();
+                voiceActive = true;
+                document.getElementById('voiceBtn').classList.add('listening');
+                showToast('🎙 Dinleniyor… (TR/EN)', 8000);
+            } catch(e) {
+                showToast('⚠ Mikrofon başlatılamadı');
+            }
+        }
+
+        function stopVoice() {
+            voiceActive = false;
+            document.getElementById('voiceBtn').classList.remove('listening');
+            try { recognition && recognition.stop(); } catch(_){}
+        }
+
+        // ================================================================
         // Kick off
         init();
     </script>
