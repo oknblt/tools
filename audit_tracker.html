@@ -321,6 +321,7 @@ tbody tr.week-stripe.selected{background:#ccd8ef;}
               <option value="YES">YES</option><option value="NO">NO</option>
             </select>
           </div>
+          <div class="field"><label>Transportation</label><input type="text" id="f_transportation" placeholder="Transportation"/></div>
         </div>
       </div>
       <div class="fsec" style="flex:1.5">
@@ -579,6 +580,7 @@ const COL_DEFS = [
   {key:'reportNo',   label:'Report No',            type:'text', width:100},
   {key:'manday',     label:'Manday',              type:'text', width:75},
   {key:'reportWriting',label:'Report',     type:'select', width:110},
+  {key:'transportation',label:'Transportation',    type:'text', width:130},
   {key:'factoryName',label:'Factory Name',         type:'text', width:160},
   {key:'sector',     label:'Sector',               type:'text', width:100},
   {key:'address',    label:'Address',              type:'text', width:150},
@@ -590,7 +592,7 @@ const COL_DEFS = [
 const FIELDS = COL_DEFS.map(c=>c.key);
 const XL_HEADERS = [
   'Start Date','End Date','City','Day','Program','Program 2','Scope',
-  'Type','Brand','Report No','Manday','Report',
+  'Type','Brand','Report No','Manday','Report','Transportation',
   'Factory Name','Sector','Address','Lead / Team','Other','Other 2'
 ];
 
@@ -1398,6 +1400,7 @@ function importExcel(ev){
         startDate:'Start Date', endDate:'End Date', city:'City', totalDay:'Day',
         program1:'Program', program2:'Program 2', scope:'Scope', auditType:'Type',
         brand:'Brand', reportNo:'Report No', manday:'Manday', reportWriting:'Report',
+        transportation:'Transportation',
         factoryName:'Factory Name', sector:'Sector', address:'Address',
         leadAuditor:'Lead / Team', otherAuditor:'Other', otherAuditor2:'Other 2'
       };
