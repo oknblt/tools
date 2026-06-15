@@ -682,7 +682,7 @@ selectDirBtnEl.addEventListener('click', async () => {
         status.textContent = 'Scanning folder…';
         const allFiles = [];
         await scanDirectory(dirHandle, '', allFiles);
-        const extensions = ['pdf', 'doc', 'docx'];
+        const extensions = ['pdf', 'doc', 'docx','jpeg', 'jpg', 'png'];
         const targetFiles = allFiles.filter(f => extensions.includes(f.extension.toLowerCase()));
         renderFilePreview(targetFiles);
         if (!targetFiles.length) {
