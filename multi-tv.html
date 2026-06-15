@@ -529,7 +529,7 @@
             "Euro D":        { url: "https://live.duhnet.tv/S2/HLS_LIVE/eurodnp/track_4_1000/playlist.m3u8", source: "IPTV" },
         "Kanal D Romanya":          { url: "https://stream1.kanald.ro/iphone/knd-live.m3u8",    source: "IPTV" },
             "Beyaz TV":      { url: "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_1080p.m3u8", source: "IPTV" },
-        "BRTV":          { url: "https:////live.artidijitalmedya.com/artidijital_brtv/brtv/playlist.m3u8",    source: "IPTV" },
+        "BRTV":          { url: "https://live.artidijitalmedya.com/artidijital_brtv/brtv/playlist.m3u8",    source: "IPTV" },
             "Star TV":       { url: "https://dogus-live.daioncdn.net/startv/startv.m3u8",  source: "IPTV" },
 
             // ---- Sports ----
@@ -556,7 +556,7 @@
 
         // ---- Channel groupings (for the dropdown) ----
         const CHANNEL_GROUPS = [
-            { label: "📰 News",           channels: ["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100", "Bloomberg HT", "BBC News", "DW TV English", "Wonder", "France 24 English", "France 24 French", "BBC Earth", "Bloomberg", "Tele 1", "CNN Türk",] },
+            { label: "📰 News",           channels: ["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100", "Bloomberg HT", "BBC News", "DW TV English", "Wonder", "France 24 English", "France 24 French", "BBC Earth", "Bloomberg", "Tele 1", "CNN Türk"] },
             { label: "📡 TRT (Official)", channels: ["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yıldız","TRT Belgesel","TRT Müzik","TRT World"] },
             { label: "📺 National",       channels: ["NOW","Kanal D","Show TV","ATV", "CNBC-e", "TV8","TV8,5", "Teve2", "360","BRTV", "Euro D", "Kanal D Romanya", "Beyaz TV","Star TV"] },
             { label: "⚽ Sports",         channels: ["HT Spor","beIN SPORTS XTRA", "A Spor","Sports TV"] },
@@ -582,17 +582,9 @@
             return list;
         }
 
-        // ---- Init ----
-        function init() {
-            createTVBoxes(1);
-            drumBuild();
-            drumAttachEvents();
-            updateChannelNav();
-        }
-
-        // Build channel number map once
+        // ---- Channel numbers ----
         const CH_NUMBERS = {};
-        (function() {
+        function buildChannelNumbers() {
             let n = 1;
             for (const group of CHANNEL_GROUPS) {
                 for (const name of group.channels) {
@@ -601,11 +593,20 @@
                     }
                 }
             }
-        })();
+        }
 
         function chNum(name) {
             const n = CH_NUMBERS[name];
             return n ? String(n).padStart(2,'0') : '';
+        }
+
+        // ---- Init ----
+        function init() {
+            buildChannelNumbers();
+            createTVBoxes(1);
+            drumBuild();
+            drumAttachEvents();
+            updateChannelNav();
         }
 
         function generateChannelOptions() {
