@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <title>📺 Multi TV Viewer - Bulut Projects</title>
-    <style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>&#128250; Multi TV Viewer</title>
+<style>
         * {
             margin: 0;
             padding: 0;
@@ -441,49 +441,41 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
-    </style>
+</style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-row">
-            <h1>📺 <span>Multi TV Viewer</span></h1>
-<span class="brand-tag">Bulut Projects</span>
-            <div class="controls">
-                <button class="btn btn-layout active" data-layout="1x1" onclick="setGrid('1x1', this)">1</button>
-                <button class="btn btn-layout" data-layout="1x2" onclick="setGrid('1x2', this)">1×2</button>
-                <button class="btn btn-layout" data-layout="2x2" onclick="setGrid('2x2', this)">2×2</button>
-                <button class="btn btn-action" onclick="muteAll()">🔇 Mute All</button>
-                <button class="btn btn-action" onclick="refreshAll()">🔄</button>
-                <button class="btn-voice" id="voiceBtn" onclick="toggleVoice()" title="Sesli komut">🎙</button>
-            </div>
-        </div>
+<div class="header">
+  <div class="header-row">
+    <h1>&#128250; <span>Multi TV Viewer</span></h1>
+    <span class="brand-tag">Bulut Projects</span>
+    <div class="controls">
+      <button class="btn btn-layout active" data-layout="1x1" onclick="setGrid('1x1',this)">1</button>
+      <button class="btn btn-layout" data-layout="1x2" onclick="setGrid('1x2',this)">1&times;2</button>
+      <button class="btn btn-layout" data-layout="2x2" onclick="setGrid('2x2',this)">2&times;2</button>
+      <button class="btn btn-action" onclick="muteAll()">&#128263; Mute All</button>
+      <button class="btn btn-action" onclick="refreshAll()">&#128260;</button>
+      <button class="btn-voice" id="voiceBtn" onclick="toggleVoice()" title="Sesli komut">&#127897;</button>
     </div>
-
-    <div id="gridContainer" class="grid-container grid-1x1"></div>
-
-
-    <!-- Channel navigation bar — only visible in 1x1 mode -->
-    <div class="channel-nav" id="channelNav">
-        <button class="nav-btn nav-edge" onclick="navChannel('first')" title="İlk kanal">&#8676;</button>
-        <button class="nav-btn" onclick="navChannel('prev')" title="Önceki">&#8592;</button>
-        <div class="drum-picker" id="drumPicker">
-            <div class="drum-sel"></div>
-            <div class="drum-track" id="drumTrack"></div>
-        </div>
-        <button class="nav-btn" onclick="navChannel('next')" title="Sonraki">&#8594;</button>
-        <button class="nav-btn nav-edge" onclick="navChannel('last')" title="Son kanal">&#8677;</button>
-    </div>
-
-    <div id="voiceToast"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <script>
-        // ---- TV Channels ----
-        // NOTE: Major Turkish private channels (Show TV, Star, ATV, Kanal D, Fox/Now)
-        // are protected by token + referrer checks. Direct m3u8 playback in a browser
-        // is unreliable and stops working frequently. TRT and news channels are the
-        // most stable.
-        const TV_CHANNELS = {
+  </div>
+</div>
+<div id="gridContainer" class="grid-container grid-1x1"></div>
+<div class="channel-nav" id="channelNav">
+  <button class="nav-btn nav-edge" onclick="navChannel('first')">&#8676;</button>
+  <button class="nav-btn" onclick="navChannel('prev')">&#8592;</button>
+  <div class="drum-picker" id="drumPicker">
+    <div class="drum-sel"></div>
+    <div class="drum-track" id="drumTrack"></div>
+  </div>
+  <button class="nav-btn" onclick="navChannel('next')">&#8594;</button>
+  <button class="nav-btn nav-edge" onclick="navChannel('last')">&#8677;</button>
+</div>
+<div id="voiceToast"></div>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<script>
+// ================================================================
+// DATA
+// ================================================================
+const TV_CHANNELS = {
             "": { type: "none", url: "", source: "" },
 
             // ---- News ----
@@ -554,8 +546,7 @@
             "DMAX":          { url: "https://dygvideo.dygdigital.com/live/hls/dmaxdai",     source: "IPTV" }
         };
 
-        // ---- Channel groupings (for the dropdown) ----
-        const CHANNEL_GROUPS = [
+const CHANNEL_GROUPS = [
             { label: "📰 News",           channels: ["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100", "Bloomberg HT", "BBC News", "DW TV English", "Wonder", "France 24 English", "France 24 French", "BBC Earth", "Bloomberg", "Tele 1", "CNN Türk"] },
             { label: "📡 TRT (Official)", channels: ["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yıldız","TRT Belgesel","TRT Müzik","TRT World"] },
             { label: "📺 National",       channels: ["NOW","Kanal D","Show TV","ATV", "CNBC-e", "TV8","TV8,5", "Teve2", "360","BRTV", "Euro D", "Kanal D Romanya", "Beyaz TV","Star TV"] },
@@ -563,16 +554,46 @@
             { label: "🎬 Entertainment",  channels: ["FTV","Power TV", "Powertürk", "NR1", "NR1 Türk", "NR1 Dance", "TLC", "Fashion One", "Redbull TV", "MTRSPT 1", "Motorvision", "A2", "DMAX"] }
         ];
 
-        // ---- State ----
-        let currentGrid = '1x1';
-        let tvBoxes = [];
-        let soloIndex = -1;
-        let userMutedAll = false; // true = user explicitly muted all; don't auto-unmute on channel change
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+// ================================================================
+// STATE
+// ================================================================
+var currentGrid = '1x1';
+var tvBoxes     = [];
+var soloIndex   = -1;
+var userMutedAll = false;
+var CH_NUMBERS  = {};
+var peer = null, peerConn = null, myPeerId = null;
+var ws = null, wsReconnectTimer = null;
+var ITEM_H = 36;
+var drumChannels = [], drumIdx = 0, drumDragging = false;
+var drumStartY = 0, drumStartOffset = 0, drumOffset = 0, drumCommitTimer = null;
+var recognition = null, voiceActive = false, toastTimer = null;
+var SEEK_STEP = 10;
 
-        // ---- Flat ordered channel list (mirrors CHANNEL_GROUPS order) ----
-        function getFlatChannelList() {
+// ================================================================
+// CHANNEL NUMBERS
+// ================================================================
+function buildChannelNumbers() {
+    var n = 1;
+    for (var gi = 0; gi < CHANNEL_GROUPS.length; gi++) {
+        var chs = CHANNEL_GROUPS[gi].channels;
+        for (var ci = 0; ci < chs.length; ci++) {
+            var name = chs[ci];
+            if (TV_CHANNELS[name] && TV_CHANNELS[name].url) {
+                CH_NUMBERS[name] = n++;
+            }
+        }
+    }
+}
+function chNum(name) {
+    var n = CH_NUMBERS[name];
+    return n ? String(n).padStart(2,'0') : '';
+}
+
+// ================================================================
+// CORE FUNCTIONS
+// ================================================================
+function getFlatChannelList() {
             const list = [];
             for (const group of CHANNEL_GROUPS) {
                 for (const name of group.channels) {
@@ -582,34 +603,7 @@
             return list;
         }
 
-        // ---- Channel numbers ----
-        const CH_NUMBERS = {};
-        function buildChannelNumbers() {
-            let n = 1;
-            for (const group of CHANNEL_GROUPS) {
-                for (const name of group.channels) {
-                    if (TV_CHANNELS[name] && TV_CHANNELS[name].url) {
-                        CH_NUMBERS[name] = n++;
-                    }
-                }
-            }
-        }
-
-        function chNum(name) {
-            const n = CH_NUMBERS[name];
-            return n ? String(n).padStart(2,'0') : '';
-        }
-
-        // ---- Init ----
-        function init() {
-            buildChannelNumbers();
-            createTVBoxes(1);
-            drumBuild();
-            drumAttachEvents();
-            updateChannelNav();
-        }
-
-        function generateChannelOptions() {
+function generateChannelOptions() {
             let html = '<option value="">Kanal seçin</option>';
             for (const group of CHANNEL_GROUPS) {
                 html += `<optgroup label="${group.label}">`;
@@ -623,7 +617,7 @@
             return html;
         }
 
-        function createTVBoxes(count) {
+function createTVBoxes(count) {
             const container = document.getElementById('gridContainer');
             // Tear down existing players cleanly
             tvBoxes.forEach(box => {
@@ -668,7 +662,29 @@
             updateMuteButtons();
         }
 
-        function changeChannel(boxIndex, channelName) {
+function setGrid(layout, btn) {
+            currentGrid = layout;
+            const container = document.getElementById('gridContainer');
+            container.className = 'grid-container grid-' + layout;
+            document.querySelectorAll('.btn-layout').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            // Preserve currently-watched channels across layout changes
+            const previous = tvBoxes.map(b => b.currentChannel);
+            const counts = { '1x1': 1, '1x2': 2, '2x2': 4 };
+            const newCount = counts[layout] || 1;
+            createTVBoxes(newCount);
+            // Restore channels into the new boxes (as many as fit)
+            for (let i = 0; i < Math.min(newCount, previous.length); i++) {
+                if (previous[i]) {
+                    tvBoxes[i].select.value = previous[i];
+                    changeChannel(i, previous[i]);
+                }
+            }
+            updateChannelNav();
+        }
+
+function changeChannel(boxIndex, channelName) {
             const box = tvBoxes[boxIndex];
             const channel = TV_CHANNELS[channelName];
 
@@ -779,8 +795,7 @@
             updateChannelNav();
         }
 
-        // Solo audio toggle: only one stream has audio at a time (iOS-friendly).
-        function toggleSolo(boxIndex) {
+function toggleSolo(boxIndex) {
             if (soloIndex === boxIndex) {
                 soloIndex = -1;
                 userMutedAll = true;
@@ -791,7 +806,7 @@
             updateMuteButtons();
         }
 
-        function updateMuteButtons() {
+function updateMuteButtons() {
             tvBoxes.forEach((box, i) => {
                 const isSolo = (soloIndex === i);
                 if (box.video) {
@@ -818,7 +833,13 @@
             });
         }
 
-        function fullscreen(boxIndex) {
+function muteAll() {
+            soloIndex = -1;
+            userMutedAll = true;
+            updateMuteButtons();
+        }
+
+function fullscreen(boxIndex) {
             const box = tvBoxes[boxIndex];
             if (!box.video) return;
             const v = box.video;
@@ -834,16 +855,7 @@
             }
         }
 
-        // remoteFullscreen: disabled — fullscreen requires direct user gesture on TV screen
-        function remoteFullscreen() { /* no-op: browser security prevents remote fullscreen */ }
-
-        function muteAll() {
-            soloIndex = -1;
-            userMutedAll = true;
-            updateMuteButtons();
-        }
-
-        function refreshAll() {
+function refreshAll() {
             tvBoxes.forEach((box, i) => {
                 if (box.currentChannel) {
                     changeChannel(i, box.currentChannel);
@@ -851,8 +863,7 @@
             });
         }
 
-        // Resume playback without reloading the stream
-        function resumeAll() {
+function resumeAll() {
             tvBoxes.forEach(box => {
                 if (box.video && box.video.paused) {
                     // If muted, play normally; if unmuted, try with sound then fallback
@@ -868,43 +879,14 @@
             });
         }
 
-        function setGrid(layout, btn) {
-            currentGrid = layout;
-            const container = document.getElementById('gridContainer');
-            container.className = 'grid-container grid-' + layout;
-            document.querySelectorAll('.btn-layout').forEach(b => b.classList.remove('active'));
-            if (btn) btn.classList.add('active');
-
-            // Preserve currently-watched channels across layout changes
-            const previous = tvBoxes.map(b => b.currentChannel);
-            const counts = { '1x1': 1, '1x2': 2, '2x2': 4 };
-            const newCount = counts[layout] || 1;
-            createTVBoxes(newCount);
-            // Restore channels into the new boxes (as many as fit)
-            for (let i = 0; i < Math.min(newCount, previous.length); i++) {
-                if (previous[i]) {
-                    tvBoxes[i].select.value = previous[i];
-                    changeChannel(i, previous[i]);
-                }
-            }
+function updateActiveChannels() {
             updateChannelNav();
         }
 
-        function updateActiveChannels() {
-            updateChannelNav();
-        }
-
-        // ---- Drum-roll picker ----
-        const ITEM_H = 36;
-        let drumChannels = [];
-        let drumIdx = 0;
-        let drumDragging = false;
-        let drumStartY = 0;
-        let drumStartOffset = 0;
-        let drumOffset = 0;
-        let drumCommitTimer = null;
-
-        function drumBuild() {
+// ================================================================
+// DRUM ROLL PICKER
+// ================================================================
+function drumBuild() {
             drumChannels = getFlatChannelList();
             const track = document.getElementById('drumTrack');
             if (!track) return;
@@ -924,7 +906,7 @@
             drumSetTo(0, false);
         }
 
-        function drumSetTo(idx, animate) {
+function drumSetTo(idx, animate) {
             idx = Math.max(0, Math.min(drumChannels.length - 1, idx));
             drumIdx = idx;
             drumOffset = -((1 + idx) * ITEM_H); // 1 = pad items before
@@ -936,7 +918,7 @@
             drumHighlight(idx);
         }
 
-        function drumHighlight(idx) {
+function drumHighlight(idx) {
             document.getElementById('drumTrack')?.querySelectorAll('.drum-item[data-idx]').forEach(el => {
                 const d = Math.abs(parseInt(el.dataset.idx) - idx);
                 el.classList.toggle('active', d === 0);
@@ -944,19 +926,19 @@
             });
         }
 
-        function drumSetActive(channelName) {
+function drumSetActive(channelName) {
             const i = drumChannels.indexOf(channelName);
             if (i >= 0) drumSetTo(i, true);
         }
 
-        function drumCommit(idx) {
+function drumCommit(idx) {
             const name = drumChannels[idx];
             if (!name || !tvBoxes[0] || name === tvBoxes[0].currentChannel) return;
             tvBoxes[0].select.value = name;
             changeChannel(0, name);
         }
 
-        function drumPointerStart(e) {
+function drumPointerStart(e) {
             drumDragging = true;
             drumStartY = e.touches ? e.touches[0].clientY : e.clientY;
             drumStartOffset = drumOffset;
@@ -965,7 +947,7 @@
             e.preventDefault();
         }
 
-        function drumPointerMove(e) {
+function drumPointerMove(e) {
             if (!drumDragging) return;
             const y = e.touches ? e.touches[0].clientY : e.clientY;
             const delta = y - drumStartY;
@@ -979,7 +961,7 @@
             e.preventDefault();
         }
 
-        function drumPointerEnd() {
+function drumPointerEnd() {
             if (!drumDragging) return;
             drumDragging = false;
             let snapped = Math.max(0, Math.min(drumChannels.length-1, Math.round((-drumOffset/ITEM_H) - 1)));
@@ -988,7 +970,7 @@
             drumCommitTimer = setTimeout(() => drumCommit(snapped), 300);
         }
 
-        function drumAttachEvents() {
+function drumAttachEvents() {
             const picker = document.getElementById('drumPicker');
             if (!picker) return;
             picker.addEventListener('touchstart', drumPointerStart, { passive: false });
@@ -999,7 +981,7 @@
             window.addEventListener('mouseup',    drumPointerEnd);
         }
 
-        function updateChannelNav() {
+function updateChannelNav() {
             const nav = document.getElementById('channelNav');
             if (currentGrid === '1x1') {
                 nav.classList.add('visible');
@@ -1010,7 +992,7 @@
             }
         }
 
-        function navChannel(direction) {
+function navChannel(direction) {
             if (currentGrid !== '1x1' || !tvBoxes[0]) return;
             const flat = getFlatChannelList();
             if (!flat.length) return;
@@ -1026,14 +1008,10 @@
             drumSetTo(idx, true);
         }
 
-        // ================================================================
-        // PEER-TO-PEER REMOTE CONTROL (PeerJS — no server needed)
-        // ================================================================
-        let peer = null;
-        let peerConn = null;
-        let myPeerId = null;
-
-        function peerInit() {
+// ================================================================
+// PEER-TO-PEER REMOTE
+// ================================================================
+function peerInit() {
             // Load PeerJS dynamically so a CDN failure never breaks the main app
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
@@ -1042,7 +1020,7 @@
             document.head.appendChild(script);
         }
 
-        function _peerStart() {
+function _peerStart() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let shortId = '';
             for (let i = 0; i < 4; i++) shortId += chars[Math.floor(Math.random() * chars.length)];
@@ -1064,7 +1042,7 @@
             peer.on('error', e => { showToast('⚠ P2P hatası: ' + e.type); });
         }
 
-        function showPeerCode(code, fullId) {
+function showPeerCode(code, fullId) {
             let panel = document.getElementById('peerPanel');
             if (!panel) {
                 panel = document.createElement('div');
@@ -1088,41 +1066,12 @@
             panel._fullId = fullId;
         }
 
-        function hidePeerCode() {
+function hidePeerCode() {
             const p = document.getElementById('peerPanel');
             if (p) p.style.display = 'none';
         }
 
-        // Start peer on load
-        peerInit();
-
-        // ================================================================
-        // WEBSOCKET REMOTE CONTROL
-        // ================================================================
-        let ws = null;
-        let wsReconnectTimer = null;
-
-        function wsConnect() {
-            const host = location.hostname;
-            const port = 8765;
-            try {
-                ws = new WebSocket(`ws://${host}:${port}`);
-                ws.onopen = () => {
-                    ws.send(JSON.stringify({ type: 'register', role: 'tv' }));
-                    showToast('📡 Kumanda bağlantısı hazır', 2000);
-                };
-                ws.onmessage = (e) => {
-                    try { handleRemoteCommand(JSON.parse(e.data)); } catch(_){}
-                };
-                ws.onclose = () => {
-                    ws = null;
-                    wsReconnectTimer = setTimeout(wsConnect, 4000);
-                };
-                ws.onerror = () => { try { ws.close(); } catch(_){} };
-            } catch(_) {}
-        }
-
-        function handleRemoteCommand(cmd) {
+function handleRemoteCommand(cmd) {
             switch(cmd.action) {
                 case 'next':          navChannel('next'); showToast('⏭ Sonraki kanal'); break;
                 case 'prev':          navChannel('prev'); showToast('⏮ Önceki kanal'); break;
@@ -1174,17 +1123,33 @@
             }
         }
 
-        // Start WS connection (TV mode)
-        wsConnect();
+// ================================================================
+// WEBSOCKET REMOTE (server.js)
+// ================================================================
+function wsConnect() {
+            const host = location.hostname;
+            const port = 8765;
+            try {
+                ws = new WebSocket(`ws://${host}:${port}`);
+                ws.onopen = () => {
+                    ws.send(JSON.stringify({ type: 'register', role: 'tv' }));
+                    showToast('📡 Kumanda bağlantısı hazır', 2000);
+                };
+                ws.onmessage = (e) => {
+                    try { handleRemoteCommand(JSON.parse(e.data)); } catch(_){}
+                };
+                ws.onclose = () => {
+                    ws = null;
+                    wsReconnectTimer = setTimeout(wsConnect, 4000);
+                };
+                ws.onerror = () => { try { ws.close(); } catch(_){} };
+            } catch(_) {}
+        }
 
-        // ================================================================
-        // VOICE COMMAND ENGINE
-        // ================================================================
-        let recognition = null;
-        let voiceActive = false;
-        let toastTimer  = null;
-
-        function showToast(msg, duration = 2500) {
+// ================================================================
+// VOICE ENGINE
+// ================================================================
+function showToast(msg, duration = 2500) {
             const t = document.getElementById('voiceToast');
             t.textContent = msg;
             t.classList.add('show');
@@ -1192,12 +1157,7 @@
             toastTimer = setTimeout(() => t.classList.remove('show'), duration);
         }
 
-        // Seek step in seconds for rewind/forward on live streams (moves playback head)
-        const SEEK_STEP = 10;
-
-        // Channel aliases: words/phrases that map to channel names.
-        // Keys are lowercase trigger words, values are exact TV_CHANNELS keys.
-        const VOICE_CHANNEL_ALIASES = {};
+const VOICE_CHANNEL_ALIASES = {};
         (function buildAliases() {
             for (const name of Object.keys(TV_CHANNELS)) {
                 if (!name) continue;
@@ -1263,7 +1223,7 @@
             Object.assign(VOICE_CHANNEL_ALIASES, extras);
         })();
 
-        function matchChannel(transcript) {
+function matchChannel(transcript) {
             const t = transcript.toLowerCase().trim();
             // Match by channel number: "kanal 5", "5 numaralı", "beş" etc.
             const numMatch = t.match(/\b(\d{1,2})\b/);
@@ -1281,7 +1241,7 @@
             return null;
         }
 
-        function handleVoiceCommand(transcript) {
+function handleVoiceCommand(transcript) {
             const t = transcript.toLowerCase().trim();
             showToast('🎙 "' + transcript + '"', 3000);
 
@@ -1354,8 +1314,7 @@
             showToast('❓ Komut anlaşılamadı');
         }
 
-        // Helper used by voice for 1x1 channel switch (also updates drum)
-        navChannel._switch = function(channelName) {
+navChannel._switch = function(channelName) {
             const flat = getFlatChannelList();
             const idx  = flat.indexOf(channelName);
             if (idx < 0) return;
@@ -1363,7 +1322,7 @@
             drumSetTo(idx, true);
         };
 
-        function initVoice() {
+function initVoice() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
                 showToast('⚠ Tarayıcı sesli komutu desteklemiyor', 4000);
@@ -1393,7 +1352,7 @@
             return r;
         }
 
-        function toggleVoice() {
+function toggleVoice() {
             if (voiceActive) { stopVoice(); return; }
             if (!recognition) recognition = initVoice();
             if (!recognition) return;
@@ -1407,15 +1366,25 @@
             }
         }
 
-        function stopVoice() {
+function stopVoice() {
             voiceActive = false;
             document.getElementById('voiceBtn').classList.remove('listening');
             try { recognition && recognition.stop(); } catch(_){}
         }
 
-        // ================================================================
-        // Kick off
-        init();
-    </script>
+// ================================================================
+// INIT
+// ================================================================
+function init() {
+    buildChannelNumbers();
+    createTVBoxes(1);
+    drumBuild();
+    drumAttachEvents();
+    updateChannelNav();
+    peerInit();
+    wsConnect();
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
 </body>
 </html>
