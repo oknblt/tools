@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>📺 Multi TV Viewer - Bulut Projects</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ---------- Header ---------- */
+        .header {
+            background: #001f3f;
+            padding: 8px 10px;
+            padding-top: max(8px, env(safe-area-inset-top));
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+.brand-tag {
+  font-size: 10px; color: #7aafd4;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin-top: 2px;
+}
+        .controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: background 0.2s;
+            min-height: 36px;
+            white-space: nowrap;
+        }
+
+        .btn-layout {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.25);
+        }
+
+        .btn-layout:hover, .btn-layout:active {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .btn-layout.active {
+            background: #4CAF50;
+            border-color: #4CAF50;
+        }
+
+        .btn-action {
+            background: white;
+            color: #001f3f;
+        }
+
+        .btn-action:active {
+            background: #ddd;
+        }
+
+        /* info-pill removed */
+
+        /* ---------- Grid ---------- */
+        .grid-container {
+            flex: 1;
+            padding: 6px;
+            display: grid;
+            gap: 6px;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .grid-1x1 {
+            grid-template-columns: 1fr;
+            grid-template-rows: 1fr;
+        }
+
+        .grid-1x2 {
+            grid-template-columns: 1fr;
+            grid-template-rows: repeat(2, 1fr);
+        }
+
+        .grid-2x2 {
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+        }
+
+        /* On wider screens (landscape / tablet / desktop), make 1x2 side-by-side */
+        @media (min-width: 700px) and (orientation: landscape) {
+            .grid-1x2 {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: 1fr;
+            }
+        }
+
+        /* ---------- TV Box ---------- */
+        .tv-box {
+            background: #2a2a2a;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #3a3a3a;
+            min-height: 0;
+            min-width: 0;
+            position: relative;
+        }
+
+        .tv-header {
+            background: #2f2f2f;
+            padding: 5px 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .tv-header select {
+            background: #444;
+            color: white;
+            border: 1px solid #555;
+            padding: 6px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            flex: 1;
+            min-width: 0;
+            min-height: 32px;
+        }
+
+        .tv-header select:focus { outline: none; border-color: #667eea; }
+
+        .channel-badge {
+            background: #4CAF50;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .channel-badge.iptv { background: #ff9800; }
+
+        /* ---------- Screen ---------- */
+        .tv-screen {
+            flex: 1;
+            background: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .tv-screen video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+            display: block;
+        }
+
+        /* Floating overlay controls — absolute pos so they're always tappable */
+        .overlay-controls {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            display: flex;
+            gap: 5px;
+            z-index: 10;
+            opacity: 0.85;
+        }
+
+        .overlay-btn {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+
+        .overlay-btn:active { background: rgba(102, 126, 234, 0.9); }
+
+        .placeholder {
+            color: #888;
+            font-size: 13px;
+            text-align: center;
+            padding: 16px;
+        }
+
+        .loading {
+            color: #667eea;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: #ff5252;
+            font-size: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .error-message button {
+            margin-top: 8px;
+            background: #555;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        optgroup { font-weight: bold; background: #333; }
+        option { background: #444; padding: 5px; }
+
+        /* iOS hint removed */
+
+        /* ---------- Channel Nav Bar (1x1 only) ---------- */
+        .channel-nav {
+            display: none;
+            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 10px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            background: #111;
+            border-top: 1px solid #2a2a2a;
+        }
+
+        .channel-nav.visible {
+            display: flex;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.75);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 15px;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+            flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .nav-btn:active, .nav-btn:hover {
+            background: rgba(102,126,234,0.35);
+            border-color: rgba(102,126,234,0.6);
+            color: #fff;
+        }
+
+        .nav-btn.nav-edge {
+            width: 30px;
+            font-size: 11px;
+            opacity: 0.65;
+        }
+
+        /* ---- Drum-roll picker ---- */
+        .drum-picker {
+            flex: 1;
+            max-width: 210px;
+            height: 36px;
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: grab;
+        }
+        .drum-picker::before,
+        .drum-picker::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0;
+            height: 10px;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .drum-picker::before { top: 0;    background: linear-gradient(to bottom, #111, transparent); }
+        .drum-picker::after  { bottom: 0; background: linear-gradient(to top,   #111, transparent); }
+        .drum-sel {
+            position: absolute;
+            top: 50%; left: 0; right: 0;
+            transform: translateY(-50%);
+            height: 28px;
+            background: rgba(102,126,234,0.15);
+            border-top: 1px solid rgba(102,126,234,0.4);
+            border-bottom: 1px solid rgba(102,126,234,0.4);
+            border-radius: 5px;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .drum-track {
+            position: absolute;
+            left: 0; right: 0;
+            top: 0;
+            will-change: transform;
+        }
+        .drum-track.animated {
+            transition: transform 0.2s cubic-bezier(0.25,0.46,0.45,0.94);
+        }
+        .drum-item {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11.5px;
+            color: rgba(255,255,255,0.3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 6px;
+            z-index: 1;
+        }
+        .drum-item.active { color: #fff; font-size: 12.5px; font-weight: 600; }
+        .drum-item.near   { color: rgba(255,255,255,0.6); }
+
+        /* ---------- Voice command ---------- */
+        .btn-voice {
+            background: rgba(255,255,255,0.12);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 18px;
+            min-height: 36px;
+            cursor: pointer;
+            transition: background 0.15s, box-shadow 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .btn-voice.listening {
+            background: rgba(220,50,50,0.7);
+            border-color: #f66;
+            box-shadow: 0 0 0 3px rgba(220,50,50,0.3);
+            animation: pulse-mic 1.2s ease-in-out infinite;
+        }
+        @keyframes pulse-mic {
+            0%,100% { box-shadow: 0 0 0 3px rgba(220,50,50,0.3); }
+            50%      { box-shadow: 0 0 0 7px rgba(220,50,50,0.1); }
+        }
+        /* Voice toast */
+        #voiceToast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(20,20,30,0.92);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 22px;
+            font-size: 13px;
+            border: 1px solid rgba(102,126,234,0.4);
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+            z-index: 999;
+            max-width: 80vw;
+            text-align: center;
+        }
+        #voiceToast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-row">
+            <h1>📺 <span>Multi TV Viewer</span></h1>
+<span class="brand-tag">Bulut Projects</span>
+            <div class="controls">
+                <button class="btn btn-layout active" data-layout="1x1" onclick="setGrid('1x1', this)">1</button>
+                <button class="btn btn-layout" data-layout="1x2" onclick="setGrid('1x2', this)">1×2</button>
+                <button class="btn btn-layout" data-layout="2x2" onclick="setGrid('2x2', this)">2×2</button>
+                <button class="btn btn-action" onclick="muteAll()">🔇 Mute All</button>
+                <button class="btn btn-action" onclick="refreshAll()">🔄</button>
+                <button class="btn-voice" id="voiceBtn" onclick="toggleVoice()" title="Sesli komut">🎙</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gridContainer" class="grid-container grid-1x1"></div>
+
+
+    <!-- Channel navigation bar — only visible in 1x1 mode -->
+    <div class="channel-nav" id="channelNav">
+        <button class="nav-btn nav-edge" onclick="navChannel('first')" title="İlk kanal">&#8676;</button>
+        <button class="nav-btn" onclick="navChannel('prev')" title="Önceki">&#8592;</button>
+        <div class="drum-picker" id="drumPicker">
+            <div class="drum-sel"></div>
+            <div class="drum-track" id="drumTrack"></div>
+        </div>
+        <button class="nav-btn" onclick="navChannel('next')" title="Sonraki">&#8594;</button>
+        <button class="nav-btn nav-edge" onclick="navChannel('last')" title="Son kanal">&#8677;</button>
+    </div>
+
+    <div id="voiceToast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+        // ---- TV Channels ----
+        // NOTE: Major Turkish private channels (Show TV, Star, ATV, Kanal D, Fox/Now)
+        // are protected by token + referrer checks. Direct m3u8 playback in a browser
+        // is unreliable and stops working frequently. TRT and news channels are the
+        // most stable.
+        const TV_CHANNELS = {
+            "": { type: "none", url: "", source: "" },
+
+            // ---- News ----
+            "Halk TV":       { url: "https://halktv-live.daioncdn.net/halktv/halktv.m3u8",   source: "IPTV" },
+            "NTV":           { url: "https://dygvideo.dygdigital.com/live/hls/ntv4puhu",    source: "IPTV" },
+	    "Sözcü TV":      { url: "https://trn03.tulix.tv/gt-sozcu-tv/playlist.m3u8",     source: "IPTV" },
+            "Habertürk":     { url: "https://tv.ensonhaber.com/haberturk/haberturk.m3u8",   source: "IPTV" },
+            "Haber Global":  { url: "https://tv.ensonhaber.com/haberglobal/haberglobal.m3u8", source: "IPTV" },
+	    "TV 100":        { url: "https://tv100-live.daioncdn.net/tv100/tv100_1080p.m3u8", source: "IPTV" },
+	    "Bloomberg HT":  { url: "https://ciner.daioncdn.net/bloomberght/bloomberght_480p.m3u8", source: "IPTV" },
+	    "BBC News":      { url: "https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn%3abbc%3apips%3aservice%3abbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8", source: "IPTV" },
+	    "DW TV English": { url: "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8", source: "IPTV" },
+	    "Wonder":        { url: "https://wonder-samsung-uk.amagi.tv/playlist.m3u8", source: "IPTV" },
+            "France 24 English":  { url: "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_5000.m3u8",    source: "IPTV" },
+            "France 24 French":   { url: "https://live.france24.com/hls/live/2037179/F24_FR_HI_HLS/master_5000.m3u8",   source: "IPTV" },
+            "BBC Earth":   { url: "https://amg00793-amg00793c6-xumo-us-2669.playouts.now.amagi.tv/BBCStudios-BBCEarthA-hls/playlist.m3u8",   source: "IPTV" },
+	    "Sky News":   { url: "https://linear417-gb-hls1-prd-ak.cdn.skycdp.com/100e/Content/HLS_001_1080_30/Live/channel(skynews)/index_1080-30.m3u8",   source: "IPTV" },
+            "Bloomberg":     { url: "https://liveprodusphoenixeast.akamaized.net/USPhx-HD/Channel-TX-USPhx-AWS-virginia-1/Source-USPhx-16k-1-s6lk2-BP-07-02-81ykIWnsMsg_live.m3u8", source: "IPTV" },
+            "Tele 1":        { url: "https://tele1-live.ercdn.net/tele1/tele1.m3u8",        source: "IPTV" },
+            "CNN Türk":      { url: "https://dsmartgo-live.ercdn.net/dsmartgo/cnnturk/cnnturk.isml/cnnturk.m3u8", source: "IPTV" },
+            
+            
+            // ---- TRT (Official, most reliable) ----
+            "TRT 1":         { url: "https://tv-trt1.medya.trt.com.tr/master.m3u8",          source: "TRT" },
+            "TRT 2":         { url: "https://tv-trt2.medya.trt.com.tr/master.m3u8",          source: "TRT" },
+            "TRT Haber":     { url: "https://tv-trthaber.medya.trt.com.tr/master.m3u8",      source: "TRT" },
+            "TRT Spor":      { url: "https://tv-trtspor1.medya.trt.com.tr/master.m3u8",      source: "TRT" },
+            "TRT Spor Yıldız": { url: "https://tv-trtspor2.medya.trt.com.tr/master.m3u8",    source: "TRT" },
+            "TRT Belgesel":  { url: "https://tv-trtbelgesel.medya.trt.com.tr/master.m3u8",   source: "TRT" },
+            "TRT Müzik":     { url: "https://tv-trtmuzik.medya.trt.com.tr/master.m3u8",      source: "TRT" },
+            "TRT World":     { url: "https://tv-trtworld.medya.trt.com.tr/master.m3u8",      source: "TRT" },
+
+            // ---- National (often token-protected, may break) ----
+	    "NOW":           { url: "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv.m3u8", source: "IPTV" },
+            "Kanal D":       { url: "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/kanald/kanald.m3u8", source: "IPTV" },
+            "Show TV":       { url: "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showtv/showtv.m3u8",   source: "IPTV" },
+            "ATV":           { url: "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_480p.m3u8",         source: "IPTV" },
+            "CNBC-e":        { url: "https://hnpsechtsc.turknet.ercdn.net/xpnvudnlsv/cnbc-e/cnbc-e.m3u8",         source: "IPTV" },
+            "TV8":           { url: "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8/tv8.m3u8", source: "IPTV" },
+            "TV8,5":         { url: "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk.m3u8", source: "IPTV" },
+            "Teve2":         { url: "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/teve2/teve2.m3u8", source: "IPTV" }, 
+	    "360":           { url: "https://turkmedya-live.ercdn.net/tv360/tv360.m3u8",    source: "IPTV" },
+            "Euro D":        { url: "https://live.duhnet.tv/S2/HLS_LIVE/eurodnp/track_4_1000/playlist.m3u8", source: "IPTV" },
+	    "Kanal D Romanya":          { url: "https://stream1.kanald.ro/iphone/knd-live.m3u8",    source: "IPTV" },
+            "Beyaz TV":      { url: "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_1080p.m3u8", source: "IPTV" },
+	    "BRTV":          { url: "https:////live.artidijitalmedya.com/artidijital_brtv/brtv/playlist.m3u8",    source: "IPTV" },
+            "Star TV":       { url: "https://dogus-live.daioncdn.net/startv/startv.m3u8",  source: "IPTV" },
+
+            // ---- Sports ----
+            "HT Spor":       { url: "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/ht-spor/ht-spor.m3u8",     source: "IPTV" },
+            "beIN SPORTS XTRA":        { url: "https://bein-esp-xumo.amagi.tv/playlistR1080p.m3u8",     source: "IPTV" },
+            "A Spor":        { url: "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor_720p.m3u8",     source: "IPTV" },
+            "Sports TV":     { url: "https://live.sportstv.com.tr/hls/low/sportstv_hd/index.m3u8", source: "IPTV" },
+
+            // ---- Entertainment ----
+            "FTV":           { url: "https://edge-fast3.evrideo.tv/bfdbb576-83f7-11f0-9f89-0200170e3e04_1000028043_HLS/manifest.m3u8",    source: "IPTV" },
+	    "Power TV":      { url: "https://live.artidijitalmedya.com/artidijital_powertv/powertv/playlist.m3u8",    source: "IPTV" },
+	    "Powertürk":     { url: "https://live.artidijitalmedya.com/artidijital_powerturktv/powerturktv/playlist.m3u8",    source: "IPTV" },
+	    "NR1":           { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e17cd6360b_1/playlist.m3u8",    source: "IPTV" },
+	    "NR1 Türk":      { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/playlist.m3u8",    source: "IPTV" },
+            "NR1 Dance":     { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8",    source: "IPTV" },
+            "Fashion One":   { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2ee6997cb_1/playlist.m3u8",    source: "IPTV" },
+            "Redbull TV":   { url: "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master_3360.m3u8",    source: "IPTV" },
+            "MTRSPT 1":     { url: "https://amg02873-kravemedia-mtrspt1-distrotv-mnsrl.amagi.tv/playlist/amg02873-kravemedia-mtrspt1-distrotv/playlist.m3u8",    source: "IPTV" },
+            "Motorvision":   { url: "https://api-ott.motorvision.tv/loggingmediaurlpassthrough/a.m3u8?version=12&id=1199&partner=sportstribal&channel_name=Motorvision&content_genre=Drag%20Racing%2CMotor%20Racing%2CMotorsport%2CRacing%2CSport&ic=IAB17%2CIAB17-1&provider=FreeLiveSports&us_privacy=&gdpr=0&gdpr_consent=&coppa=0&content_livestream=1&content_url=https%3A%2F%2Fwatch.freelivesports.tv%2Fpages%2Fdiscover%2Fe%2Flive-tv%3Fchannel%3D6675bed4a2823e9a829eda97&lmt=0&did=r7mgUP",    source: "IPTV" },
+            "A2":            { url: "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/a2tv/a2tv.m3u8",       source: "IPTV" },
+	    "TLC":           { url: "https://dygvideo.dygdigital.com/live/hls/tlctvdai",    source: "IPTV" },
+            "DMAX":          { url: "https://dygvideo.dygdigital.com/live/hls/dmaxdai",     source: "IPTV" }
+        };
+
+        // ---- Channel groupings (for the dropdown) ----
+        const CHANNEL_GROUPS = [
+            { label: "📰 News",           channels: ["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100", "Bloomberg HT", "BBC News", "DW TV English", "Wonder", "France 24 English", "France 24 French", "BBC Earth", "Bloomberg", "Tele 1", "CNN Türk",] },
+            { label: "📡 TRT (Official)", channels: ["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yıldız","TRT Belgesel","TRT Müzik","TRT World"] },
+            { label: "📺 National",       channels: ["NOW","Kanal D","Show TV","ATV", "CNBC-e", "TV8","TV8,5", "Teve2", "360","BRTV", "Euro D", "Kanal D Romanya", "Beyaz TV","Star TV"] },
+            { label: "⚽ Sports",         channels: ["HT Spor","beIN SPORTS XTRA", "A Spor","Sports TV"] },
+            { label: "🎬 Entertainment",  channels: ["FTV","Power TV", "Powertürk", "NR1", "NR1 Türk", "NR1 Dance", "TLC", "Fashion One", "Redbull TV", "MTRSPT 1", "Motorvision", "A2", "DMAX"] }
+        ];
+
+        // ---- State ----
+        let currentGrid = '1x1';
+        let tvBoxes = [];
+        let soloIndex = -1;
+        let userMutedAll = false; // true = user explicitly muted all; don't auto-unmute on channel change
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        // ---- Flat ordered channel list (mirrors CHANNEL_GROUPS order) ----
+        function getFlatChannelList() {
+            const list = [];
+            for (const group of CHANNEL_GROUPS) {
+                for (const name of group.channels) {
+                    if (TV_CHANNELS[name] && TV_CHANNELS[name].url) list.push(name);
+                }
+            }
+            return list;
+        }
+
+        // ---- Init ----
+        function init() {
+            createTVBoxes(1);
+            drumBuild();
+            drumAttachEvents();
+            updateChannelNav();
+        }
+
+        // Build channel number map once
+        const CH_NUMBERS = {};
+        (function() {
+            let n = 1;
+            for (const group of CHANNEL_GROUPS) {
+                for (const name of group.channels) {
+                    if (TV_CHANNELS[name] && TV_CHANNELS[name].url) {
+                        CH_NUMBERS[name] = n++;
+                    }
+                }
+            }
+        })();
+
+        function chNum(name) {
+            const n = CH_NUMBERS[name];
+            return n ? String(n).padStart(2,'0') : '';
+        }
+
+        function generateChannelOptions() {
+            let html = '<option value="">Kanal seçin</option>';
+            for (const group of CHANNEL_GROUPS) {
+                html += `<optgroup label="${group.label}">`;
+                for (const name of group.channels) {
+                    if (TV_CHANNELS[name]) {
+                        html += `<option value="${name}">${chNum(name)} ${name}</option>`;
+                    }
+                }
+                html += '</optgroup>';
+            }
+            return html;
+        }
+
+        function createTVBoxes(count) {
+            const container = document.getElementById('gridContainer');
+            // Tear down existing players cleanly
+            tvBoxes.forEach(box => {
+                if (box.hls) { try { box.hls.destroy(); } catch(e){} }
+                if (box.video) { try { box.video.pause(); box.video.src = ''; } catch(e){} }
+            });
+            container.innerHTML = '';
+            tvBoxes = [];
+            soloIndex = -1;
+
+            for (let i = 0; i < count; i++) {
+                const box = document.createElement('div');
+                box.className = 'tv-box';
+                box.innerHTML = `
+                    <div class="tv-header">
+                        <select id="select-${i}" onchange="changeChannel(${i}, this.value)">
+                            ${generateChannelOptions()}
+                        </select>
+                        <span class="channel-badge" id="badge-${i}" style="display:none;">TRT</span>
+                    </div>
+                    <div class="tv-screen" id="screen-${i}">
+                        <div class="overlay-controls">
+                            <button class="overlay-btn" id="mute-${i}" onclick="toggleSolo(${i})" title="Toggle audio">🔇</button>
+                            <button class="overlay-btn" onclick="fullscreen(${i})" title="Fullscreen">⛶</button>
+                        </div>
+                        <div class="placeholder">📺 Select a channel</div>
+                    </div>
+                `;
+                container.appendChild(box);
+                tvBoxes.push({
+                    element: box,
+                    screen: box.querySelector(`#screen-${i}`),
+                    select: box.querySelector(`#select-${i}`),
+                    badge: box.querySelector(`#badge-${i}`),
+                    muteBtn: box.querySelector(`#mute-${i}`),
+                    currentChannel: null,
+                    video: null,
+                    hls: null
+                });
+            }
+            updateActiveChannels();
+            updateMuteButtons();
+        }
+
+        function changeChannel(boxIndex, channelName) {
+            const box = tvBoxes[boxIndex];
+            const channel = TV_CHANNELS[channelName];
+
+            // Destroy previous player cleanly
+            if (box.hls)   { try { box.hls.destroy(); } catch(_){} box.hls = null; }
+            if (box.video) { try { box.video.pause(); box.video.src = ''; } catch(_){} box.video = null; }
+
+            // Rebuild screen (keeps overlay controls intact via innerHTML)
+            box.screen.innerHTML = `
+                <div class="overlay-controls">
+                    <button class="overlay-btn" id="mute-${boxIndex}" onclick="toggleSolo(${boxIndex})" title="Ses">🔇</button>
+                    <button class="overlay-btn" onclick="fullscreen(${boxIndex})" title="Tam ekran">⛶</button>
+                </div>
+            `;
+            box.muteBtn = box.screen.querySelector(`#mute-${boxIndex}`);
+
+            if (!channel || !channelName) {
+                box.screen.insertAdjacentHTML('beforeend', '<div class="placeholder">📺 Kanal seçin</div>');
+                box.currentChannel = null;
+                box.badge.style.display = 'none';
+                if (soloIndex === boxIndex) soloIndex = -1;
+                updateActiveChannels();
+                updateMuteButtons();
+                return;
+            }
+
+            // Loading indicator
+            box.screen.insertAdjacentHTML('beforeend',
+                `<div class="loading"><div class="spinner"></div><div>Yükleniyor…</div><small style="color:#999">${channelName}</small></div>`
+            );
+
+            box.badge.textContent = channel.source;
+            box.badge.className   = 'channel-badge ' + (channel.source === 'TRT' ? '' : 'iptv');
+            box.badge.style.display = 'inline-block';
+
+            const video = document.createElement('video');
+            video.controls   = false;
+            video.autoplay   = true;
+            video.muted      = true;   // always start muted; updateMuteButtons corrects it after ready
+            video.playsInline = true;
+            video.preload    = 'auto';
+            video.setAttribute('playsinline', '');
+            video.setAttribute('webkit-playsinline', '');
+            video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:none;';
+            video.addEventListener('click', () => toggleSolo(boxIndex));
+
+            // Tag this request so stale callbacks from a previous channel can be ignored
+            const reqId = Date.now();
+            box._reqId = reqId;
+
+            const showError = (msg) => {
+                if (box._reqId !== reqId) return;
+                box.screen.querySelector('.loading')?.remove();
+                box.screen.insertAdjacentHTML('beforeend', `
+                    <div class="error-message">❌ ${msg}<br>
+                    <small>Kanal yayında olmayabilir</small><br>
+                    <button onclick="changeChannel(${boxIndex},'${channelName}')">🔄 Tekrar dene</button></div>
+                `);
+            };
+
+            const onReady = () => {
+                if (box._reqId !== reqId) { try { video.pause(); video.src=''; } catch(_){} return; }
+                box.screen.querySelector('.loading')?.remove();
+                video.style.display = 'block';
+                // Always play muted first — guaranteed to succeed on all browsers/iOS
+                video.muted = true;
+                video.play().then(() => {
+                    updateMuteButtons();
+                }).catch(() => {
+                    updateMuteButtons();
+                });
+            };
+
+            if (window.Hls && Hls.isSupported()) {
+                const hls = new Hls({ enableWorker:true, lowLatencyMode:false,
+                    backBufferLength:30, maxBufferLength:20,
+                    manifestLoadingTimeOut:12000, manifestLoadingMaxRetry:2,
+                    levelLoadingTimeOut:12000, fragLoadingTimeOut:20000, fragLoadingMaxRetry:3 });
+                hls.loadSource(channel.url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, onReady);
+                hls.on(Hls.Events.ERROR, (e, data) => {
+                    if (!data.fatal) return;
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) { try { hls.startLoad(); } catch(_){} }
+                    else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) { try { hls.recoverMediaError(); } catch(_){} }
+                    else { try { hls.destroy(); } catch(_){} showError('Yayın yüklenemedi'); }
+                });
+                box.hls = hls;
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = channel.url;
+                video.addEventListener('loadedmetadata', onReady, { once: true });
+                video.addEventListener('error', () => showError('Video yüklenemedi'), { once: true });
+            } else {
+                showError('Tarayıcı HLS desteklemiyor');
+                return;
+            }
+
+            box.screen.appendChild(video);
+            box.video = video;
+            box.currentChannel = channelName;
+
+            // Auto-solo only on very first channel load AND user hasn't explicitly muted
+            if (soloIndex === -1 && !userMutedAll) soloIndex = boxIndex;
+
+            updateActiveChannels();
+            // Do NOT call updateMuteButtons here — video isn't ready yet.
+            // onReady will call it once the stream actually starts.
+            updateChannelNav();
+        }
+
+        // Solo audio toggle: only one stream has audio at a time (iOS-friendly).
+        function toggleSolo(boxIndex) {
+            if (soloIndex === boxIndex) {
+                soloIndex = -1;
+                userMutedAll = true;
+            } else {
+                soloIndex = boxIndex;
+                userMutedAll = false;
+            }
+            updateMuteButtons();
+        }
+
+        function updateMuteButtons() {
+            tvBoxes.forEach((box, i) => {
+                const isSolo = (soloIndex === i);
+                if (box.video) {
+                    const v = box.video;
+                    if (isSolo) {
+                        // Unmuting: set muted first, then ensure playback is running
+                        v.muted = false;
+                        if (v.paused) {
+                            v.play().catch(() => {
+                                // Browser rejected unmuted play — fall back to muted play
+                                v.muted = true;
+                                v.play().catch(() => {});
+                            });
+                        }
+                    } else {
+                        // Muting: just set the flag, never interrupt playback
+                        v.muted = true;
+                    }
+                }
+                if (box.muteBtn) {
+                    box.muteBtn.textContent = isSolo ? '🔊' : '🔇';
+                    box.muteBtn.style.background = isSolo ? 'rgba(191,196,197,0.85)' : 'rgba(0,0,0,0.6)';
+                }
+            });
+        }
+
+        function fullscreen(boxIndex) {
+            const box = tvBoxes[boxIndex];
+            if (!box.video) return;
+            const v = box.video;
+            // iOS Safari needs webkitEnterFullscreen on the video element directly
+            if (v.webkitEnterFullscreen) {
+                v.webkitEnterFullscreen();
+            } else if (v.requestFullscreen) {
+                v.requestFullscreen().catch(() => {});
+            } else if (v.webkitRequestFullscreen) {
+                v.webkitRequestFullscreen();
+            } else if (box.element.requestFullscreen) {
+                box.element.requestFullscreen().catch(() => {});
+            }
+        }
+
+        // remoteFullscreen: disabled — fullscreen requires direct user gesture on TV screen
+        function remoteFullscreen() { /* no-op: browser security prevents remote fullscreen */ }
+
+        function muteAll() {
+            soloIndex = -1;
+            userMutedAll = true;
+            updateMuteButtons();
+        }
+
+        function refreshAll() {
+            tvBoxes.forEach((box, i) => {
+                if (box.currentChannel) {
+                    changeChannel(i, box.currentChannel);
+                }
+            });
+        }
+
+        // Resume playback without reloading the stream
+        function resumeAll() {
+            tvBoxes.forEach(box => {
+                if (box.video && box.video.paused) {
+                    // If muted, play normally; if unmuted, try with sound then fallback
+                    if (box.video.muted) {
+                        box.video.play().catch(() => {});
+                    } else {
+                        box.video.play().catch(() => {
+                            box.video.muted = true;
+                            box.video.play().catch(() => {});
+                        });
+                    }
+                }
+            });
+        }
+
+        function setGrid(layout, btn) {
+            currentGrid = layout;
+            const container = document.getElementById('gridContainer');
+            container.className = 'grid-container grid-' + layout;
+            document.querySelectorAll('.btn-layout').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            // Preserve currently-watched channels across layout changes
+            const previous = tvBoxes.map(b => b.currentChannel);
+            const counts = { '1x1': 1, '1x2': 2, '2x2': 4 };
+            const newCount = counts[layout] || 1;
+            createTVBoxes(newCount);
+            // Restore channels into the new boxes (as many as fit)
+            for (let i = 0; i < Math.min(newCount, previous.length); i++) {
+                if (previous[i]) {
+                    tvBoxes[i].select.value = previous[i];
+                    changeChannel(i, previous[i]);
+                }
+            }
+            updateChannelNav();
+        }
+
+        function updateActiveChannels() {
+            updateChannelNav();
+        }
+
+        // ---- Drum-roll picker ----
+        const ITEM_H = 36;
+        let drumChannels = [];
+        let drumIdx = 0;
+        let drumDragging = false;
+        let drumStartY = 0;
+        let drumStartOffset = 0;
+        let drumOffset = 0;
+        let drumCommitTimer = null;
+
+        function drumBuild() {
+            drumChannels = getFlatChannelList();
+            const track = document.getElementById('drumTrack');
+            if (!track) return;
+            track.innerHTML = '';
+            // 1 ghost above and below so the first/last items can be centred
+            const ghost = () => { const d=document.createElement('div'); d.className='drum-item'; return d; };
+            track.appendChild(ghost());
+            drumChannels.forEach((name, i) => {
+                const el = document.createElement('div');
+                el.className = 'drum-item';
+                const num = chNum(name);
+                el.textContent = num ? num + '  ' + name : name;
+                el.dataset.idx = String(i);
+                track.appendChild(el);
+            });
+            track.appendChild(ghost());
+            drumSetTo(0, false);
+        }
+
+        function drumSetTo(idx, animate) {
+            idx = Math.max(0, Math.min(drumChannels.length - 1, idx));
+            drumIdx = idx;
+            drumOffset = -((1 + idx) * ITEM_H); // 1 = pad items before
+            const track = document.getElementById('drumTrack');
+            if (!track) return;
+            if (animate) track.classList.add('animated');
+            else         track.classList.remove('animated');
+            track.style.transform = `translateY(${drumOffset}px)`;
+            drumHighlight(idx);
+        }
+
+        function drumHighlight(idx) {
+            document.getElementById('drumTrack')?.querySelectorAll('.drum-item[data-idx]').forEach(el => {
+                const d = Math.abs(parseInt(el.dataset.idx) - idx);
+                el.classList.toggle('active', d === 0);
+                el.classList.toggle('near',   d === 1);
+            });
+        }
+
+        function drumSetActive(channelName) {
+            const i = drumChannels.indexOf(channelName);
+            if (i >= 0) drumSetTo(i, true);
+        }
+
+        function drumCommit(idx) {
+            const name = drumChannels[idx];
+            if (!name || !tvBoxes[0] || name === tvBoxes[0].currentChannel) return;
+            tvBoxes[0].select.value = name;
+            changeChannel(0, name);
+        }
+
+        function drumPointerStart(e) {
+            drumDragging = true;
+            drumStartY = e.touches ? e.touches[0].clientY : e.clientY;
+            drumStartOffset = drumOffset;
+            clearTimeout(drumCommitTimer);
+            document.getElementById('drumTrack')?.classList.remove('animated');
+            e.preventDefault();
+        }
+
+        function drumPointerMove(e) {
+            if (!drumDragging) return;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            const delta = y - drumStartY;
+            const minOff = -((1 + drumChannels.length - 1) * ITEM_H);
+            const maxOff = -(1 * ITEM_H);
+            drumOffset = Math.max(minOff, Math.min(maxOff, drumStartOffset + delta));
+            const track = document.getElementById('drumTrack');
+            if (track) track.style.transform = `translateY(${drumOffset}px)`;
+            const near = Math.max(0, Math.min(drumChannels.length-1, Math.round((-drumOffset/ITEM_H) - 1)));
+            drumHighlight(near);
+            e.preventDefault();
+        }
+
+        function drumPointerEnd() {
+            if (!drumDragging) return;
+            drumDragging = false;
+            let snapped = Math.max(0, Math.min(drumChannels.length-1, Math.round((-drumOffset/ITEM_H) - 1)));
+            drumSetTo(snapped, true);
+            clearTimeout(drumCommitTimer);
+            drumCommitTimer = setTimeout(() => drumCommit(snapped), 300);
+        }
+
+        function drumAttachEvents() {
+            const picker = document.getElementById('drumPicker');
+            if (!picker) return;
+            picker.addEventListener('touchstart', drumPointerStart, { passive: false });
+            picker.addEventListener('touchmove',  drumPointerMove,  { passive: false });
+            picker.addEventListener('touchend',   drumPointerEnd,   { passive: false });
+            picker.addEventListener('mousedown',  drumPointerStart);
+            window.addEventListener('mousemove',  drumPointerMove);
+            window.addEventListener('mouseup',    drumPointerEnd);
+        }
+
+        function updateChannelNav() {
+            const nav = document.getElementById('channelNav');
+            if (currentGrid === '1x1') {
+                nav.classList.add('visible');
+                const ch = tvBoxes[0]?.currentChannel;
+                if (ch) drumSetActive(ch);
+            } else {
+                nav.classList.remove('visible');
+            }
+        }
+
+        function navChannel(direction) {
+            if (currentGrid !== '1x1' || !tvBoxes[0]) return;
+            const flat = getFlatChannelList();
+            if (!flat.length) return;
+            const current = tvBoxes[0].currentChannel;
+            let idx = current ? flat.indexOf(current) : 0;
+            if (direction === 'first')     idx = 0;
+            else if (direction === 'last') idx = flat.length - 1;
+            else if (direction === 'next') idx = (idx + 1) % flat.length;
+            else if (direction === 'prev') idx = (idx - 1 + flat.length) % flat.length;
+            const name = flat[idx];
+            tvBoxes[0].select.value = name;
+            changeChannel(0, name);
+            drumSetTo(idx, true);
+        }
+
+        // ================================================================
+        // PEER-TO-PEER REMOTE CONTROL (PeerJS — no server needed)
+        // ================================================================
+        let peer = null;
+        let peerConn = null;
+        let myPeerId = null;
+
+        function peerInit() {
+            // Use a random 4-char alphanumeric ID so remote can connect with just 4 chars
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let shortId = '';
+            for (let i = 0; i < 4; i++) shortId += chars[Math.floor(Math.random() * chars.length)];
+            peer = new Peer(shortId, { debug: 0 });
+            peer.on('open', id => {
+                myPeerId = id;
+                showPeerCode(id, id);
+            });
+            peer.on('connection', conn => {
+                peerConn = conn;
+                conn.on('data', data => {
+                    try { handleRemoteCommand(typeof data === 'string' ? JSON.parse(data) : data); }
+                    catch(_) {}
+                });
+                conn.on('close', () => { peerConn = null; hidePeerCode(); showToast('📡 Kumanda bağlantısı kesildi'); });
+                hidePeerCode();
+                showToast('📡 Kumanda bağlandı!', 3000);
+            });
+            peer.on('error', e => { showToast('⚠ Bağlantı hatası: ' + e.type); });
+        }
+
+        function showPeerCode(code, fullId) {
+            let panel = document.getElementById('peerPanel');
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.id = 'peerPanel';
+                panel.style.cssText = [
+                    'position:fixed','bottom:80px','right:12px','z-index:998',
+                    'background:rgba(15,15,25,0.95)','border:1px solid rgba(102,126,234,0.5)',
+                    'border-radius:14px','padding:12px 16px','text-align:center',
+                    'backdrop-filter:blur(10px)','box-shadow:0 4px 20px rgba(0,0,0,0.4)',
+                    'min-width:120px'
+                ].join(';');
+                document.body.appendChild(panel);
+            }
+            panel.innerHTML = [
+                '<div style="font-size:10px;color:#888;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Kumanda Kodu</div>',
+                '<div style="font-size:28px;font-weight:700;color:#fff;letter-spacing:.15em">' + code + '</div>',
+                '<div style="font-size:9px;color:#555;margin-top:4px">remote.html'de bu kodu girin</div>'
+            ].join('');
+            panel.style.display = 'block';
+            // Store full peer id for QR/copy
+            panel._fullId = fullId;
+        }
+
+        function hidePeerCode() {
+            const p = document.getElementById('peerPanel');
+            if (p) p.style.display = 'none';
+        }
+
+        // Start peer on load
+        peerInit();
+
+        // ================================================================
+        // WEBSOCKET REMOTE CONTROL
+        // ================================================================
+        let ws = null;
+        let wsReconnectTimer = null;
+
+        function wsConnect() {
+            const host = location.hostname;
+            const port = 8765;
+            try {
+                ws = new WebSocket(`ws://${host}:${port}`);
+                ws.onopen = () => {
+                    ws.send(JSON.stringify({ type: 'register', role: 'tv' }));
+                    showToast('📡 Kumanda bağlantısı hazır', 2000);
+                };
+                ws.onmessage = (e) => {
+                    try { handleRemoteCommand(JSON.parse(e.data)); } catch(_){}
+                };
+                ws.onclose = () => {
+                    ws = null;
+                    wsReconnectTimer = setTimeout(wsConnect, 4000);
+                };
+                ws.onerror = () => { try { ws.close(); } catch(_){} };
+            } catch(_) {}
+        }
+
+        function handleRemoteCommand(cmd) {
+            switch(cmd.action) {
+                case 'next':          navChannel('next'); showToast('⏭ Sonraki kanal'); break;
+                case 'prev':          navChannel('prev'); showToast('⏮ Önceki kanal'); break;
+                case 'first':         navChannel('first'); showToast('⏮⏮ İlk kanal'); break;
+                case 'last':          navChannel('last'); showToast('⏭⏭ Son kanal'); break;
+                case 'mute':          muteAll(); showToast('🔇 Ses kapatıldı'); break;
+                case 'unmute':
+                    if (soloIndex === -1) { soloIndex = 0; userMutedAll = false; updateMuteButtons(); }
+                    showToast('🔊 Ses açıldı'); break;
+                case 'pause':
+                    tvBoxes.forEach(b => { if (b.video) b.video.pause(); });
+                    showToast('⏸ Durduruldu'); break;
+                case 'play':
+                    resumeAll(); showToast('▶ Devam ediyor'); break;
+                case 'fullscreen':    remoteFullscreen(); break;
+                case 'seek':
+                    tvBoxes.forEach(b => {
+                        if (b.video && isFinite(b.video.duration))
+                            b.video.currentTime = Math.max(0, Math.min(b.video.duration, b.video.currentTime + (cmd.delta||0)));
+                    });
+                    showToast((cmd.delta > 0 ? '⏩ ' : '⏪ ') + Math.abs(cmd.delta) + 'sn'); break;
+                case 'channel': {
+                    let chName = cmd.name;
+                    // Also support channel number
+                    if (!chName && cmd.number) {
+                        for (const [n, num] of Object.entries(CH_NUMBERS)) {
+                            if (num === cmd.number) { chName = n; break; }
+                        }
+                    }
+                    if (chName) {
+                        const flat = getFlatChannelList();
+                        const idx = flat.indexOf(chName);
+                        if (idx >= 0) {
+                            tvBoxes[0] && changeChannel(0, chName);
+                            if (tvBoxes[0]) tvBoxes[0].select.value = chName;
+                            drumSetTo(idx, true);
+                            showToast('📺 ' + chNum(chName) + ' ' + chName);
+                        }
+                    }
+                    break;
+                }
+                case 'layout':
+                    if (cmd.layout) {
+                        const btn = document.querySelector(`[data-layout="${cmd.layout}"]`);
+                        setGrid(cmd.layout, btn);
+                        showToast('📐 ' + cmd.layout);
+                    }
+                    break;
+            }
+        }
+
+        // Start WS connection (TV mode)
+        wsConnect();
+
+        // ================================================================
+        // VOICE COMMAND ENGINE
+        // ================================================================
+        let recognition = null;
+        let voiceActive = false;
+        let toastTimer  = null;
+
+        function showToast(msg, duration = 2500) {
+            const t = document.getElementById('voiceToast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), duration);
+        }
+
+        // Seek step in seconds for rewind/forward on live streams (moves playback head)
+        const SEEK_STEP = 10;
+
+        // Channel aliases: words/phrases that map to channel names.
+        // Keys are lowercase trigger words, values are exact TV_CHANNELS keys.
+        const VOICE_CHANNEL_ALIASES = {};
+        (function buildAliases() {
+            for (const name of Object.keys(TV_CHANNELS)) {
+                if (!name) continue;
+                const key = name.toLowerCase();
+                VOICE_CHANNEL_ALIASES[key] = name;
+                // Also map just the first word if multi-word ("haber global" → "haber global" & "habertürk" etc.)
+            }
+            // Manual extra aliases
+            const extras = {
+                'halk':         'Halk TV',
+                'ntv':          'NTV',
+                'sözcü':        'Sözcü TV',
+                'sozcu':        'Sözcü TV',
+                'haberturk':    'Habertürk',
+                'habertürk':    'Habertürk',
+                'haber türk':   'Habertürk',
+                'haber global': 'Haber Global',
+                'global':       'Haber Global',
+                'tv yüz':       'TV 100',
+                'bloomberg ht': 'Bloomberg HT',
+                'bbc':          'BBC News',
+                'bbc news':     'BBC News',
+                'dw':           'DW TV English',
+                'france 24':    'France 24 English',
+                'france':       'France 24 English',
+                'sky':          'Sky News',
+                'sky news':     'Sky News',
+                'tele bir':     'Tele 1',
+                'tele 1':       'Tele 1',
+                'cnn':          'CNN Türk',
+                'cnn türk':     'CNN Türk',
+                'trt':          'TRT 1',
+                'trt bir':      'TRT 1',
+                'trt 1':        'TRT 1',
+                'trt iki':      'TRT 2',
+                'trt 2':        'TRT 2',
+                'trt haber':    'TRT Haber',
+                'trt spor':     'TRT Spor',
+                'trt belgesel': 'TRT Belgesel',
+                'trt müzik':    'TRT Müzik',
+                'trt world':    'TRT World',
+                'now':          'NOW',
+                'kanal d':      'Kanal D',
+                'show':         'Show TV',
+                'show tv':      'Show TV',
+                'atv':          'ATV',
+                'tv sekiz':     'TV8',
+                'tv 8':         'TV8',
+                'teve':         'Teve2',
+                'teve iki':     'Teve2',
+                'beyaz':        'Beyaz TV',
+                'star':         'Star TV',
+                'star tv':      'Star TV',
+                'ht spor':      'HT Spor',
+                'a spor':       'A Spor',
+                'aspor':        'A Spor',
+                'sports tv':    'Sports TV',
+                'red bull':     'Redbull TV',
+                'redbull':      'Redbull TV',
+                'dmax':         'DMAX',
+                'tlc':          'TLC',
+            };
+            Object.assign(VOICE_CHANNEL_ALIASES, extras);
+        })();
+
+        function matchChannel(transcript) {
+            const t = transcript.toLowerCase().trim();
+            // Match by channel number: "kanal 5", "5 numaralı", "beş" etc.
+            const numMatch = t.match(/\b(\d{1,2})\b/);
+            if (numMatch) {
+                const n = parseInt(numMatch[1]);
+                for (const [name, num] of Object.entries(CH_NUMBERS)) {
+                    if (num === n) return name;
+                }
+            }
+            // Direct alias lookup (longest match first)
+            const keys = Object.keys(VOICE_CHANNEL_ALIASES).sort((a,b) => b.length - a.length);
+            for (const k of keys) {
+                if (t.includes(k)) return VOICE_CHANNEL_ALIASES[k];
+            }
+            return null;
+        }
+
+        function handleVoiceCommand(transcript) {
+            const t = transcript.toLowerCase().trim();
+            showToast('🎙 "' + transcript + '"', 3000);
+
+            // --- Mute / Ses kapat ---
+            if (/ses kapat|mute|sustur|kapat sesi/.test(t)) {
+                muteAll(); showToast('🔇 Ses kapatıldı'); return;
+            }
+            // --- Unmute / Ses aç ---
+            if (/ses aç|unmute|sesi aç|aç sesi/.test(t)) {
+                if (soloIndex === -1) {
+                    soloIndex = 0;
+                    updateMuteButtons();
+                }
+                showToast('🔊 Ses açıldı'); return;
+            }
+            // --- Sonraki kanal ---
+            if (/sonraki|next|ileri kanal|kanal ileri/.test(t)) {
+                navChannel('next'); showToast('⏭ Sonraki kanal'); return;
+            }
+            // --- Önceki kanal ---
+            if (/önceki|previous|geri kanal|kanal geri/.test(t)) {
+                navChannel('prev'); showToast('⏮ Önceki kanal'); return;
+            }
+            // --- İlk kanal ---
+            if (/ilk kanal|first channel|başa git|en başa/.test(t)) {
+                navChannel('first'); showToast('⏮⏮ İlk kanal'); return;
+            }
+            // --- Son kanal ---
+            if (/son kanal|last channel|en sona/.test(t)) {
+                navChannel('last'); showToast('⏭⏭ Son kanal'); return;
+            }
+            // --- Yayını durdur / Pause ---
+            if (/durdur|pause|beklet|dur/.test(t)) {
+                tvBoxes.forEach(b => { if (b.video) b.video.pause(); });
+                showToast('⏸ Durduruldu'); return;
+            }
+            // --- Yayına devam et / Play ---
+            if (/devam|play|oynat|başlat/.test(t)) {
+                resumeAll();
+                showToast('▶ Devam ediyor'); return;
+            }
+            // --- Tam ekran ---
+            if (/tam ekran|fullscreen|full screen/.test(t)) {
+                fullscreen(0); showToast('⛶ Tam ekran'); return;
+            }
+            // --- Geri sar ---
+            if (/geri sar|rewind|geri al/.test(t)) {
+                tvBoxes.forEach(b => { if (b.video && isFinite(b.video.duration)) b.video.currentTime = Math.max(0, b.video.currentTime - SEEK_STEP); });
+                showToast(`⏪ ${SEEK_STEP}sn geri`); return;
+            }
+            // --- İleri sar ---
+            if (/ileri sar|forward|ilerle/.test(t)) {
+                tvBoxes.forEach(b => { if (b.video && isFinite(b.video.duration)) b.video.currentTime = Math.min(b.video.duration, b.video.currentTime + SEEK_STEP); });
+                showToast(`⏩ ${SEEK_STEP}sn ileri`); return;
+            }
+            // --- Kanal değiştir ---
+            const ch = matchChannel(t);
+            if (ch) {
+                if (currentGrid === '1x1') {
+                    navChannel._switch(ch);
+                } else {
+                    // Switch first (focused) box in multi-view
+                    tvBoxes[0].select.value = ch;
+                    changeChannel(0, ch);
+                }
+                showToast('📺 ' + ch);
+                return;
+            }
+            // Anlaşılmadı
+            showToast('❓ Komut anlaşılamadı');
+        }
+
+        // Helper used by voice for 1x1 channel switch (also updates drum)
+        navChannel._switch = function(channelName) {
+            const flat = getFlatChannelList();
+            const idx  = flat.indexOf(channelName);
+            if (idx < 0) return;
+            if (tvBoxes[0]) { tvBoxes[0].select.value = channelName; changeChannel(0, channelName); }
+            drumSetTo(idx, true);
+        };
+
+        function initVoice() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                showToast('⚠ Tarayıcı sesli komutu desteklemiyor', 4000);
+                return null;
+            }
+            const r = new SpeechRecognition();
+            r.lang = 'tr-TR';           // primary: Turkish
+            r.continuous = false;
+            r.interimResults = false;
+            r.maxAlternatives = 3;
+
+            r.onresult = (e) => {
+                // Try all alternatives
+                for (let i = 0; i < e.results[0].length; i++) {
+                    const t = e.results[0][i].transcript;
+                    handleVoiceCommand(t);
+                    break; // first (most confident) alternative is enough
+                }
+            };
+            r.onerror = (e) => {
+                if (e.error === 'no-speech') { showToast('🎙 Ses algılanamadı'); }
+                else if (e.error === 'not-allowed') { showToast('⚠ Mikrofon izni reddedildi', 4000); }
+                else { showToast('⚠ Hata: ' + e.error); }
+                stopVoice();
+            };
+            r.onend = () => stopVoice();
+            return r;
+        }
+
+        function toggleVoice() {
+            if (voiceActive) { stopVoice(); return; }
+            if (!recognition) recognition = initVoice();
+            if (!recognition) return;
+            try {
+                recognition.start();
+                voiceActive = true;
+                document.getElementById('voiceBtn').classList.add('listening');
+                showToast('🎙 Dinleniyor… (TR/EN)', 8000);
+            } catch(e) {
+                showToast('⚠ Mikrofon başlatılamadı');
+            }
+        }
+
+        function stopVoice() {
+            voiceActive = false;
+            document.getElementById('voiceBtn').classList.remove('listening');
+            try { recognition && recognition.stop(); } catch(_){}
+        }
+
+        // ================================================================
+        // Kick off
+        init();
+    </script>
+</body>
+</html>
