@@ -476,7 +476,6 @@
 
     <div id="voiceToast"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
         // ---- TV Channels ----
@@ -1034,7 +1033,15 @@
         let myPeerId = null;
 
         function peerInit() {
-            // Use a random 4-char alphanumeric ID so remote can connect with just 4 chars
+            // Load PeerJS dynamically so a CDN failure never breaks the main app
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+            script.onload = () => _peerStart();
+            script.onerror = () => console.warn('PeerJS CDN failed — remote control unavailable');
+            document.head.appendChild(script);
+        }
+
+        function _peerStart() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let shortId = '';
             for (let i = 0; i < 4; i++) shortId += chars[Math.floor(Math.random() * chars.length)];
@@ -1053,7 +1060,7 @@
                 hidePeerCode();
                 showToast('📡 Kumanda bağlandı!', 3000);
             });
-            peer.on('error', e => { showToast('⚠ Bağlantı hatası: ' + e.type); });
+            peer.on('error', e => { showToast('⚠ P2P hatası: ' + e.type); });
         }
 
         function showPeerCode(code, fullId) {
