@@ -128,7 +128,7 @@ body{display:flex;flex-direction:column}
       <div class="rb" onclick="navCmd('first')"><span>&#9198;</span><small>Ilk</small></div>
       <div class="rb acc" onclick="navCmd('prev')"><span>&#9664;</span><small>Önceki</small></div>
       <div class="rb acc" onclick="navCmd('next')"><span>&#9654;</span><small>Sonraki</small></div>
-      <div class="rb" onclick="navCmd('last')"><span>&#9197;;</span><small>Son</small></div>
+      <div class="rb" onclick="navCmd('last')"><span>&#9197;</span><small>Son</small></div>
     </div>
 
     <!-- Volume -->
@@ -173,11 +173,11 @@ body{display:flex;flex-direction:column}
 <script>
 // Channel list matching multi-tv-final.html
 var CHANNEL_GROUPS = [
-  { label:"Haber", channels:["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100","Bloomberg HT","BBC News","DW TV English","Wonder","France 24 English","France 24 French","BBC Earth","Bloomberg","Sky News","Tele 1","CNN Türk"] },
+  { label:"Haber", channels:["Halk TV","NTV","Haber Global", "Habertürk","TV 100","CNN","BBC News","DW TV English","Bloomberg", "France 24 English","France 24 French","BFM TV", "Canal 32", "Baku TV", "Sky News","BBC Earth","Wonder","Tele 1"] },
   { label:"TRT",   channels:["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yildiz","TRT Belgesel","TRT Muzik","TRT World"] },
-  { label:"Ulusal",channels:["NOW","Kanal D","Show TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","Euro D","Kanal D Romanya","Beyaz TV","Star TV"] },
-  { label:"Spor",  channels:["HT Spor","beIN SPORTS XTRA","A Spor","Sports TV"] },
-  { label:"Eglence",channels:["FTV","Power TV","Powerturk","NR1","NR1 Turk","NR1 Dance","TLC","Fashion One","Redbull TV","MTRSPT 1","Motorvision","A2","DMAX"] }
+  { label:"Ulusal",channels:["NOW","Kanal D","Show TV","Star TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","KTV", "Kanal D Romanya","Beyaz TV", "A2"] },
+  { label:"Spor",  channels:["HT Spor","A Spor", "beIN SPORTS XTRA","Fifa", "Redbull TV","MTRSPT 1","Motorvision"] },
+  { label:"Eglence",channels:["FTV","Fashion One", "Power TV","Powerturk","NR1","NR1 Turk","NR1 Dance","Latin Zone TV", "Radio Kiss Kiss", "Generations TV","DBM TV", "Beach TV", "Kepez TV","Avia Stream","Fire","Summer", "Kamintv", "Relaxon","Dozhditv","Terrasatv", "Nature", "Winter", "SvetVokrugtv", "GornayaDolina", "Komnata", "Beach TV CSULB","Beach TV Panama City" ] }
 ];
 
 // Build numbered channel list
