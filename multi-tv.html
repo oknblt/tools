@@ -112,6 +112,7 @@ var TV_CHANNELS = {
   "Haber Global": { url: "https://tv.ensonhaber.com/haberglobal/haberglobal.m3u8", source: "IPTV" },
   "Habertürk":    { url: "https://tv.ensonhaber.com/haberturk/haberturk.m3u8", source: "IPTV" },
   "TV 100":       { url: "https://tv100-live.daioncdn.net/tv100/tv100_1080p.m3u8", source: "IPTV" },
+  "Bloomberg HT":       { url: "https://tatatam.trt1sultanfatihss.workers.dev/https://ciner.daioncdn.net/bloomberght/bloomberght_720p.m3u8", source: "IPTV" },
   "CNN": { url: "https://d3fzntptkfpmvg.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-6rc4k0y56fezj/CNNFAST_GB.m3u8", source: "IPTV" },
   "BBC News":     { url: "https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn%3abbc%3apips%3aservice%3abbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8", source: "IPTV" },
   "DW TV English":{ url: "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8", source: "IPTV" },
@@ -120,10 +121,18 @@ var TV_CHANNELS = {
   "France 24 French":  { url: "https://live.france24.com/hls/live/2037179/F24_FR_HI_HLS/master_5000.m3u8", source: "IPTV" },
   "BFM TV":          { url: "https://ncdn-live-bfm.pfd.sfr.net/shls/LIVE$BFM_TV/index.m3u8", source: "IPTV" },
   "Canal 32":        { url: "https://event.vedge.infomaniak.com/livecast/ik%3acanal32_4/manifest.m3u8", source: "IPTV" },
+  "WDR Fernsehen":        { url: "https://www.euromediacenter.com/wdr-fernsehen-123-123.m3u8", source: "IPTV" },
+  "Baden TV":        { url: "https://cdn.icu.de/rtplive/btv.stream/playlist.m3u8", source: "IPTV" },
+  "Alex Berlin":        { url: "https://www.euromediacenter.com/alex-berlin-4-4.m3u8", source: "IPTV" },
+  "München TV":        { url: "https://muenchentv.iptv-playoutcenter.de/muenchentv/muenchentv.stream_1/playlist.m3u8", source: "IPTV" },
+  "Top Sci-Fi":        { url: "https://www.euromediacenter.com/top-sci-fi-112-112.m3u8", source: "IPTV" },
+ "Das Erste HD":     { url: "https://derste247livede.akamaized.net/hls/live/658317/daserste_de/master.m3u8", source: "IPTV" },
+  "hr fernsehen":      { url: "https://hrhls.akamaized.net/hls/live/2024525/hrhls/index.m3u8", source: "IPTV" },
   "Baku TV":        { url: "https://rtmp.baku.tv/hls/bakutv_1080p.m3u8", source: "IPTV" },
   "Sky News":     { url: "https://linear417-gb-hls1-prd-ak.cdn.skycdp.com/100e/Content/HLS_001_1080_30/Live/channel(skynews)/index_1080-30.m3u8", source: "IPTV" },
   "BBC Earth":    { url: "https://amg00793-amg00793c6-xumo-us-2669.playouts.now.amagi.tv/BBCStudios-BBCEarthA-hls/playlist.m3u8", source: "IPTV" },
   "Wonder":       { url: "https://wonder-samsung-uk.amagi.tv/playlist.m3u8", source: "IPTV" },
+  "Mythbusters":       { url: "https://www.euromediacenter.com/mythbusters-4366-4366.m3u8", source: "IPTV" },
   "Tele 1":       { url: "https://tele1-live.ercdn.net/tele1/tele1.m3u8", source: "IPTV" },
   "CNN Türk":     { url: "https://dsmartgo-live.ercdn.net/dsmartgo/cnnturk/cnnturk.isml/cnnturk.m3u8", source: "IPTV" },
   "TRT 1":        { url: "https://tv-trt1.medya.trt.com.tr/master.m3u8", source: "TRT" },
@@ -154,17 +163,19 @@ var TV_CHANNELS = {
   "A Spor":       { url: "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor_720p.m3u8", source: "IPTV" },
   "beIN SPORTS XTRA": { url: "https://bein-esp-xumo.amagi.tv/playlistR1080p.m3u8", source: "IPTV" },
   "Fifa":    { url: "https://a62dad94.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/UmFrdXRlblRWLWV1X0ZJRkFQbHVzRW5nbGlzaF9ITFM/playlist.m3u8", source: "IPTV" },
-  "Redbull TV":   { url: "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master_3360.m3u8", source: "IPTV" },
+  "Redbull TV":   { url: "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8", source: "IPTV" },
   "MTRSPT 1":     { url: "https://amg02873-kravemedia-mtrspt1-distrotv-mnsrl.amagi.tv/playlist/amg02873-kravemedia-mtrspt1-distrotv/playlist.m3u8", source: "IPTV" },
 "Motorvision":  { url: "https://api-ott.motorvision.tv/loggingmediaurlpassthrough/a.m3u8?version=12&id=1199&partner=sportstribal&channel_name=Motorvision&content_genre=Drag%20Racing%2CMotor%20Racing%2CMotorsport%2CRacing%2CSport&ic=IAB17%2CIAB17-1&provider=FreeLiveSports&us_privacy=&gdpr=0&gdpr_consent=&coppa=0&content_livestream=1&content_url=https%3A%2F%2Fwatch.freelivesports.tv%2Fpages%2Fdiscover%2Fe%2Flive-tv%3Fchannel%3D6675bed4a2823e9a829eda97&lmt=0&did=r7mgUP", source: "IPTV" },
 "Sports TV":    { url: "https://live.sportstv.com.tr/hls/low/sportstv_hd/index.m3u8", source: "IPTV" },
  "FTV":          { url: "https://edge-fast3.evrideo.tv/bfdbb576-83f7-11f0-9f89-0200170e3e04_1000028043_HLS/manifest.m3u8", source: "IPTV" },
 "Fashion One":  { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2ee6997cb_1/playlist.m3u8", source: "IPTV" },
   "Power TV":     { url: "https://live.artidijitalmedya.com/artidijital_powertv/powertv/playlist.m3u8", source: "IPTV" },
-  "Powerturk":    { url: "https://live.artidijitalmedya.com/artidijital_powerturktv/powerturktv/playlist.m3u8", source: "IPTV" },
+  "Powertürk":    { url: "https://live.artidijitalmedya.com/artidijital_powerturktv/powerturktv/playlist.m3u8", source: "IPTV" },
+  "Powertürk Akustik":    { url: "https://www.euromediacenter.com/power-turk-akustik-5777-5777.m3u8", source: "IPTV" },
   "NR1":          { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e17cd6360b_1/playlist.m3u8", source: "IPTV" },
   "NR1 Turk":     { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/playlist.m3u8", source: "IPTV" },
   "NR1 Dance":    { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8", source: "IPTV" },
+  "Deluxe Music":    { url: "https://www.euromediacenter.com/deluxe-music-22-22.m3u8", source: "IPTV" },
   "Latin Zone TV":          { url: "https://cdn.streamingcpanel.com:3784/live/latinzonetvlive.m3u8", source: "IPTV" },
   "Radio Kiss Kiss":        { url: "https://59253971be783.streamlock.net/KKTV01/livestream/playlist.m3u8", source: "IPTV" },
   "Generations TV":        { url: "https://edge18.vedge.infomaniak.com/livecast/ik%3ageneration-tv/chunklist_.m3u8", source: "IPTV" },
@@ -190,11 +201,11 @@ var TV_CHANNELS = {
 };
 
 var CHANNEL_GROUPS = [
-  { label: "Haber", channels: ["Halk TV","NTV","Haber Global", "Habertürk","TV 100","CNN","BBC News","DW TV English","Bloomberg", "France 24 English","France 24 French","BFM TV", "Canal 32", "Baku TV", "Sky News","BBC Earth","Wonder","Tele 1"] },
+  { label: "Haber", channels: ["Halk TV","NTV","Haber Global", "Habertürk","TV 100","CNN","BBC News","DW TV English","Bloomberg", "France 24 English","France 24 French","BFM TV", "Canal 32", "WDR Fernsehen", "Baden TV", "Alex Berlin", "München TV", "Top Sci-Fi", "Das Erste HD","hr fernsehen", "Baku TV", "Sky News","BBC Earth","Wonder", "Mythbusters", "Tele 1"] },
   { label: "TRT", channels: ["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yildiz","TRT Belgesel","TRT Muzik","TRT World"] },
   { label: "Ulusal", channels: ["NOW","Kanal D","Show TV","Star TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","KTV", "Kanal D Romanya","Beyaz TV", "A2"] },
   { label: "Spor", channels: ["HT Spor","A Spor", "beIN SPORTS XTRA","Fifa", "Redbull TV","MTRSPT 1","Motorvision"] },
-  { label: "Eglence", channels: ["FTV","Fashion One", "Power TV","Powerturk","NR1","NR1 Turk","NR1 Dance","Latin Zone TV", "Radio Kiss Kiss", "Generations TV","DBM TV", "Beach TV", "Kepez TV","Avia Stream","Fire","Summer", "Kamintv", "Relaxon","Dozhditv","Terrasatv", "Nature", "Winter", "SvetVokrugtv", "GornayaDolina", "Komnata", "Beach TV CSULB","Beach TV Panama City" ] }
+  { label: "Eglence", channels: ["FTV","Fashion One", "Power TV","Powerturk","Powertürk Akustik", "NR1","NR1 Turk","NR1 Dance", "Deluxe Music" ,"Latin Zone TV", "Radio Kiss Kiss", "Generations TV","DBM TV", "Beach TV", "Kepez TV","Avia Stream","Fire","Summer", "Kamintv", "Relaxon","Dozhditv","Terrasatv", "Nature", "Winter", "SvetVokrugtv", "GornayaDolina", "Komnata", "Beach TV CSULB","Beach TV Panama City" ] }
 ];
 
 // ================================================================
