@@ -4,359 +4,294 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>📺 TV Kumanda</title>
+<title>&#128250; TV Kumanda</title>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:#0a0a12;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden}
 body{display:flex;flex-direction:column}
 
-/* ── Connect screen ── */
-#connectScreen{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:20px;padding:30px;
-}
+/* header */
+.hdr{background:#001020;padding:max(10px,env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hdr h1{font-size:14px;font-weight:700}
+.conn-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:#888}
+.dot{width:9px;height:9px;border-radius:50%;background:#444}
+.dot.on{background:#4CAF50;box-shadow:0 0 6px #4CAF50}
+.disc{background:rgba(244,67,54,.2);border:1px solid rgba(244,67,54,.4);color:#f44;border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer}
+
+/* connect screen */
+#connectScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px}
 #connectScreen h2{font-size:20px;font-weight:700}
 #connectScreen p{font-size:13px;color:#888;text-align:center;line-height:1.6}
-.code-input{
-  display:flex;gap:8px;align-items:center;
-}
-.code-input input{
-  width:100px;background:#1a1a28;border:2px solid #667eea;border-radius:10px;
-  color:#fff;font-size:28px;font-weight:700;text-align:center;padding:10px;
-  letter-spacing:.15em;text-transform:uppercase;
-}
-.code-input input:focus{outline:none;border-color:#8fa4f4}
-.connect-btn{
-  background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;
-  padding:14px 32px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;
-  width:100%;max-width:280px;
-}
-.connect-btn:active{opacity:.85}
-.status-badge{
-  display:flex;align-items:center;gap:8px;font-size:13px;color:#888;
-}
-.dot{width:10px;height:10px;border-radius:50%;background:#444;flex-shrink:0}
-.dot.on{background:#4CAF50;box-shadow:0 0 8px #4CAF50}
-.dot.err{background:#f44336}
+.code-input-wrap{display:flex;gap:8px;align-items:center}
+.code-input-wrap input{width:110px;background:#1a1a28;border:2px solid #667eea;border-radius:10px;color:#fff;font-size:28px;font-weight:700;text-align:center;padding:10px;letter-spacing:.15em;text-transform:uppercase}
+.code-input-wrap input:focus{outline:none}
+.conn-btn{background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;width:100%;max-width:280px}
+.conn-btn:active{opacity:.85}
+.conn-status{display:flex;align-items:center;gap:8px;font-size:13px;color:#888}
 
-/* ── Remote screen ── */
+/* remote screen */
 #remoteScreen{flex:1;display:none;flex-direction:column;overflow:hidden}
+.scroll{flex:1;overflow-y:auto;padding:8px 10px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
 
-/* Status bar */
-.rmt-header{
-  background:#001020;
-  padding:max(10px,env(safe-area-inset-top)) 14px 10px;
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
-}
-.rmt-header h1{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px}
-.disc-btn{
-  background:rgba(244,67,54,.2);border:1px solid rgba(244,67,54,.4);
-  color:#f44336;border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;
-}
+/* channel select */
+.ch-bar{background:#0d0d1a;border-bottom:1px solid #1a1a2a;padding:6px 10px;display:flex;gap:8px;align-items:center;flex-shrink:0}
+.ch-bar select{flex:1;background:#1a1a28;color:#fff;border:1px solid #333;border-radius:8px;padding:7px 10px;font-size:12px;min-height:36px}
+.ch-go{background:#667eea;border:none;color:#fff;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
 
-/* Number pad */
-.numpad-bar{
-  background:#0d0d1a;border-bottom:1px solid #1a1a2a;
-  padding:6px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;
-}
-.num-display{
-  background:#1a1a28;border:1px solid #2a2a3a;border-radius:8px;
-  padding:6px 12px;font-size:20px;font-weight:700;letter-spacing:.1em;
-  min-width:70px;text-align:center;color:#fff;flex-shrink:0;
-}
-.numpad-grid{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:4px;flex:1;
-}
-.num-btn{
-  background:#1a1a28;border:1px solid #222;color:#ccc;
-  border-radius:7px;padding:8px 4px;font-size:14px;font-weight:600;
-  cursor:pointer;text-align:center;
-  transition:background .1s;-webkit-tap-highlight-color:transparent;
-}
-.num-btn:active{background:#2a2a40;border-color:#667eea}
-.num-btn.go{background:#667eea;border-color:#667eea;color:#fff}
-.num-btn.clr{background:#2a1a1a;border-color:#3a2a2a;color:#f66}
+/* numpad */
+.numpad-area{background:#0d0d1a;border-bottom:1px solid #1a1a2a;padding:8px 10px;flex-shrink:0}
+.num-display{background:#1a1a28;border:1px solid #2a2a3a;border-radius:8px;padding:6px 12px;font-size:22px;font-weight:700;letter-spacing:.1em;text-align:center;color:#fff;margin-bottom:8px}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.nk{background:#1a1a28;border:1px solid #222;color:#ccc;border-radius:10px;padding:13px 0;font-size:18px;font-weight:600;text-align:center;cursor:pointer;transition:background .1s;user-select:none}
+.nk:active{background:#2a2a40;border-color:#667eea;color:#fff}
+.nk.accent{background:#111830;border-color:#667eea44;font-size:14px}
+.nk.clr{background:#2a1a1a;border-color:#3a2020;color:#f66;font-size:14px}
+.nk.go-btn{background:#667eea;border-color:#667eea;color:#fff;font-size:14px;font-weight:700}
 
-/* Channel picker */
-.ch-bar{
-  background:#0d0d1a;border-bottom:1px solid #1a1a2a;
-  padding:6px 10px;display:flex;gap:8px;align-items:center;flex-shrink:0;
-}
-.ch-bar select{
-  flex:1;background:#1a1a28;color:#fff;border:1px solid #333;
-  border-radius:8px;padding:7px 10px;font-size:12px;min-height:36px;
-}
-.ch-go{
-  background:#667eea;border:none;color:#fff;padding:7px 14px;
-  border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
-}
+/* section */
+.sec{margin:10px 0 6px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#444}
 
-/* Scroll area */
-.rmt-scroll{flex:1;overflow-y:auto;padding:8px 10px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+/* button grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 
-.sec-title{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#444;margin:12px 0 6px}
+.rb{background:#111120;border:1px solid #1e1e30;color:#ccc;border-radius:11px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:background .1s,transform .08s;user-select:none}
+.rb span{font-size:18px}
+.rb small{font-size:10px;color:#666;text-align:center}
+.rb:active{background:#1e1e38;border-color:#667eea;transform:scale(.93)}
+.rb.acc{background:#111830;border-color:#667eea33}
+.rb.grn{background:#0e1e12;border-color:#4CAF5033}
+.rb.red{background:#1e0e0e;border-color:#f4433633}
+.rb.orn{background:#1e160a;border-color:#ff980033}
 
-.btn-grid{display:grid;gap:7px}
-.col2{grid-template-columns:1fr 1fr}
-.col4{grid-template-columns:repeat(4,1fr)}
-
-.rbt{
-  background:#111120;border:1px solid #1e1e30;color:#ccc;border-radius:11px;
-  padding:13px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;
-  cursor:pointer;transition:background .1s,transform .08s;
-  -webkit-tap-highlight-color:transparent;user-select:none;
-}
-.rbt span{font-size:18px}
-.rbt small{font-size:10px;color:#666}
-.rbt:active{background:#1e1e38;border-color:#667eea;transform:scale(.93)}
-.rbt.accent{background:#111830;border-color:#667eea33}
-.rbt.grn{background:#0e1e12;border-color:#4CAF5033}
-.rbt.red{background:#1e0e0e;border-color:#f4433633}
-
-/* Toast */
-#toast{
-  position:fixed;bottom:max(75px,calc(env(safe-area-inset-bottom)+60px));
-  left:50%;transform:translateX(-50%) translateY(14px);
-  background:rgba(15,15,25,.95);color:#fff;padding:8px 18px;
-  border-radius:20px;font-size:12px;border:1px solid rgba(102,126,234,.35);
-  backdrop-filter:blur(8px);opacity:0;pointer-events:none;
-  transition:opacity .18s,transform .18s;z-index:9999;white-space:nowrap;
-}
+/* toast */
+#toast{position:fixed;bottom:max(72px,calc(env(safe-area-inset-bottom)+60px));left:50%;transform:translateX(-50%) translateY(14px);background:rgba(15,15,25,.95);color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;border:1px solid rgba(102,126,234,.35);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:9999;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 
-<!-- ── Connect Screen ── -->
-<div id="connectScreen">
-  <div style="font-size:48px">📺</div>
-  <h2>TV Kumanda</h2>
-  <p>Multi TV Viewer'da görünen <strong>4 haneli kodu</strong> girin.<br>Aynı WiFi'a gerek yok, sadece internet yeterli.</p>
-  <div class="code-input">
-    <input type="text" id="codeInput" maxlength="4" placeholder="XXXX" autocomplete="off" autocorrect="off" spellcheck="false">
+<div class="hdr">
+  <h1>&#128250; TV Kumanda</h1>
+  <div class="conn-badge">
+    <div class="dot" id="dot"></div>
+    <span id="statusTxt">Hazirlanıyor…</span>
+    <button class="disc" id="discBtn" style="display:none" onclick="doDisconnect()">Kes</button>
   </div>
-  <button class="connect-btn" onclick="doConnect()">Bağlan</button>
-  <div class="status-badge"><div class="dot" id="dot"></div><span id="statusTxt">Hazırlanıyor…</span></div>
 </div>
 
-<!-- ── Remote Screen ── -->
-<div id="remoteScreen">
+<!-- CONNECT SCREEN -->
+<div id="connectScreen">
+  <div style="font-size:48px">&#128250;</div>
+  <h2>TV Kumanda</h2>
+  <p>Multi TV Viewer'da görünen<br><strong>4 haneli kodu</strong> girin.</p>
+  <div class="code-input-wrap">
+    <input type="text" id="codeInput" maxlength="4" placeholder="XXXX" autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+  <button class="conn-btn" onclick="doConnect()">Baglan</button>
+  <div class="conn-status"><div class="dot" id="dot2"></div><span id="statusTxt2">Hazirlanıyor…</span></div>
+</div>
 
-  <div class="rmt-header">
-    <h1>📺 TV Kumanda</h1>
-    <div style="display:flex;align-items:center;gap:8px">
-      <div class="status-badge"><div class="dot on" id="rdot"></div><span style="font-size:11px;color:#4CAF50">Bağlı</span></div>
-      <button class="disc-btn" onclick="doDisconnect()">✕ Kes</button>
-    </div>
+<!-- REMOTE SCREEN -->
+<div id="remoteScreen">
+  <!-- Channel select -->
+  <div class="ch-bar">
+    <select id="chSel"><option value="">Kanal sec…</option></select>
+    <button class="ch-go" onclick="sendChannel()">Gec</button>
   </div>
 
   <!-- Number pad -->
-  <div class="numpad-bar">
-    <div class="num-display" id="numDisplay">–</div>
-    <div class="numpad-grid">
-      <div class="num-btn" onclick="numPress(1)">1</div>
-      <div class="num-btn" onclick="numPress(2)">2</div>
-      <div class="num-btn" onclick="numPress(3)">3</div>
-      <div class="num-btn" onclick="numPress(4)">4</div>
-      <div class="num-btn" onclick="numPress(5)">5</div>
-      <div class="num-btn" onclick="numPress(6)">6</div>
-      <div class="num-btn" onclick="numPress(7)">7</div>
-      <div class="num-btn" onclick="numPress(8)">8</div>
-      <div class="num-btn" onclick="numPress(9)">9</div>
-      <div class="num-btn clr" onclick="numClear()">⌫</div>
-      <div class="num-btn" onclick="numPress(0)">0</div>
-      <div class="num-btn go" onclick="numGo()">Git</div>
+  <div class="numpad-area">
+    <div class="num-display" id="numDisp">–</div>
+    <div class="numpad">
+      <div class="nk" onclick="np(1)">1</div>
+      <div class="nk" onclick="np(2)">2</div>
+      <div class="nk" onclick="np(3)">3</div>
+      <div class="nk" onclick="np(4)">4</div>
+      <div class="nk" onclick="np(5)">5</div>
+      <div class="nk" onclick="np(6)">6</div>
+      <div class="nk" onclick="np(7)">7</div>
+      <div class="nk" onclick="np(8)">8</div>
+      <div class="nk" onclick="np(9)">9</div>
+      <div class="nk accent" onclick="navCmd('first')" title="Ilk kanal">&#8676;</div>
+      <div class="nk" onclick="np(0)">0</div>
+      <div class="nk accent" onclick="navCmd('last')" title="Son kanal">&#8677;</div>
     </div>
   </div>
 
-  <!-- Channel select -->
-  <div class="ch-bar">
-    <select id="chSel"><option value="">Kanal seç…</option></select>
-    <button class="ch-go" onclick="sendChannel()">Geç</button>
-  </div>
-
-  <div class="rmt-scroll">
-
-    <div class="sec-title">Kanal</div>
-    <div class="btn-grid col4">
-      <div class="rbt" onclick="send('first')"><span>⏮⏮</span><small>İlk</small></div>
-      <div class="rbt accent" onclick="send('prev')"><span>◀</span><small>Önceki</small></div>
-      <div class="rbt accent" onclick="send('next')"><span>▶</span><small>Sonraki</small></div>
-      <div class="rbt" onclick="send('last')"><span>⏭⏭</span><small>Son</small></div>
+  <div class="scroll">
+    <!-- Channel nav -->
+    <div class="sec">Kanal</div>
+    <div class="g4">
+      <div class="rb" onclick="navCmd('first')"><span>&#9198;&#9198;</span><small>Ilk</small></div>
+      <div class="rb acc" onclick="navCmd('prev')"><span>&#9664;</span><small>Önceki</small></div>
+      <div class="rb acc" onclick="navCmd('next')"><span>&#9654;</span><small>Sonraki</small></div>
+      <div class="rb" onclick="navCmd('last')"><span>&#9197;&#9197;</span><small>Son</small></div>
     </div>
 
-    <div class="sec-title">Ses</div>
-    <div class="btn-grid col2">
-      <div class="rbt grn" onclick="send('unmute')"><span>🔊</span><small>Ses Aç</small></div>
-      <div class="rbt red"  onclick="send('mute')"><span>🔇</span><small>Ses Kapat</small></div>
+    <!-- Volume -->
+    <div class="sec">Ses</div>
+    <div class="g4">
+      <div class="rb grn" onclick="cmd('unmute')"><span>&#128266;</span><small>Ses Aç</small></div>
+      <div class="rb orn" onclick="cmd('vol_down')"><span>&#128509;</span><small>Azalt</small></div>
+      <div class="rb orn" onclick="cmd('vol_up')"><span>&#128266;</span><small>Artır</small></div>
+      <div class="rb red" onclick="cmd('mute')"><span>&#128263;</span><small>Sessiz</small></div>
     </div>
 
-    <div class="sec-title">Oynatma</div>
-    <div class="btn-grid col2">
-      <div class="rbt accent" onclick="send('play')"><span>▶️</span><small>Devam</small></div>
-      <div class="rbt" onclick="send('pause')"><span>⏸</span><small>Durdur</small></div>
+    <!-- Playback -->
+    <div class="sec">Oynatma</div>
+    <div class="g2">
+      <div class="rb acc" onclick="cmd('play')"><span>&#9654;&#65039;</span><small>Devam</small></div>
+      <div class="rb" onclick="cmd('pause')"><span>&#9208;</span><small>Durdur</small></div>
     </div>
 
-    <div class="sec-title">Sarmak</div>
-    <div class="btn-grid col2">
-      <div class="rbt" onclick="seek(-10)"><span>⏪</span><small>10sn Geri</small></div>
-      <div class="rbt" onclick="seek(10)"><span>⏩</span><small>10sn İleri</small></div>
+    <!-- Seek -->
+    <div class="sec">Sarmak</div>
+    <div class="g2">
+      <div class="rb" onclick="seek(-10)"><span>&#9194;</span><small>10sn Geri</small></div>
+      <div class="rb" onclick="seek(10)"><span>&#9193;</span><small>10sn İleri</small></div>
     </div>
-    <div class="btn-grid col2" style="margin-top:7px">
-      <div class="rbt" onclick="seek(-30)"><span>⏪⏪</span><small>30sn Geri</small></div>
-      <div class="rbt" onclick="seek(30)"><span>⏩⏩</span><small>30sn İleri</small></div>
-    </div>
-
-    <div class="sec-title">Düzen</div>
-    <div class="btn-grid col4" style="margin-bottom:20px">
-      <div class="rbt accent" onclick="layout('1x1')"><span>1</span><small>Tek</small></div>
-      <div class="rbt" onclick="layout('1x2')"><span>1×2</span><small>İkili</small></div>
-      <div class="rbt" onclick="layout('2x2')"><span>2×2</span><small>Dörtlü</small></div>
-      <div class="rbt red" onclick="send('mute')"><span>🔇</span><small>Hepsini Kapat</small></div>
+    <div class="g2" style="margin-top:7px">
+      <div class="rb" onclick="seek(-30)"><span>&#9194;&#9194;</span><small>30sn Geri</small></div>
+      <div class="rb" onclick="seek(30)"><span>&#9193;&#9193;</span><small>30sn İleri</small></div>
     </div>
 
+    <!-- Layout -->
+    <div class="sec">Düzen</div>
+    <div class="g3" style="margin-bottom:20px">
+      <div class="rb acc" onclick="layout('1x1')"><span>1</span><small>Tek</small></div>
+      <div class="rb" onclick="layout('1x2')"><span>1&#xD7;2</span><small>İkili</small></div>
+      <div class="rb" onclick="layout('2x2')"><span>2&#xD7;2</span><small>Dörtlü</small></div>
+    </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
 <script>
-// ── Channel list (same as multi-tv.html, numbered) ──────────────────────────
-const CHANNEL_GROUPS = [
-  { label:"📰 Haber", channels:["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100","Bloomberg HT","BBC News","DW TV English","Wonder","France 24 English","France 24 French","BBC Earth","Bloomberg","Tele 1","CNN Türk"] },
-  { label:"📡 TRT",   channels:["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yıldız","TRT Belgesel","TRT Müzik","TRT World"] },
-  { label:"📺 Ulusal",channels:["NOW","Kanal D","Show TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","Euro D","Kanal D Romanya","Beyaz TV","Star TV"] },
-  { label:"⚽ Spor",  channels:["HT Spor","beIN SPORTS XTRA","A Spor","Sports TV"] },
-  { label:"🎬 Eğlence",channels:["FTV","Power TV","Powertürk","NR1","NR1 Türk","NR1 Dance","TLC","Fashion One","Redbull TV","MTRSPT 1","Motorvision","A2","DMAX"] }
+// Channel list matching multi-tv-final.html
+var CHANNEL_GROUPS = [
+  { label:"Haber", channels:["Halk TV","NTV","Sözcü TV","Habertürk","Haber Global","TV 100","Bloomberg HT","BBC News","DW TV English","Wonder","France 24 English","France 24 French","BBC Earth","Bloomberg","Sky News","Tele 1","CNN Türk"] },
+  { label:"TRT",   channels:["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yildiz","TRT Belgesel","TRT Muzik","TRT World"] },
+  { label:"Ulusal",channels:["NOW","Kanal D","Show TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","Euro D","Kanal D Romanya","Beyaz TV","Star TV"] },
+  { label:"Spor",  channels:["HT Spor","beIN SPORTS XTRA","A Spor","Sports TV"] },
+  { label:"Eglence",channels:["FTV","Power TV","Powerturk","NR1","NR1 Turk","NR1 Dance","TLC","Fashion One","Redbull TV","MTRSPT 1","Motorvision","A2","DMAX"] }
 ];
 
-// Build numbered list
-const CH_BY_NUMBER = {};
-const CH_BY_NAME   = {};
-let n = 1;
-const sel = document.getElementById('chSel');
-for (const g of CHANNEL_GROUPS) {
-  const og = document.createElement('optgroup');
+// Build numbered channel list
+var CH_BY_NUM = {}, CH_BY_NAME = {}, allChannels = [];
+var n = 1;
+var sel = document.getElementById('chSel');
+CHANNEL_GROUPS.forEach(function(g) {
+  var og = document.createElement('optgroup');
   og.label = g.label;
-  for (const name of g.channels) {
-    CH_BY_NUMBER[n] = name;
+  g.channels.forEach(function(name) {
+    CH_BY_NUM[n] = name;
     CH_BY_NAME[name] = n;
-    const o = document.createElement('option');
+    allChannels.push(name);
+    var o = document.createElement('option');
     o.value = name;
     o.textContent = String(n).padStart(2,'0') + '  ' + name;
     og.appendChild(o);
     n++;
-  }
+  });
   sel.appendChild(og);
-}
+});
 
-// ── PeerJS ───────────────────────────────────────────────────────────────────
-let peer = null;
-let conn = null;
-let ready = false;
+// PeerJS
+var peer = null, conn = null, ready = false;
 
-function peerInit() {
+function peerReady() {
   peer = new Peer({ debug: 0 });
-  peer.on('open', () => {
-    setStatus(false, 'Hazır — kodu girin');
-  });
-  peer.on('error', e => {
-    setStatus(false, 'Hata: ' + e.type);
-  });
+  peer.on('open', function() { setStatus(false, 'Hazır — kodu girin'); });
+  peer.on('error', function(e) { setStatus(false, 'Hata: ' + e.type); });
 }
 
 function doConnect() {
-  const raw = document.getElementById('codeInput').value.trim().toUpperCase();
-  if (raw.length !== 4) { toast('4 haneli kodu girin'); return; }
-  // Full peer ID ends with the 4-char code — find it
-  // PeerJS default server gives IDs like "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx1A2B"
-  // We need to discover the full ID. Strategy: TV side shows last 4 chars.
-  // Remote just uses the full peer ID stored by TV — but we only have 4 chars.
-  // Solution: TV advertises its full peer ID on a well-known "rendezvous" peer ID
-  // derived from the 4-char code so remote can contact it.
-  // Simpler: TV peer ID IS the 4-char code (we set it explicitly).
-  setStatus(false, 'Bağlanıyor…');
-  conn = peer.connect(raw, { reliable: true, serialization: 'json' });
-  conn.on('open', () => {
-    ready = true;
-    showRemote();
-    toast('✅ Bağlantı kuruldu!');
-  });
-  conn.on('close', () => { ready = false; showConnect(); toast('⚠ Bağlantı kesildi'); });
-  conn.on('error', e => { toast('Bağlantı hatası'); });
+  var code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if (code.length !== 4) { toast('4 haneli kodu girin'); return; }
+  setStatus(false, 'Baglanıyor…');
+  conn = peer.connect(code, { reliable: true, serialization: 'json' });
+  conn.on('open', function() { ready = true; showRemote(); toast('Baglanti kuruldu!'); });
+  conn.on('close', function() { ready = false; showConnect(); toast('Baglanti kesildi'); });
+  conn.on('error', function() { toast('Baglanti hatası'); });
 }
 
 function doDisconnect() {
-  if (conn) { try { conn.close(); } catch(_){} conn = null; }
-  ready = false;
-  showConnect();
+  if (conn) { try { conn.close(); } catch(e){} conn = null; }
+  ready = false; showConnect();
 }
 
-function send(action) {
-  if (!ready || !conn) { toast('⚠ Bağlı değil'); return; }
-  conn.send({ action });
-  toast({ next:'⏭ Sonraki', prev:'⏮ Önceki', first:'⏮⏮ İlk', last:'⏭⏭ Son',
-    mute:'🔇 Sessiz', unmute:'🔊 Ses Açıldı', pause:'⏸ Durduruldu',
-    play:'▶ Devam', fullscreen:'⛶ Tam Ekran' }[action] || action);
+function send(obj) {
+  if (!ready || !conn) { toast('Bagli degil'); return; }
+  conn.send(obj);
 }
-function seek(d)    { if (!ready||!conn) return; conn.send({ action:'seek', delta:d }); toast((d>0?'⏩ ':'⏪ ')+Math.abs(d)+'sn'); }
-function layout(l)  { if (!ready||!conn) return; conn.send({ action:'layout', layout:l }); toast('📐 '+l); }
+
+function cmd(action) { send({ action: action }); }
+function navCmd(dir) {
+  var labels = { first:'İlk kanal', last:'Son kanal', next:'Sonraki', prev:'Önceki' };
+  send({ action: dir }); toast(labels[dir] || dir);
+}
+function seek(d) { send({ action:'seek', delta:d }); toast((d>0?'İleri ':'Geri ') + Math.abs(d) + 'sn'); }
+function layout(l) { send({ action:'layout', layout:l }); toast('Duzen: ' + l); }
 function sendChannel() {
-  const name = document.getElementById('chSel').value;
-  if (!name) { toast('Kanal seçin'); return; }
-  if (!ready||!conn) { toast('⚠ Bağlı değil'); return; }
-  conn.send({ action:'channel', name });
-  toast('📺 ' + String(CH_BY_NAME[name]||'').padStart(2,'0') + ' ' + name);
+  var name = document.getElementById('chSel').value;
+  if (!name) { toast('Kanal secin'); return; }
+  send({ action:'channel', name:name });
+  toast(String(CH_BY_NAME[name]||'').padStart(2,'0') + ' ' + name);
 }
 
-// ── Number pad ───────────────────────────────────────────────────────────────
-let numBuf = '';
-let numTimer = null;
-
-function numPress(d) {
-  numBuf = (numBuf + d).slice(-2); // max 2 digits
-  document.getElementById('numDisplay').textContent = numBuf;
+// Numpad
+var numBuf = '', numTimer = null;
+function np(d) {
+  numBuf = (numBuf + d).slice(-2);
+  document.getElementById('numDisp').textContent = numBuf;
   clearTimeout(numTimer);
-  numTimer = setTimeout(() => {
-    numGo();
-  }, 1500); // auto-confirm after 1.5s
+  numTimer = setTimeout(npGo, 1500);
 }
-function numClear() { numBuf=''; document.getElementById('numDisplay').textContent='–'; clearTimeout(numTimer); }
-function numGo() {
+function npGo() {
   clearTimeout(numTimer);
-  const n = parseInt(numBuf);
-  numBuf = '';
-  document.getElementById('numDisplay').textContent = '–';
-  if (!n) return;
-  const name = CH_BY_NUMBER[n];
-  if (!name) { toast('Kanal ' + n + ' bulunamadı'); return; }
-  if (!ready||!conn) { toast('⚠ Bağlı değil'); return; }
-  conn.send({ action:'channel', name, number: n });
-  toast('📺 ' + String(n).padStart(2,'0') + ' ' + name);
+  var n2 = parseInt(numBuf);
+  numBuf = ''; document.getElementById('numDisp').textContent = '–';
+  if (!n2) return;
+  var name = CH_BY_NUM[n2];
+  if (!name) { toast('Kanal ' + n2 + ' bulunamadi'); return; }
+  send({ action:'channel', name:name });
+  toast(String(n2).padStart(2,'0') + ' ' + name);
 }
 
-// ── UI helpers ───────────────────────────────────────────────────────────────
-function showRemote()  { document.getElementById('connectScreen').style.display='none';  document.getElementById('remoteScreen').style.display='flex'; }
-function showConnect() { document.getElementById('connectScreen').style.display='flex';  document.getElementById('remoteScreen').style.display='none'; }
+// UI
+function showRemote() {
+  document.getElementById('connectScreen').style.display = 'none';
+  document.getElementById('remoteScreen').style.display = 'flex';
+  document.getElementById('dot').className = 'dot on';
+  document.getElementById('statusTxt').textContent = 'Bagli';
+  document.getElementById('discBtn').style.display = 'inline-block';
+}
+function showConnect() {
+  document.getElementById('connectScreen').style.display = 'flex';
+  document.getElementById('remoteScreen').style.display = 'none';
+  document.getElementById('dot').className = 'dot';
+  document.getElementById('statusTxt').textContent = 'Bagli degil';
+  document.getElementById('discBtn').style.display = 'none';
+}
 function setStatus(ok, txt) {
-  document.getElementById('dot').className = 'dot' + (ok?' on':'');
-  document.getElementById('statusTxt').textContent = txt;
+  document.getElementById('dot2').className = 'dot' + (ok ? ' on' : '');
+  document.getElementById('statusTxt2').textContent = txt;
 }
 
-let toastT = null;
+var toastT;
 function toast(msg) {
-  const el = document.getElementById('toast');
+  var el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
-  clearTimeout(toastT);
-  toastT = setTimeout(() => el.classList.remove('show'), 1800);
+  clearTimeout(toastT); toastT = setTimeout(function(){ el.classList.remove('show'); }, 1800);
 }
 
-// Enter key on code input
-document.getElementById('codeInput').addEventListener('keydown', e => { if (e.key==='Enter') doConnect(); });
+document.getElementById('codeInput').addEventListener('keydown', function(e){ if(e.key==='Enter') doConnect(); });
 
-peerInit();
+peerReady();
 </script>
 </body>
 </html>
