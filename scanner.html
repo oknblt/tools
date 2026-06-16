@@ -247,6 +247,7 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
     linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px) 50% 0/1px 100% no-repeat;
   pointer-events:none;
 }
+
 .empty-state.drag-over{
   opacity:1;
   outline:3px dashed #27ae60;
@@ -267,9 +268,9 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 <!-- MAIN PREVIEW -->
 <div class="preview-area" id="previewArea">
   <div class="empty-state" id="emptyState"
-  ondragover="event.preventDefault();this.classList.add('drag-over')"
-  ondragleave="this.classList.remove('drag-over')"
-  ondrop="onDropFiles(event)">
+    ondragover="event.preventDefault();this.classList.add('drag-over')"
+    ondragleave="this.classList.remove('drag-over')"
+    ondrop="onDropFiles(event)">
     <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
     <p style="font-size:16px;font-weight:700;opacity:1;">Welcome</p>
     <p style="font-size:12px;opacity:0.7;margin-top:-8px;">Document Scanner — Bulut Projects</p>
@@ -401,6 +402,15 @@ let redactColor  = 'white'; // 'white' or 'black'
 let tReady  = false;
 const selectedPages = new Set();
 
+/* ═══ DRAG & DROP ═══ */
+function onDropFiles(e){
+  e.preventDefault();
+  document.getElementById('emptyState').classList.remove('drag-over');
+  const dt=e.dataTransfer;
+  if(!dt||!dt.files||!dt.files.length)return;
+  addPages({target:{files:dt.files}});
+}
+
 /* ═══ EXIF + AUTO-ROTATE ═══ */
 function applyOrientation(img, ori, cb){
   const c=document.createElement('canvas'), ctx=c.getContext('2d');
@@ -492,15 +502,6 @@ function showEmpty(){
   document.getElementById('pgBadge').style.display='none';
   document.getElementById('btnPrev').style.display='none';
   document.getElementById('btnNext').style.display='none';
-}
-
-function onDropFiles(e){
-  e.preventDefault();
-  document.getElementById('emptyState').classList.remove('drag-over');
-  const dt=e.dataTransfer;
-  if(!dt||!dt.files||!dt.files.length)return;
-  // Mevcut addPages fonksiyonu bir event bekliyor, sentetik obje oluştur
-  addPages({target:{files:dt.files}});
 }
 
 function addPages(ev){
