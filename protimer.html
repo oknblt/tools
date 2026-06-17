@@ -88,8 +88,9 @@
             padding: 18px 18px 16px;
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 0;
             transition: border-color 0.3s;
+            overflow: visible;
         }
         .panel.running { border-color: rgba(0,212,170,0.3); }
 
@@ -97,6 +98,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-shrink: 0;
+            margin-bottom: 14px;
         }
         .panel-title {
             font-family: 'Rajdhani', sans-serif;
@@ -105,6 +108,78 @@
             letter-spacing: 0.12em;
             text-transform: uppercase;
             color: #ffffff;
+        }
+
+        /* panel toggle (slide) - her zaman görünür */
+        .panel-toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .panel-toggle-label {
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-dim);
+            transition: color 0.2s;
+        }
+        .panel-toggle-label.on { color: var(--green); }
+
+        .panel-slide-toggle {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .panel-slide-track {
+            position: absolute;
+            inset: 0;
+            background: var(--surface-3);
+            border: 1px solid var(--border-bright);
+            border-radius: 12px;
+            transition: all 0.25s ease;
+        }
+        .panel-slide-thumb {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 14px;
+            height: 14px;
+            background: var(--text-dim);
+            border-radius: 50%;
+            transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        }
+        .panel-slide-toggle.active .panel-slide-track {
+            background: rgba(0,212,170,0.2);
+            border-color: var(--green);
+        }
+        .panel-slide-toggle.active .panel-slide-thumb {
+            left: 18px;
+            background: var(--green);
+        }
+
+        /* panel body — içerik kısmı gizlenebilir */
+        .panel-body {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: all 0.3s ease;
+            max-height: 900px;
+            opacity: 1;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+        }
+        .panel-body.collapsed {
+            max-height: 0 !important;
+            opacity: 0;
+            padding: 0;
+            margin: 0;
+            pointer-events: none;
         }
 
         /* ── TIME DISPLAY ── */
@@ -628,78 +703,96 @@
         <button class="settings-btn" id="settingsBtn">⚙</button>
     </div>
 
-    <!-- ── COUNTDOWN PANEL (top) ── -->
+    <!-- ── COUNTDOWN PANEL ── -->
     <div class="panel" id="cdPanel">
         <div class="panel-header">
             <div class="panel-title">⏳ Countdown</div>
-        </div>
-
-        <div class="time-display" id="cdDisplay">00:01:00<span class="tenths">.0</span></div>
-
-        <div class="input-row" id="cdInputRow">
-            <input type="number" id="hrsIn" class="time-input" min="0" max="99" value="00" inputmode="numeric">
-            <span class="input-sep">:</span>
-            <input type="number" id="minIn" class="time-input" min="0" max="59" value="01" inputmode="numeric">
-            <span class="input-sep">:</span>
-            <input type="number" id="secIn" class="time-input" min="0" max="59" value="00" inputmode="numeric">
-        </div>
-
-        <div class="dual-section">
-            <div class="dual-header">
-                <div class="dual-title-row">
-                    <div class="dual-title">Dual Timer</div>
-                    <div class="loop-badge" id="loopBadge">0 loops</div>
-                    <div class="phase-badge work hidden" id="phaseBadge">Work</div>
+            <div class="panel-toggle-wrap">
+                <span class="panel-toggle-label on" id="cdToggleLabel">ON</span>
+                <div class="panel-slide-toggle active" id="cdPanelToggle">
+                    <div class="panel-slide-track"></div>
+                    <div class="panel-slide-thumb"></div>
                 </div>
-                <div class="slide-toggle-wrap">
-                    <span class="toggle-label" id="toggleLabel">OFF</span>
-                    <div class="slide-toggle" id="dualToggle">
-                        <div class="slider-track"></div>
-                        <div class="slider-thumb"></div>
+            </div>
+        </div>
+
+        <div class="panel-body" id="cdPanelBody">
+            <div class="time-display" id="cdDisplay">00:01:00<span class="tenths">.0</span></div>
+
+            <div class="input-row" id="cdInputRow">
+                <input type="number" id="hrsIn" class="time-input" min="0" max="99" value="00" inputmode="numeric">
+                <span class="input-sep">:</span>
+                <input type="number" id="minIn" class="time-input" min="0" max="59" value="01" inputmode="numeric">
+                <span class="input-sep">:</span>
+                <input type="number" id="secIn" class="time-input" min="0" max="59" value="00" inputmode="numeric">
+            </div>
+
+            <div class="dual-section">
+                <div class="dual-header">
+                    <div class="dual-title-row">
+                        <div class="dual-title">Dual Timer</div>
+                        <div class="loop-badge" id="loopBadge">0 loops</div>
+                        <div class="phase-badge work hidden" id="phaseBadge">Work</div>
+                    </div>
+                    <div class="slide-toggle-wrap">
+                        <span class="toggle-label" id="toggleLabel">OFF</span>
+                        <div class="slide-toggle" id="dualToggle">
+                            <div class="slider-track"></div>
+                            <div class="slider-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dual-inputs-row" id="dualInputsRow">
+                    <span class="dual-group-label work">WORK</span>
+                    <div class="dual-input-pair">
+                        <input type="number" id="workMin" class="time-input" min="0" max="99" value="25" inputmode="numeric">
+                        <span class="input-sep">:</span>
+                        <input type="number" id="workSec" class="time-input" min="0" max="59" value="00" inputmode="numeric">
+                    </div>
+                    <span class="dual-group-label rest">REST</span>
+                    <div class="dual-input-pair">
+                        <input type="number" id="restMin" class="time-input" min="0" max="99" value="05" inputmode="numeric">
+                        <span class="input-sep">:</span>
+                        <input type="number" id="restSec" class="time-input" min="0" max="59" value="00" inputmode="numeric">
                     </div>
                 </div>
             </div>
-            <div class="dual-inputs-row" id="dualInputsRow">
-                <span class="dual-group-label work">WORK</span>
-                <div class="dual-input-pair">
-                    <input type="number" id="workMin" class="time-input" min="0" max="99" value="25" inputmode="numeric">
-                    <span class="input-sep">:</span>
-                    <input type="number" id="workSec" class="time-input" min="0" max="59" value="00" inputmode="numeric">
-                </div>
-                <span class="dual-group-label rest">REST</span>
-                <div class="dual-input-pair">
-                    <input type="number" id="restMin" class="time-input" min="0" max="99" value="05" inputmode="numeric">
-                    <span class="input-sep">:</span>
-                    <input type="number" id="restSec" class="time-input" min="0" max="59" value="00" inputmode="numeric">
+
+            <div class="btn-grid three-col">
+                <button class="btn btn-start" id="cdStart">Start</button>
+                <button class="btn btn-stop" id="cdStop">Stop</button>
+                <button class="btn btn-reset" id="cdReset">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── STOPWATCH PANEL ── -->
+    <div class="panel" id="swPanel">
+        <div class="panel-header">
+            <div class="panel-title">⏱ Stopwatch</div>
+            <div class="panel-toggle-wrap">
+                <span class="panel-toggle-label" id="swToggleLabel">OFF</span>
+                <div class="panel-slide-toggle" id="swPanelToggle">
+                    <div class="panel-slide-track"></div>
+                    <div class="panel-slide-thumb"></div>
                 </div>
             </div>
         </div>
 
-        <div class="btn-grid three-col">
-            <button class="btn btn-start" id="cdStart">Start</button>
-            <button class="btn btn-stop" id="cdStop">Stop</button>
-            <button class="btn btn-reset" id="cdReset">Reset</button>
-        </div>
-    </div>
+        <div class="panel-body collapsed" id="swPanelBody">
+            <div class="time-display" id="swDisplay">00:00<span class="tenths">.0</span></div>
 
-    <!-- ── STOPWATCH PANEL (bottom) ── -->
-    <div class="panel" id="swPanel">
-        <div class="panel-header">
-            <div class="panel-title">⏱ Stopwatch</div>
-        </div>
+            <div class="btn-grid">
+                <button class="btn btn-start" id="swStart">Start</button>
+                <button class="btn btn-stop" id="swStop">Stop</button>
+                <button class="btn btn-lap" id="swLap">Lap</button>
+                <button class="btn btn-reset" id="swReset">Reset</button>
+            </div>
 
-        <div class="time-display" id="swDisplay">00:00<span class="tenths">.0</span></div>
-
-        <div class="btn-grid">
-            <button class="btn btn-start" id="swStart">Start</button>
-            <button class="btn btn-stop" id="swStop">Stop</button>
-            <button class="btn btn-lap" id="swLap">Lap</button>
-            <button class="btn btn-reset" id="swReset">Reset</button>
-        </div>
-
-        <div class="laps-panel">
-            <div class="laps-header">Laps</div>
-            <div id="lapsList"><div class="no-laps">— No laps recorded —</div></div>
+            <div class="laps-panel">
+                <div class="laps-header">Laps</div>
+                <div id="lapsList"><div class="no-laps">— No laps recorded —</div></div>
+            </div>
         </div>
     </div>
 </div>
@@ -712,13 +805,12 @@
     let selectedAlarm = 'bells';
     let flashEnabled = true;
 
-    // ── AUDIO CONTEXT (persisted to avoid Safari issues) ──
+    // ── AUDIO CONTEXT ──
     let audioCtx = null;
     function getAudioCtx() {
         if (!audioCtx || audioCtx.state === 'closed') {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        // Resume if suspended (Safari requires user gesture to resume)
         if (audioCtx.state === 'suspended') audioCtx.resume();
         return audioCtx;
     }
@@ -737,6 +829,10 @@
     let dualActive = false;
     let dualPhase = 'work';
     let dualLoopCount = 0;
+
+    // ── PANEL TOGGLE STATE ──
+    let swPanelVisible = false;
+    let cdPanelVisible = true;
 
     // ── ELEMENTS ──
     const swPanel    = document.getElementById('swPanel');
@@ -769,6 +865,12 @@
     const modalClose   = document.getElementById('modalClose');
     const flashToggle  = document.getElementById('flashToggle');
     const alarmOptions = document.getElementById('alarmOptions');
+    const swPanelToggle = document.getElementById('swPanelToggle');
+    const cdPanelToggle = document.getElementById('cdPanelToggle');
+    const swToggleLabel = document.getElementById('swToggleLabel');
+    const cdToggleLabel = document.getElementById('cdToggleLabel');
+    const swPanelBody = document.getElementById('swPanelBody');
+    const cdPanelBody = document.getElementById('cdPanelBody');
 
     // ── FORMAT ──
     function p2(n) { return String(n).padStart(2, '0'); }
@@ -967,13 +1069,10 @@
     }
 
     // ── COUNTDOWN ──
-    // Use a generation counter: each new cdRunPhase call gets a unique gen.
-    // When stop is pressed we increment cdGen, so any pending setTimeout/setInterval
-    // from the old gen will see a mismatch and bail out.
     let cdGen = 0;
 
     function cdStopFn() {
-        cdGen++;                     // invalidate any running phase
+        cdGen++;
         if (cdIntervalId) { clearInterval(cdIntervalId); cdIntervalId = null; }
         cdRunning = false;
         cdPanel.classList.remove('running');
@@ -999,7 +1098,6 @@
                 clearInterval(cdIntervalId); cdIntervalId = null;
                 cdRunning = false; cdPanel.classList.remove('running');
 
-                // Schedule next phase BEFORE notify so Safari audio doesn't block it
                 if (gen === cdGen && dualActive) {
                     dualPhase = dualPhase === 'work' ? 'rest' : 'work';
                     if (dualPhase === 'work') {
@@ -1012,8 +1110,6 @@
                         setTimeout(() => cdRunPhase(nextMs, gen), 400);
                     }
                 }
-
-                // notify after scheduling so audio doesn't block setTimeout
                 notify();
                 return;
             }
@@ -1099,6 +1195,37 @@
         updateCdDisplay();
     });
 
+    // ── PANEL TOGGLES ──
+    function toggleSwPanel(force) {
+        if (swRunning) return;
+        const newState = (force !== undefined) ? force : !swPanelVisible;
+        swPanelVisible = newState;
+        swPanelBody.classList.toggle('collapsed', !swPanelVisible);
+        swPanelToggle.classList.toggle('active', swPanelVisible);
+        swToggleLabel.textContent = swPanelVisible ? 'ON' : 'OFF';
+        swToggleLabel.classList.toggle('on', swPanelVisible);
+    }
+
+    function toggleCdPanel(force) {
+        if (cdRunning) return;
+        const newState = (force !== undefined) ? force : !cdPanelVisible;
+        cdPanelVisible = newState;
+        cdPanelBody.classList.toggle('collapsed', !cdPanelVisible);
+        cdPanelToggle.classList.toggle('active', cdPanelVisible);
+        cdToggleLabel.textContent = cdPanelVisible ? 'ON' : 'OFF';
+        cdToggleLabel.classList.toggle('on', cdPanelVisible);
+    }
+
+    swPanelToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSwPanel();
+    });
+
+    cdPanelToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleCdPanel();
+    });
+
     // ── SETTINGS MODAL ──
     settingsBtn.addEventListener('click', () => modalOverlay.classList.add('open'));
     modalClose.addEventListener('click', () => modalOverlay.classList.remove('open'));
@@ -1119,7 +1246,7 @@
         }
     };
 
-    // Warm up AudioContext on first user interaction
+    // Warm up AudioContext
     document.addEventListener('touchstart', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
     document.addEventListener('click', () => { try { getAudioCtx(); } catch(e){} }, { once: true });
 
@@ -1163,6 +1290,11 @@
     updateSwDisplay();
     updateCdDisplay();
     renderLaps();
+
+    // Başlangıç durumları: Stopwatch gizli, Countdown görünür
+    toggleSwPanel(false);
+    toggleCdPanel(true);
+
 })();
 </script>
 </body>
