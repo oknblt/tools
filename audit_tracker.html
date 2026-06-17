@@ -1207,6 +1207,7 @@ function sortData(data){
     let va=a[sortField]??'',vb=b[sortField]??'';
     const def=COL_DEFS.find(c=>c.key===sortField);
     if(def&&def.type==='date'){va=toISO(va);vb=toISO(vb);}
+    else if(sortField==='reportWriting'){va=va.toString().trim().toUpperCase();vb=vb.toString().trim().toUpperCase();}
     else if(!isNaN(va)&&!isNaN(vb)&&va!==''&&vb!==''){va=Number(va);vb=Number(vb);}
     if(va<vb)return sortAsc?-1:1;
     if(va>vb)return sortAsc?1:-1;
@@ -1296,7 +1297,12 @@ function renderTable(){
         else if(key==='totalDay') val=r[key]?`<span class="badge b-blue">${escHTML(r[key])}</span>`:'—';
         else if(key==='auditType') val=escHTML(r[key]||'—');
         else if(key==='reportNo') val=escHTML(r[key]||'—');
-        else if(key==='reportWriting') val=escHTML(r[key]||'—');
+        else if(key==='reportWriting'){
+          const raw=r[key]||'';
+          const display = raw.toString().trim().toUpperCase() === 'YES' ? 'Yes' : 
+                          raw.toString().trim().toUpperCase() === 'NO' ? 'No' : raw;
+          val=escHTML(display);
+        }
         else if(key==='city') val=istanbulHighlight(r[key]);
         else if(key==='factoryName'){
           const displayName=privacyMode?maskFactory(r[key]):r[key];
@@ -1339,6 +1345,11 @@ function exportExcel(){
   const rows=data.map(r=>visCols.map(k=>{
     if(k==='startDate'||k==='endDate')return fmtDate(r[k]);
     if(k==='factoryName'&&privacyMode)return maskFactory(r[k]);
+    if(k==='reportWriting'){
+      const raw=r[k]||'';
+      return raw.toString().trim().toUpperCase() === 'YES' ? 'Yes' : 
+             raw.toString().trim().toUpperCase() === 'NO' ? 'No' : raw;
+    }
     return r[k]??'';
   }));
 
@@ -1535,6 +1546,11 @@ function exportPDF(){
       let v='';
       if(def.type==='date')v=fmtDate(r[k])||'—';
       else if(k==='factoryName'&&privacyMode)v=maskFactory(r[k])||'—';
+      else if(k==='reportWriting'){
+        const raw=r[k]||'';
+        v=raw.toString().trim().toUpperCase() === 'YES' ? 'Yes' : 
+           raw.toString().trim().toUpperCase() === 'NO' ? 'No' : raw;
+      }
       else v=(r[k]||'').toString().trim()||'—';
       return`<td>${v}</td>`;
     }).join('');
