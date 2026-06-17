@@ -318,7 +318,7 @@ tbody tr.week-stripe.selected{background:#ccd8ef;}
           <div class="field"><label>Report</label>
             <select id="f_reportWriting">
               <option value="">-- Select --</option>
-              <option value="YES">YES</option><option value="NO">NO</option>
+              <option value="YES">Yes</option><option value="NO">No</option>
             </select>
           </div>
           <div class="field"><label>Transportation</label><input type="text" id="f_transportation"/></div>
@@ -1269,10 +1269,7 @@ function renderTable(){
   if(data.length===0){tbody.innerHTML='';noData.style.display='';}
   else{
     noData.style.display='none';
-    const rwBadge=rw=>{
-      const v=(rw||'').toString().trim().toUpperCase();
-      return v==='YES'?'<span class="badge b-yes">YES</span>':v==='NO'?'<span class="badge b-no">NO</span>':(escHTML(rw||'—'));
-    };
+
     // Pre-scan to find factories that appear more than once (duplicates)
     const factoryCount={};
     data.forEach(r=>{const k=(r.factoryName||'').trim().toLowerCase();if(k)factoryCount[k]=(factoryCount[k]||0)+1;});
@@ -1297,9 +1294,9 @@ function renderTable(){
         let val;
         if(def.type==='date') val=fmtDate(r[key]);
         else if(key==='totalDay') val=r[key]?`<span class="badge b-blue">${escHTML(r[key])}</span>`:'—';
-        else if(key==='auditType') val=r[key]?`<span class="badge b-amber">${escHTML(r[key])}</span>`:'—';
+        else if(key==='auditType') val=escHTML(r[key]||'—');
         else if(key==='reportNo') val=escHTML(r[key]||'—');
-        else if(key==='reportWriting') val=rwBadge(r[key]);
+        else if(key==='reportWriting') val=escHTML(r[key]||'—');
         else if(key==='city') val=istanbulHighlight(r[key]);
         else if(key==='factoryName'){
           const displayName=privacyMode?maskFactory(r[key]):r[key];
