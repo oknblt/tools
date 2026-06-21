@@ -2945,10 +2945,13 @@ function switchUpcomingTab(name) {
 
 // Belirli tür için son 3 faturayı döndürür (dönem bazlı, en yeni önce)
 function getLastBillsByType(typeKeyword) {
-  const norm = s => (s || '').trim().toLowerCase();
-  const kw = norm(typeKeyword);
-  const matched = state.bills.filter(b => norm(b.type) === kw || norm(b.type).includes(kw));
-  // Döneme göre azalan sıra (en yeni dönem önce)
+  // Türkçe büyük/küçük harf duyarsız karşılaştırma (İ/i sorunu için localeCompare)
+  const trEq = (a, b) => a.localeCompare(b, 'tr', { sensitivity: 'base' }) === 0;
+  const trInc = (str, kw) => str.toLocaleLowerCase('tr-TR').includes(kw.toLocaleLowerCase('tr-TR'));
+  const matched = state.bills.filter(b => {
+    const t = (b.type || '').trim();
+    return trEq(t, typeKeyword) || trInc(t, typeKeyword);
+  });
   matched.sort((a, b) => periodToNumber(b.month) - periodToNumber(a.month));
   return matched.slice(0, 3);
 }
@@ -2963,25 +2966,33 @@ function buildBillSummaryHTML(bills, title) {
     const overdue = !paid && b.due && b.due < today;
     let statusBadge;
     if (paid) {
-      statusBadge = `<span class="badge" style="background:#d9f0e1;color:#2d7048;font-size:11px;">✓ Ödendi</span>`;
+      statusBadge = `<span class="badge" style="background:#d9f0e1;color:#2d7048;">✓ Ödendi</span>`;
     } else if (overdue) {
-      statusBadge = `<span class="badge" style="background:#fcdede;color:#9c2f2f;font-size:11px;">⚠ Gecikmiş</span>`;
+      statusBadge = `<span class="badge" style="background:#fcdede;color:#9c2f2f;">⚠ Gecikmiş</span>`;
     } else {
-      statusBadge = `<span class="badge bill" style="font-size:11px;">⏳ Ödenmedi</span>`;
+      statusBadge = `<span class="badge bill">⏳ Ödenmedi</span>`;
     }
-    return `<div class="bill-summary-row">
-      <div class="bs-period">${escapeHtml(b.month || '—')}</div>
-      <div class="bs-amount">${fmtTry(b.amount)}</div>
-      <div class="bs-due">${fmtDate(b.due)}</div>
-      <div>${statusBadge}</div>
-      <div class="bs-desc" title="${escapeHtml(b.desc || '')}">${escapeHtml(b.desc || '')}</div>
-    </div>`;
+    return `<tr>
+      <td><span class="badge bill">${escapeHtml(b.type)}</span></td>
+      <td>${escapeHtml(b.month || '—')}</td>
+      <td class="num">${fmtTry(b.amount)}</td>
+      <td>${fmtDate(b.due)}</td>
+      <td>${statusBadge}</td>
+      <td>${escapeHtml(b.desc || '')}</td>
+    </tr>`;
   }).join('');
-  return `<div style="padding:12px 20px;">
-    <div class="bill-summary-card">
-      <div class="bill-summary-card-head">${escapeHtml(title)} — Son 3 Fatura</div>
-      <div style="padding:2px 0;">${rows}</div>
-    </div>
+  return `<div class="table-wrap">
+    <table class="data">
+      <thead><tr>
+        <th>Tür</th>
+        <th>Dönem</th>
+        <th class="num">Tutar (₺)</th>
+        <th>Son Ödeme</th>
+        <th>Durum</th>
+        <th>Açıklama</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
   </div>`;
 }
 
@@ -3056,28 +3067,31 @@ function renderBillSummaryPanels() {
       const overdue = !paid && b.due && b.due < today;
       let statusBadge;
       if (paid) {
-        statusBadge = `<span class="badge" style="background:#d9f0e1;color:#2d7048;font-size:11px;">✓ Ödendi</span>`;
+        statusBadge = `<span class="badge" style="background:#d9f0e1;color:#2d7048;">✓ Ödendi</span>`;
       } else if (overdue) {
-        statusBadge = `<span class="badge" style="background:#fcdede;color:#9c2f2f;font-size:11px;">⚠ Gecikmiş</span>`;
+        statusBadge = `<span class="badge" style="background:#fcdede;color:#9c2f2f;">⚠ Gecikmiş</span>`;
       } else {
-        statusBadge = `<span class="badge bill" style="font-size:11px;">⏳ Ödenmedi</span>`;
+        statusBadge = `<span class="badge bill">⏳ Ödenmedi</span>`;
       }
-      return `<div class="bill-summary-row">
-        <div class="bs-period">${escapeHtml(b.month || '—')}</div>
-        <div class="bs-amount">${fmtTry(b.amount)}</div>
-        <div class="bs-due">${fmtDate(b.due)}</div>
-        <div>${statusBadge}</div>
-        <div class="bs-desc" title="${escapeHtml(b.desc || '')}">${escapeHtml(b.desc || '')}</div>
-      </div>`;
+      return `<tr>
+        <td><span class="badge bill">${escapeHtml(b.type)}</span></td>
+        <td>${escapeHtml(b.month || '—')}</td>
+        <td class="num">${fmtTry(b.amount)}</td>
+        <td>${fmtDate(b.due)}</td>
+        <td>${statusBadge}</td>
+        <td>${escapeHtml(b.desc || '')}</td>
+      </tr>`;
     }).join('');
-    return `<div class="cc-subpanel${active}" data-ccpanel="${escapeHtml(bank)}">
-      <div style="padding:12px 20px;">
-        <div class="bill-summary-card">
-          <div class="bill-summary-card-head">${escapeHtml(bank)} Kredi Kartı — Son 3 Fatura</div>
-          <div style="padding:2px 0;">${rows || '<div class="bill-empty-notice">Fatura yok</div>'}</div>
-        </div>
-      </div>
-    </div>`;
+    const tableHtml = rows
+      ? `<div class="table-wrap"><table class="data">
+          <thead><tr>
+            <th>Tür</th><th>Dönem</th><th class="num">Tutar (₺)</th>
+            <th>Son Ödeme</th><th>Durum</th><th>Açıklama</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>`
+      : `<div class="bill-empty-notice">Fatura yok</div>`;
+    return `<div class="cc-subpanel${active}" data-ccpanel="${escapeHtml(bank)}">${tableHtml}</div>`;
   }).join('');
 }
 
