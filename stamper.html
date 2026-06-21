@@ -292,16 +292,16 @@ input[type=color] {
   padding: 16px;
   overflow: auto;
   background: #080f1e;
+  position: relative;
 }
 #redactCanvas {
   display: block;
-  max-width: 100%;
-  max-height: 100%;
   cursor: crosshair;
   border-radius: 8px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.6);
   touch-action: none;
-  object-fit: contain;
+  transform-origin: top left;
+  flex-shrink: 0;
 }
 
 .redact-bottombar {
@@ -338,6 +338,29 @@ input[type=color] {
 }
 .btn-redact-undo:hover { background: #243f60; }
 .btn-redact-undo svg { width: 13px; height: 13px; }
+
+/* Zoom controls */
+.zoom-controls {
+  display: flex; align-items: center; gap: 4px;
+  background: #0f2040;
+  border: 1px solid #2a4a6a;
+  border-radius: 8px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+.zoom-btn {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: none; background: transparent; color: #a8c8e8;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1;
+}
+.zoom-btn:hover { background: #243f60; color: #fff; }
+.zoom-label {
+  font-size: 11px; color: #7aafd4; min-width: 38px;
+  text-align: center; user-select: none; font-weight: 600;
+}
 
 @media (max-width: 480px) {
   body { padding: 16px 10px; }
@@ -529,6 +552,12 @@ input[type=color] {
       <label>Size</label>
       <input type="range" id="brushSize" min="5" max="120" value="30">
       <span class="redact-size-val" id="brushSizeVal">30</span>
+    </div>
+    <div class="zoom-controls">
+      <button class="zoom-btn" id="zoomOut" title="Zoom out">−</button>
+      <span class="zoom-label" id="zoomLabel">100%</span>
+      <button class="zoom-btn" id="zoomIn" title="Zoom in">+</button>
+      <button class="zoom-btn" id="zoomReset" title="Reset zoom" style="font-size:11px;width:auto;padding:0 5px;">↺</button>
     </div>
     <button class="btn-redact-undo" id="btnUndo">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -758,6 +787,47 @@ let redactState = {
 };
 let _prevX = 0, _prevY = 0, _rectPreviewSnap = null;
 
+// ============================================================
+// ZOOM STATE
+// ============================================================
+let zoomLevel = 1.0;
+const ZOOM_MIN = 0.25, ZOOM_MAX = 5.0, ZOOM_STEP = 0.25;
+
+function applyZoom() {
+  const wrap = document.getElementById('redactCanvasWrap');
+  const cw = redactCanvas.width;
+  const ch = redactCanvas.height;
+  // Scale canvas element by zoom
+  redactCanvas.style.width  = Math.round(cw * zoomLevel) + 'px';
+  redactCanvas.style.height = Math.round(ch * zoomLevel) + 'px';
+  document.getElementById('zoomLabel').textContent = Math.round(zoomLevel * 100) + '%';
+  // Keep canvas centered if smaller than wrap
+  const wrapW = wrap.clientWidth  - 32;
+  const wrapH = wrap.clientHeight - 32;
+  const scaledW = cw * zoomLevel;
+  const scaledH = ch * zoomLevel;
+  wrap.style.justifyContent = scaledW  < wrapW  ? 'center' : 'flex-start';
+  wrap.style.alignItems     = scaledH < wrapH  ? 'center'  : 'flex-start';
+}
+
+function setZoom(level) {
+  zoomLevel = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, level));
+  applyZoom();
+}
+
+document.getElementById('zoomIn').addEventListener('click',    () => setZoom(zoomLevel + ZOOM_STEP));
+document.getElementById('zoomOut').addEventListener('click',   () => setZoom(zoomLevel - ZOOM_STEP));
+document.getElementById('zoomReset').addEventListener('click', () => setZoom(1.0));
+
+// Mouse wheel zoom on the canvas wrap
+document.getElementById('redactCanvasWrap').addEventListener('wheel', e => {
+  if (e.ctrlKey || e.metaKey || e.shiftKey || !redactState.drawing) {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+    setZoom(zoomLevel + delta);
+  }
+}, { passive: false });
+
 function openRedactEditor(idx) {
   const photo = state.photos[idx];
   redactState.photoIdx = idx;
@@ -773,8 +843,24 @@ function openRedactEditor(idx) {
   redactCtx.drawImage(photo.img, 0, 0);
   if (photo.redactCanvas) redactCtx.drawImage(photo.redactCanvas, 0, 0);
 
+  // Reset zoom and fit canvas to screen
+  const wrap = document.getElementById('redactCanvasWrap');
+  const availW = (wrap.clientWidth  || window.innerWidth)  - 32;
+  const availH = (wrap.clientHeight || window.innerHeight * 0.75) - 32;
+  const fitScale = Math.min(1.0, availW / photo.img.naturalWidth, availH / photo.img.naturalHeight);
+  zoomLevel = Math.round(fitScale / ZOOM_STEP) * ZOOM_STEP || ZOOM_STEP;
+  applyZoom();
+
   saveSnap();
   redactModal.classList.add('active');
+  // Re-apply after modal is visible (clientWidth now accurate)
+  requestAnimationFrame(() => {
+    const aw = wrap.clientWidth  - 32;
+    const ah = wrap.clientHeight - 32;
+    const fs = Math.min(1.0, aw / photo.img.naturalWidth, ah / photo.img.naturalHeight);
+    zoomLevel = Math.max(ZOOM_MIN, Math.round(fs / ZOOM_STEP) * ZOOM_STEP);
+    applyZoom();
+  });
 }
 
 function saveSnap() {
@@ -788,7 +874,7 @@ function undoRedact() {
   redactCtx.putImageData(redactState.snapshots[redactState.snapshots.length - 1], 0, 0);
 }
 
-// Convert mouse/touch position to canvas pixel coordinates
+// Convert mouse/touch position to canvas pixel coordinates (accounting for zoom)
 function toCanvasXY(clientX, clientY) {
   const rect = redactCanvas.getBoundingClientRect();
   return {
