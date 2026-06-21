@@ -1024,6 +1024,7 @@
       <div class="upcoming-tab" onclick="switchUpcomingTab('elektrik')" id="upTab_elektrik">⚡ Elektrik</div>
       <div class="upcoming-tab" onclick="switchUpcomingTab('su')" id="upTab_su">💧 Su</div>
       <div class="upcoming-tab" onclick="switchUpcomingTab('dogalgaz')" id="upTab_dogalgaz">🔥 Doğalgaz</div>
+      <div class="upcoming-tab" onclick="switchUpcomingTab('internet')" id="upTab_internet">🌐 İnternet</div>
       <div class="upcoming-tab" onclick="switchUpcomingTab('telefon')" id="upTab_telefon">📱 Telefon</div>
       <div class="upcoming-tab" onclick="switchUpcomingTab('kredikarti')" id="upTab_kredikarti">💳 Kredi Kartları</div>
     </div>
@@ -1049,6 +1050,7 @@
     <div class="upcoming-panel" id="upPanel_elektrik"><div id="billSummary_elektrik"></div></div>
     <div class="upcoming-panel" id="upPanel_su"><div id="billSummary_su"></div></div>
     <div class="upcoming-panel" id="upPanel_dogalgaz"><div id="billSummary_dogalgaz"></div></div>
+    <div class="upcoming-panel" id="upPanel_internet"><div id="billSummary_internet"></div></div>
     <div class="upcoming-panel" id="upPanel_telefon"><div id="billSummary_telefon"></div></div>
     <!-- Kredi Kartı paneli: sub-tabs ile banka bazlı -->
     <div class="upcoming-panel" id="upPanel_kredikarti">
@@ -2996,6 +2998,7 @@ function renderBillSummaryPanels() {
     { key: 'elektrik', label: 'Elektrik', keyword: 'elektrik' },
     { key: 'su',       label: 'Su',       keyword: 'su' },
     { key: 'dogalgaz', label: 'Doğalgaz', keyword: 'doğalgaz' },
+    { key: 'internet', label: 'İnternet',  keyword: 'internet' },
     { key: 'telefon',  label: 'Telefon',  keyword: 'telefon' },
   ];
   simpleTypes.forEach(({ key, label, keyword }) => {
@@ -3039,12 +3042,12 @@ function renderBillSummaryPanels() {
 
   subtabsEl.innerHTML = banks.map(bank =>
     `<div class="cc-subtab${bank === window._activeCCBank ? ' active' : ''}"
-      onclick="switchCCSubtab('${escapeHtml(bank).replace(/'/g,"\\'")}')">
+      data-ccbank="${escapeHtml(bank)}" onclick="switchCCSubtab(this.dataset.ccbank)">
       💳 ${escapeHtml(bank)}
     </div>`
   ).join('');
 
-  subpanelsEl.innerHTML = banks.map(bank => {
+  subpanelsEl.innerHTML = banks.map((bank, idx) => {
     const active = bank === window._activeCCBank ? ' active' : '';
     const bills = bankMap[bank];
     const today = new Date().toISOString().slice(0, 10);
@@ -3067,7 +3070,7 @@ function renderBillSummaryPanels() {
         <div class="bs-desc" title="${escapeHtml(b.desc || '')}">${escapeHtml(b.desc || '')}</div>
       </div>`;
     }).join('');
-    return `<div class="cc-subpanel${active}" id="ccPanel_${escapeHtml(bank).replace(/\s/g,'_')}">
+    return `<div class="cc-subpanel${active}" data-ccpanel="${escapeHtml(bank)}">
       <div style="padding:12px 20px;">
         <div class="bill-summary-card">
           <div class="bill-summary-card-head">${escapeHtml(bank)} Kredi Kartı — Son 3 Fatura</div>
@@ -3080,18 +3083,16 @@ function renderBillSummaryPanels() {
 
 function switchCCSubtab(bank) {
   window._activeCCBank = bank;
-  document.querySelectorAll('.cc-subtab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.cc-subpanel').forEach(p => p.classList.remove('active'));
-  // Sekme bul ve aktif yap
   document.querySelectorAll('.cc-subtab').forEach(t => {
-    if (t.textContent.replace('💳 ','').trim() === bank) t.classList.add('active');
+    t.classList.toggle('active', t.dataset.ccbank === bank);
   });
-  const panelId = 'ccPanel_' + bank.replace(/\s/g,'_');
-  const panel = document.getElementById(panelId);
-  if (panel) panel.classList.add('active');
+  document.querySelectorAll('.cc-subpanel').forEach(p => {
+    p.classList.toggle('active', p.dataset.ccpanel === bank);
+  });
 }
 
-
+/* ===================== Yaklaşan Ödemeler ===================== */
+function renderUpcomingPayments() {
   const tbody = document.getElementById('upcomingTbody');
   if (!tbody) return;
   const today = new Date();
