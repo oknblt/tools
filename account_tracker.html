@@ -841,100 +841,6 @@
     font-size: 16px;
     height: 44px;
   }
-
-  /* Yaklaşan Ödemeler alt kulakçıkları */
-  .upcoming-tabs {
-    display: flex;
-    gap: 2px;
-    border-bottom: 1px solid var(--border);
-    background: #fafbfc;
-    padding: 0 20px;
-    flex-wrap: wrap;
-  }
-  .upcoming-tab {
-    padding: 9px 14px;
-    cursor: pointer;
-    font-size: 12.5px;
-    font-weight: 500;
-    color: var(--text-muted);
-    border-bottom: 2px solid transparent;
-    transition: all .15s;
-    white-space: nowrap;
-  }
-  .upcoming-tab:hover { color: var(--text); }
-  .upcoming-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-  .upcoming-panel { display: none; }
-  .upcoming-panel.active { display: block; }
-
-  /* Fatura özeti kartları */
-  .bill-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    padding: 16px 20px;
-  }
-  .bill-summary-card {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-  }
-  .bill-summary-card-head {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: #fff;
-    padding: 8px 12px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .bill-summary-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto auto auto;
-    gap: 6px;
-    padding: 6px 10px;
-    font-size: 12px;
-    border-bottom: 1px solid #f0f2f5;
-    align-items: center;
-  }
-  .bill-summary-row:last-child { border-bottom: none; }
-  .bill-summary-row .bs-period { color: var(--text-muted); font-size: 11.5px; }
-  .bill-summary-row .bs-amount { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
-  .bill-summary-row .bs-due { color: var(--text-muted); font-size: 11px; }
-  .bill-summary-row .bs-desc { color: var(--text-muted); font-size: 11px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  /* Kredi kartı sub-tabs */
-  .cc-subtabs {
-    display: flex;
-    gap: 2px;
-    border-bottom: 1px solid var(--border);
-    background: #f3f6fa;
-    padding: 0 12px;
-    flex-wrap: wrap;
-  }
-  .cc-subtab {
-    padding: 7px 12px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-muted);
-    border-bottom: 2px solid transparent;
-    transition: all .15s;
-    white-space: nowrap;
-  }
-  .cc-subtab:hover { color: var(--text); }
-  .cc-subtab.active { color: var(--primary); border-bottom-color: var(--primary); }
-  .cc-subpanel { display: none; }
-  .cc-subpanel.active { display: block; }
-
-  .bill-empty-notice {
-    padding: 24px 20px;
-    text-align: center;
-    color: var(--text-muted);
-    font-style: italic;
-    font-size: 13px;
-  }
-
-  @media (max-width: 900px) {
-    .bill-summary-grid { grid-template-columns: 1fr; }
-  }
 </style>
 </style>
 </head>
@@ -1018,44 +924,20 @@
       <h2>⏰ Yaklaşan Ödemeler</h2>
       <span class="session-info">Son 5 günü kalan ve geciken ödemeler</span>
     </div>
-    <!-- Alt kulakçıklar -->
-    <div class="upcoming-tabs">
-      <div class="upcoming-tab active" onclick="switchUpcomingTab('main')" id="upTab_main">📋 Yaklaşan</div>
-      <div class="upcoming-tab" onclick="switchUpcomingTab('elektrik')" id="upTab_elektrik">⚡ Elektrik</div>
-      <div class="upcoming-tab" onclick="switchUpcomingTab('su')" id="upTab_su">💧 Su</div>
-      <div class="upcoming-tab" onclick="switchUpcomingTab('dogalgaz')" id="upTab_dogalgaz">🔥 Doğalgaz</div>
-      <div class="upcoming-tab" onclick="switchUpcomingTab('internet')" id="upTab_internet">🌐 İnternet</div>
-      <div class="upcoming-tab" onclick="switchUpcomingTab('telefon')" id="upTab_telefon">📱 Telefon</div>
-      <div class="upcoming-tab" onclick="switchUpcomingTab('kredikarti')" id="upTab_kredikarti">💳 Kredi Kartları</div>
-    </div>
-    <!-- Ana yaklaşan ödemeler paneli -->
-    <div class="upcoming-panel active" id="upPanel_main">
-      <div class="table-wrap">
-        <table class="data" id="upcomingTable">
-          <thead>
-            <tr>
-              <th>Tür</th>
-              <th>Dönem</th>
-              <th class="num" style="text-align:right;">Tutar (₺)</th>
-              <th>Son Ödeme</th>
-              <th>Durum</th>
-              <th>Açıklama</th>
-            </tr>
-          </thead>
-          <tbody id="upcomingTbody"></tbody>
-        </table>
-      </div>
-    </div>
-    <!-- Fatura türü panelleri (sadece okuma) -->
-    <div class="upcoming-panel" id="upPanel_elektrik"><div id="billSummary_elektrik"></div></div>
-    <div class="upcoming-panel" id="upPanel_su"><div id="billSummary_su"></div></div>
-    <div class="upcoming-panel" id="upPanel_dogalgaz"><div id="billSummary_dogalgaz"></div></div>
-    <div class="upcoming-panel" id="upPanel_internet"><div id="billSummary_internet"></div></div>
-    <div class="upcoming-panel" id="upPanel_telefon"><div id="billSummary_telefon"></div></div>
-    <!-- Kredi Kartı paneli: sub-tabs ile banka bazlı -->
-    <div class="upcoming-panel" id="upPanel_kredikarti">
-      <div class="cc-subtabs" id="ccSubtabs"></div>
-      <div id="ccSubpanels"></div>
+    <div class="table-wrap">
+      <table class="data" id="upcomingTable">
+        <thead>
+          <tr>
+            <th>Tür</th>
+            <th>Dönem</th>
+            <th class="num" style="text-align:right;">Tutar (₺)</th>
+            <th>Son Ödeme</th>
+            <th>Durum</th>
+            <th>Açıklama</th>
+          </tr>
+        </thead>
+        <tbody id="upcomingTbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -2930,181 +2812,6 @@ function renderTotals() {
   document.getElementById('netAssets').textContent = fmtTry(total - debt);
 }
 
-/* ===================== Yaklaşan Ödemeler Alt Sekmeler ===================== */
-let _activeUpTab = 'main';
-
-function switchUpcomingTab(name) {
-  _activeUpTab = name;
-  document.querySelectorAll('.upcoming-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.upcoming-panel').forEach(p => p.classList.remove('active'));
-  const tabEl = document.getElementById('upTab_' + name);
-  const panelEl = document.getElementById('upPanel_' + name);
-  if (tabEl) tabEl.classList.add('active');
-  if (panelEl) panelEl.classList.add('active');
-}
-
-// Belirli tür için son 3 faturayı döndürür (dönem bazlı, en yeni önce)
-function getLastBillsByType(typeKeyword) {
-  // Türkçe büyük/küçük harf duyarsız karşılaştırma (İ/i sorunu için localeCompare)
-  const trEq = (a, b) => a.localeCompare(b, 'tr', { sensitivity: 'base' }) === 0;
-  const trInc = (str, kw) => str.toLocaleLowerCase('tr-TR').includes(kw.toLocaleLowerCase('tr-TR'));
-  const matched = state.bills.filter(b => {
-    const t = (b.type || '').trim();
-    return trEq(t, typeKeyword) || trInc(t, typeKeyword);
-  });
-  matched.sort((a, b) => periodToNumber(b.month) - periodToNumber(a.month));
-  return matched.slice(0, 3);
-}
-
-function buildBillSummaryHTML(bills, title) {
-  if (bills.length === 0) {
-    return `<div class="bill-empty-notice">📭 "${title}" faturası bulunamadı.</div>`;
-  }
-  const today = new Date().toISOString().slice(0, 10);
-  const rows = bills.map(b => {
-    const paid = b.paid === 'Ödendi';
-    const overdue = !paid && b.due && b.due < today;
-    let statusBadge;
-    if (paid) {
-      statusBadge = `<span class="badge" style="background:#d9f0e1;color:#2d7048;">✓ Ödendi</span>`;
-    } else if (overdue) {
-      statusBadge = `<span class="badge" style="background:#fcdede;color:#9c2f2f;">⚠ Gecikmiş</span>`;
-    } else {
-      statusBadge = `<span class="badge bill">⏳ Ödenmedi</span>`;
-    }
-    return `<tr>
-      <td><span class="badge bill">${escapeHtml(b.type)}</span></td>
-      <td>${escapeHtml(b.month || '—')}</td>
-      <td class="num">${fmtTry(b.amount)}</td>
-      <td>${fmtDate(b.due)}</td>
-      <td>${statusBadge}</td>
-      <td>${escapeHtml(b.desc || '')}</td>
-    </tr>`;
-  }).join('');
-  return `<div class="table-wrap">
-    <table class="data">
-      <thead><tr>
-        <th>Tür</th>
-        <th>Dönem</th>
-        <th class="num">Tutar (₺)</th>
-        <th>Son Ödeme</th>
-        <th>Durum</th>
-        <th>Açıklama</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
-}
-
-// Kredi Kartı türünü parse et: "Yapı Kredi Kredi Kartı" → banka adı
-function parseCreditCardBank(typeStr) {
-  const s = (typeStr || '').trim();
-  // " kredi kartı" (case-insensitive) kısmını çıkar
-  return s.replace(/\s*kredi\s*kart[ıi]\s*$/i, '').trim() || s;
-}
-
-function renderBillSummaryPanels() {
-  // Basit türler
-  const simpleTypes = [
-    { key: 'elektrik', label: 'Elektrik', keyword: 'elektrik' },
-    { key: 'su',       label: 'Su',       keyword: 'su' },
-    { key: 'dogalgaz', label: 'Doğalgaz', keyword: 'doğalgaz' },
-    { key: 'internet', label: 'İnternet',  keyword: 'internet' },
-    { key: 'telefon',  label: 'Telefon',  keyword: 'telefon' },
-  ];
-  simpleTypes.forEach(({ key, label, keyword }) => {
-    const el = document.getElementById('billSummary_' + key);
-    if (!el) return;
-    const bills = getLastBillsByType(keyword);
-    el.innerHTML = buildBillSummaryHTML(bills, label);
-  });
-
-  // Kredi Kartı: "... kredi kartı" içeren tüm türleri bul, banka bazlı grupla
-  const norm = s => (s || '').trim().toLowerCase();
-  const ccBills = state.bills.filter(b => norm(b.type).includes('kredi kart'));
-  // Her banka (tür) için son 3 fatura
-  const bankMap = {};
-  ccBills.forEach(b => {
-    const bank = parseCreditCardBank(b.type);
-    if (!bankMap[bank]) bankMap[bank] = [];
-    bankMap[bank].push(b);
-  });
-  // Her bankada döneme göre sırala ve son 3'ü al
-  Object.keys(bankMap).forEach(bank => {
-    bankMap[bank].sort((a, b2) => periodToNumber(b2.month) - periodToNumber(a.month));
-    bankMap[bank] = bankMap[bank].slice(0, 3);
-  });
-
-  const banks = Object.keys(bankMap);
-  const subtabsEl = document.getElementById('ccSubtabs');
-  const subpanelsEl = document.getElementById('ccSubpanels');
-  if (!subtabsEl || !subpanelsEl) return;
-
-  if (banks.length === 0) {
-    subtabsEl.innerHTML = '';
-    subpanelsEl.innerHTML = '<div class="bill-empty-notice">📭 Kredi kartı faturası bulunamadı.</div>';
-    return;
-  }
-
-  // Mevcut aktif sub-tab'ı hatırla (ya da ilk bankayı seç)
-  if (!window._activeCCBank || !banks.includes(window._activeCCBank)) {
-    window._activeCCBank = banks[0];
-  }
-
-  subtabsEl.innerHTML = banks.map(bank =>
-    `<div class="cc-subtab${bank === window._activeCCBank ? ' active' : ''}"
-      data-ccbank="${escapeHtml(bank)}" onclick="switchCCSubtab(this.dataset.ccbank)">
-      💳 ${escapeHtml(bank)}
-    </div>`
-  ).join('');
-
-  subpanelsEl.innerHTML = banks.map((bank, idx) => {
-    const active = bank === window._activeCCBank ? ' active' : '';
-    const bills = bankMap[bank];
-    const today = new Date().toISOString().slice(0, 10);
-    const rows = bills.map(b => {
-      const paid = b.paid === 'Ödendi';
-      const overdue = !paid && b.due && b.due < today;
-      let statusBadge;
-      if (paid) {
-        statusBadge = `<span class="badge" style="background:#d9f0e1;color:#2d7048;">✓ Ödendi</span>`;
-      } else if (overdue) {
-        statusBadge = `<span class="badge" style="background:#fcdede;color:#9c2f2f;">⚠ Gecikmiş</span>`;
-      } else {
-        statusBadge = `<span class="badge bill">⏳ Ödenmedi</span>`;
-      }
-      return `<tr>
-        <td><span class="badge bill">${escapeHtml(b.type)}</span></td>
-        <td>${escapeHtml(b.month || '—')}</td>
-        <td class="num">${fmtTry(b.amount)}</td>
-        <td>${fmtDate(b.due)}</td>
-        <td>${statusBadge}</td>
-        <td>${escapeHtml(b.desc || '')}</td>
-      </tr>`;
-    }).join('');
-    const tableHtml = rows
-      ? `<div class="table-wrap"><table class="data">
-          <thead><tr>
-            <th>Tür</th><th>Dönem</th><th class="num">Tutar (₺)</th>
-            <th>Son Ödeme</th><th>Durum</th><th>Açıklama</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table></div>`
-      : `<div class="bill-empty-notice">Fatura yok</div>`;
-    return `<div class="cc-subpanel${active}" data-ccpanel="${escapeHtml(bank)}">${tableHtml}</div>`;
-  }).join('');
-}
-
-function switchCCSubtab(bank) {
-  window._activeCCBank = bank;
-  document.querySelectorAll('.cc-subtab').forEach(t => {
-    t.classList.toggle('active', t.dataset.ccbank === bank);
-  });
-  document.querySelectorAll('.cc-subpanel').forEach(p => {
-    p.classList.toggle('active', p.dataset.ccpanel === bank);
-  });
-}
-
 /* ===================== Yaklaşan Ödemeler ===================== */
 function renderUpcomingPayments() {
   const tbody = document.getElementById('upcomingTbody');
@@ -3160,7 +2867,6 @@ function renderAll() {
   renderIncomeTable();
   renderBankSummary();
   renderUpcomingPayments();
-  renderBillSummaryPanels();
   renderTotals();
   applyHideMode();
 }
@@ -3283,15 +2989,7 @@ async function saveSessionJSON() {
     accounts: state.accounts,
     bills: state.bills,
     incomes: state.incomes,
-    notes: state.notes,
-    settings: {
-      sort: state.sort,
-      billSort: state.billSort,
-      incSort: state.incSort,
-      accPageSize: state.accPageSize,
-      billPageSize: state.billPageSize,
-      incPageSize: state.incPageSize
-    }
+    notes: state.notes
   };
   // Şifre modalı aç
   const result = await openPasswordModal('save');
@@ -3384,15 +3082,6 @@ function applyLoadedPayload(data, fileName, wasEncrypted) {
   state.accPage = 1;
   state.billPage = 1;
   state.incPage = 1;
-  // Ayarları geri yükle
-  if (data.settings) {
-    if (data.settings.sort) state.sort = data.settings.sort;
-    if (data.settings.billSort) state.billSort = data.settings.billSort;
-    if (data.settings.incSort) state.incSort = data.settings.incSort;
-    if (data.settings.accPageSize) state.accPageSize = data.settings.accPageSize;
-    if (data.settings.billPageSize) state.billPageSize = data.settings.billPageSize;
-    if (data.settings.incPageSize) state.incPageSize = data.settings.incPageSize;
-  }
   setRateInputs();
   cancelEdit();
   renderAll();
