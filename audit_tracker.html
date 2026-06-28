@@ -568,6 +568,8 @@ tbody tr.week-stripe.selected{background:#ccd8ef;}
 </div>
 
 <script>
+if(sessionStorage.getItem('bulut_auth')!=='1') window.location.href='index.html';
+
 // ── COLUMN DEFINITIONS ────────────────────────────────────────
 const COL_DEFS = [
   {key:'startDate',  label:'Start Date',          type:'date', width:130},
