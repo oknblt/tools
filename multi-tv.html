@@ -117,6 +117,9 @@ if(sessionStorage.getItem('bulut_auth')!=='1') window.location.href='index.html'
 // ================================================================
 var TV_CHANNELS = {
   "": { url: "", source: "" },
+
+// 
+
   "Halk TV":      { url: "https://halktv-live.daioncdn.net/halktv/halktv.m3u8", source: "IPTV" },
   "NTV":          { url: "https://dygvideo.dygdigital.com/live/hls/ntv4puhu", source: "IPTV" },
   "Sözcü TV":     { url: "https://trn03.tulix.tv/gt-sozcu-tv/playlist.m3u8", source: "IPTV" },
@@ -140,10 +143,13 @@ var TV_CHANNELS = {
  "Das Erste HD":     { url: "https://derste247livede.akamaized.net/hls/live/658317/daserste_de/master.m3u8", source: "IPTV" },
   "hr fernsehen":      { url: "https://hrhls.akamaized.net/hls/live/2024525/hrhls/index.m3u8", source: "IPTV" },
   "Baku TV":        { url: "https://rtmp.baku.tv/hls/bakutv_1080p.m3u8", source: "IPTV" },
-  "Sky News":     { url: "https://linear417-gb-hls1-prd-ak.cdn.skycdp.com/100e/Content/HLS_001_1080_30/Live/channel(skynews)/index_1080-30.m3u8", source: "IPTV" },
+  "Kanal D Drama":     { url: "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01602-themahqfrance-vivekanald-samsungspain/playlist.m3u8", source: "IPTV" },
   "BBC Earth":    { url: "https://amg00793-amg00793c6-xumo-us-2669.playouts.now.amagi.tv/BBCStudios-BBCEarthA-hls/playlist.m3u8", source: "IPTV" },
   "Wonder":       { url: "https://wonder-samsung-uk.amagi.tv/playlist.m3u8", source: "IPTV" },
+  "National Geographic":       { url: "http://185.102.171.218/NatGeo/index.m3u8", source: "IPTV" },
+  "National Geographic Wild":       { url: "http://185.102.171.218/NatGeoWild/index.m3u8", source: "IPTV" },
   "Mythbusters":       { url: "https://www.euromediacenter.com/mythbusters-4366-4366.m3u8", source: "IPTV" },
+
   "Tele 1":       { url: "https://tele1-live.ercdn.net/tele1/tele1.m3u8", source: "IPTV" },
   "CNN Türk":     { url: "https://dsmartgo-live.ercdn.net/dsmartgo/cnnturk/cnnturk.isml/cnnturk.m3u8", source: "IPTV" },
   "TRT 1":        { url: "https://tv-trt1.medya.trt.com.tr/master.m3u8", source: "TRT" },
@@ -182,12 +188,12 @@ var TV_CHANNELS = {
  "FTV":          { url: "https://edge-fast3.evrideo.tv/bfdbb576-83f7-11f0-9f89-0200170e3e04_1000028043_HLS/manifest.m3u8", source: "IPTV" },
 "Fashion One":  { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2ee6997cb_1/playlist.m3u8", source: "IPTV" },
   "Power TV":     { url: "https://live.artidijitalmedya.com/artidijital_powertv/powertv/playlist.m3u8", source: "IPTV" },
-  "Powertürk":    { url: "https://live.artidijitalmedya.com/artidijital_powerturktv/powerturktv/playlist.m3u8", source: "IPTV" },
+  "Powertürk":    { url: "https://livetv.powerapp.com.tr/powerturkTV/powerturkhd.smil/playlist.m3u8", source: "IPTV" },
   "Powertürk Akustik":    { url: "https://listen.powerapp.com.tr/pturkakustik/akustik.smil/playlist.m3u8", source: "IPTV" },
   "NR1":          { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e17cd6360b_1/playlist.m3u8", source: "IPTV" },
   "NR1 Turk":     { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/playlist.m3u8", source: "IPTV" },
   "NR1 Dance":    { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8", source: "IPTV" },
-  "Deluxe Music":    { url: "https://www.euromediacenter.com/deluxe-music-22-22.m3u8", source: "IPTV" },
+  "Deluxe Music":    { url: "https://sdn-global-live-streaming-packager-cache.3qsdn.com/13456/13456_264_live.m3u8", source: "IPTV" },
   "Latin Zone TV":          { url: "https://cdn.streamingcpanel.com:3784/live/latinzonetvlive.m3u8", source: "IPTV" },
   "Radio Kiss Kiss":        { url: "https://59253971be783.streamlock.net/KKTV01/livestream/playlist.m3u8", source: "IPTV" },
   "Generations TV":        { url: "https://edge18.vedge.infomaniak.com/livecast/ik%3ageneration-tv/chunklist_.m3u8", source: "IPTV" },
@@ -213,11 +219,11 @@ var TV_CHANNELS = {
 };
 
 var CHANNEL_GROUPS = [
-  { label: "Haber", channels: ["Halk TV","NTV","Haber Global", "Habertürk","TV 100","CNN","BBC News","DW TV English","Bloomberg", "France 24 English","France 24 French","BFM TV", "Canal 32", "WDR Fernsehen", "Baden TV", "Alex Berlin", "München TV", "Top Sci-Fi", "Das Erste HD","hr fernsehen", "Baku TV", "Sky News","BBC Earth","Wonder", "Mythbusters", "Tele 1"] },
+  { label: "Haber", channels: ["Halk TV","NTV","Haber Global", "Habertürk","TV 100","CNN","BBC News","DW TV English","Bloomberg", "France 24 English","France 24 French","BFM TV", "Canal 32", "WDR Fernsehen", "Baden TV", "Alex Berlin", "München TV", "Top Sci-Fi", "Das Erste HD","hr fernsehen", "Baku TV", "Kanal D Drama","BBC Earth","Wonder", "Mythbusters", "National Geographic", "National Geographic Wild", "Tele 1"] },
   { label: "TRT", channels: ["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yildiz","TRT Belgesel","TRT Muzik", "TRT Genç", "TRT World"] },
   { label: "Ulusal", channels: ["NOW","Kanal D","Show TV","Star TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","KTV", "Kanal D Romanya","Beyaz TV", "A2"] },
   { label: "Spor", channels: ["HT Spor","A Spor", "beIN SPORTS XTRA","Fifa", "Redbull TV","MTRSPT 1","Motorvision"] },
-  { label: "Eglence", channels: ["FTV","Fashion One", "Power TV","Powerturk","Powertürk Akustik", "NR1","NR1 Turk","NR1 Dance", "Deluxe Music" ,"Latin Zone TV", "Radio Kiss Kiss", "Generations TV","DBM TV", "Beach TV", "Kepez TV","Avia Stream","Fire","Summer", "Kamintv", "Relaxon","Dozhditv","Terrasatv", "Nature", "Winter", "SvetVokrugtv", "GornayaDolina", "Komnata", "Beach TV CSULB","Beach TV Panama City" ] }
+  { label: "Eglence", channels: ["FTV","Fashion One", "Power TV","Powertürk","Powertürk Akustik", "NR1","NR1 Turk","NR1 Dance", "Deluxe Music" ,"Latin Zone TV", "Radio Kiss Kiss", "Generations TV","DBM TV", "Beach TV", "Kepez TV","Avia Stream","Fire","Summer", "Kamintv", "Relaxon","Dozhditv","Terrasatv", "Nature", "Winter", "SvetVokrugtv", "GornayaDolina", "Komnata", "Beach TV CSULB","Beach TV Panama City" ] }
 ];
 
 // ================================================================
