@@ -119,6 +119,7 @@ textarea:focus{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-glo
 </div>
 
 <script>
+if(sessionStorage.getItem('bulut_auth')!=='1') window.location.href='index.html';
 const inp = document.getElementById('inp');
 const out = document.getElementById('out');
 const themeIcon = document.getElementById('themeIcon');
