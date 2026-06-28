@@ -186,6 +186,7 @@
             margin-top: 4px;
         }
 
+
         /* ============ CONTENT ============ */
         .content {
             padding: 22px 20px 24px;
@@ -949,8 +950,12 @@
     <!-- LOGIN BUTTON -->
     <button class="login-btn" id="loginFloatingBtn" title="Admin Login">🔐</button>
 
+<script>
+if(sessionStorage.getItem('bulut_auth')!=='1') window.location.href='index.html';
+</script>
     <script src="words.js"></script>
     <script src="grammar-notes.js"></script>
     <script src="app.js"></script>
+
 </body>
 </html>
