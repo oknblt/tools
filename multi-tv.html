@@ -61,6 +61,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .drum-item{height:36px;display:flex;align-items:center;justify-content:center;font-size:11.5px;color:rgba(255,255,255,.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;z-index:1}
 .drum-item.active{color:#fff;font-size:12.5px;font-weight:600}
 .drum-item.near{color:rgba(255,255,255,.6)}
+/* Volume control */
+.vol-control{display:flex;align-items:center;gap:6px;flex-shrink:0;padding-left:2px}
+.vol-ico{font-size:16px;cursor:pointer;width:22px;text-align:center;line-height:1;-webkit-tap-highlight-color:transparent;user-select:none}
+.vol-slider{-webkit-appearance:none;appearance:none;width:74px;height:4px;border-radius:3px;outline:none;cursor:pointer;background:linear-gradient(to right,#667eea 0%,#667eea var(--vol,100%),rgba(255,255,255,.18) var(--vol,100%),rgba(255,255,255,.18) 100%)}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #667eea;cursor:pointer;box-shadow:0 0 4px rgba(0,0,0,.4)}
+.vol-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #667eea;cursor:pointer;box-shadow:0 0 4px rgba(0,0,0,.4)}
 /* Peer panel */
 .peer-panel{position:fixed;bottom:70px;right:12px;background:rgba(15,15,25,.95);border:1px solid rgba(76,175,80,.5);border-radius:14px;padding:10px 16px;text-align:center;z-index:998;backdrop-filter:blur(10px);cursor:pointer;transition:all .2s;min-width:110px}
 .peer-panel:hover{transform:scale(1.02)}
@@ -97,6 +103,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
   <button class="nav-btn" onclick="navChannel('next')">&#8594;</button>
   <button class="nav-btn nav-edge" onclick="navChannel('last')">&#8677;</button>
+  <div class="vol-control" id="volControl">
+    <span class="vol-ico" id="volIco" onclick="toggleVolMute()" title="Sesi kapat/ac">&#128266;</span>
+    <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="100" oninput="onVolInput(this.value)" title="Ses seviyesi">
+  </div>
 </div>
 <div id="voiceToast"></div>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
@@ -148,7 +158,7 @@ var TV_CHANNELS = {
   "NOW":          { url: "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv.m3u8", source: "IPTV" },
   "Kanal D":      { url: "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/kanald/kanald.m3u8", source: "IPTV" },
   "Show TV":      { url: "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showtv/showtv.m3u8", source: "IPTV" },
-  "Star TV":      { url: "http://dygvideo.dygdigital.com/live/hls/startv4puhu?m3u8", source: "IPTV" },
+  "Star TV":      { url: "https://dygvideo.dygdigital.com/live/hls/startv4puhu?m3u8", source: "IPTV" },
   "ATV":          { url: "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_480p.m3u8", source: "IPTV" },
   "CNBC-e":       { url: "https://hnpsechtsc.turknet.ercdn.net/xpnvudnlsv/cnbc-e/cnbc-e.m3u8", source: "IPTV" },
   "TV8":          { url: "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8/tv8.m3u8", source: "IPTV" },
@@ -224,10 +234,36 @@ var drumChannels = [], drumIdx = 0, drumDragging = false;
 var drumStartY = 0, drumStartOffset = 0, drumOffset = 0, drumCommitTimer = null;
 var recognition = null, voiceActive = false, toastTimer = null;
 var SEEK_STEP = 10;
+var currentVolume = 100, lastVolume = 100;
 
 // ================================================================
 // HELPERS
 // ================================================================
+// --- HTTPS / mixed-content fix -----------------------------------
+// When this page is served over HTTPS (e.g. GitHub Pages), the browser
+// BLOCKS any plain "http://" stream ("mixed content"), which is why some
+// channels work when you open the file locally but not on GitHub.
+// We route those through an HTTPS proxy so the browser only sees HTTPS.
+// (Same trick already used for "Bloomberg HT".)
+//
+// If a stream still won't play, the proxy below is the thing to change.
+// It must be a path-style proxy: PROXY + "http://original/stream.m3u8"
+var STREAM_PROXY = 'https://tatatam.trt1sultanfatihss.workers.dev/';
+// Channels to force through the proxy even if they are already https
+// (use this for streams blocked by CORS/region rather than mixed content):
+var FORCE_PROXY = ['Summer'];
+
+function resolveStreamUrl(url, name) {
+  if (!url) return url;
+  // Only rewrite when WE are on https; locally everything stays as-is
+  // so the original (working) behaviour is preserved.
+  if (location.protocol !== 'https:') return url;
+  var needsProxy = /^http:\/\//i.test(url) ||
+                   (name && FORCE_PROXY.indexOf(name) !== -1);
+  if (needsProxy && url.indexOf(STREAM_PROXY) !== 0) return STREAM_PROXY + url;
+  return url;
+}
+
 function getFlatChannelList() {
   var list = [];
   for (var gi = 0; gi < CHANNEL_GROUPS.length; gi++) {
@@ -369,11 +405,13 @@ function changeChannel(boxIndex, channelName) {
       '<button onclick="changeChannel(' + boxIndex + ',\'' + channelName + '\')">&#128260; Tekrar dene</button></div>');
   };
 
+  var streamUrl = resolveStreamUrl(channel.url, channelName);
+
   if (window.Hls && Hls.isSupported()) {
     var hls = new Hls({ enableWorker: true, lowLatencyMode: false,
       manifestLoadingTimeOut: 12000, manifestLoadingMaxRetry: 2,
       fragLoadingTimeOut: 20000, fragLoadingMaxRetry: 3 });
-    hls.loadSource(channel.url);
+    hls.loadSource(streamUrl);
     hls.attachMedia(video);
     hls.on(Hls.Events.MANIFEST_PARSED, onReady);
     hls.on(Hls.Events.ERROR, function(e, data) {
@@ -384,7 +422,7 @@ function changeChannel(boxIndex, channelName) {
     });
     box.hls = hls;
   } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = channel.url;
+    video.src = streamUrl;
     video.addEventListener('loadedmetadata', onReady, { once: true });
     video.addEventListener('error', function(){ onError('Video yuklenemedi'); }, { once: true });
   } else {
@@ -394,6 +432,7 @@ function changeChannel(boxIndex, channelName) {
 
   box.screen.appendChild(video);
   box.video = video;
+  video.volume = currentVolume / 100;
   box.currentChannel = channelName;
   if (soloIndex === -1 && !userMutedAll) soloIndex = boxIndex;
   updateChannelNav();
@@ -581,6 +620,51 @@ function navChannel(direction) {
 }
 
 // ================================================================
+// VOLUME CONTROL
+// ================================================================
+function volTargetIndex() {
+  if (soloIndex >= 0 && tvBoxes[soloIndex]) return soloIndex;
+  return 0;
+}
+
+function updateVolIcon(v) {
+  var ico = document.getElementById('volIco');
+  if (!ico) return;
+  if (v <= 0) ico.innerHTML = '&#128263;';          // muted
+  else if (v < 34) ico.innerHTML = '&#128264;';      // low
+  else if (v < 67) ico.innerHTML = '&#128265;';      // medium
+  else ico.innerHTML = '&#128266;';                  // high
+}
+
+function setVolume(v, fromSlider) {
+  v = Math.max(0, Math.min(100, Math.round(v)));
+  currentVolume = v;
+  if (v > 0) lastVolume = v;
+  var slider = document.getElementById('volSlider');
+  if (slider) {
+    if (!fromSlider) slider.value = v;
+    slider.style.setProperty('--vol', v + '%');
+  }
+  var i = volTargetIndex();
+  var box = tvBoxes[i];
+  if (box && box.video) {
+    box.video.volume = v / 100;
+    if (v > 0) {           // moving the slider up also un-mutes that box
+      soloIndex = i; userMutedAll = false;
+      updateMuteButtons();
+    }
+  }
+  updateVolIcon(v);
+}
+
+function onVolInput(val) { setVolume(parseInt(val, 10), true); }
+
+function toggleVolMute() {
+  if (currentVolume > 0) setVolume(0);
+  else setVolume(lastVolume || 100);
+}
+
+// ================================================================
 // PEER-TO-PEER REMOTE (PeerJS — no server needed)
 // ================================================================
 function peerInit() {
@@ -661,15 +745,13 @@ function handleRemoteCommand(cmd) {
       if (soloIndex === -1) { soloIndex = 0; userMutedAll = false; updateMuteButtons(); }
       showToast('\uD83D\uDD0A Ses acildi'); break;
     case 'vol_up':
-      if (tvBoxes[0] && tvBoxes[0].video) {
-        tvBoxes[0].video.volume = Math.min(1, (tvBoxes[0].video.volume || 1) + 0.1);
-        showToast('\uD83D\uDD0A ' + Math.round(tvBoxes[0].video.volume * 100) + '%');
-      } break;
+      setVolume(currentVolume + 10);
+      showToast('\uD83D\uDD0A ' + currentVolume + '%');
+      break;
     case 'vol_down':
-      if (tvBoxes[0] && tvBoxes[0].video) {
-        tvBoxes[0].video.volume = Math.max(0, (tvBoxes[0].video.volume || 1) - 0.1);
-        showToast('\uD83D\uDD09 ' + Math.round(tvBoxes[0].video.volume * 100) + '%');
-      } break;
+      setVolume(currentVolume - 10);
+      showToast('\uD83D\uDD09 ' + currentVolume + '%');
+      break;
     case 'pause':
       tvBoxes.forEach(function(b){ if (b.video) b.video.pause(); });
       showToast('\u23F8 Durduruldu'); break;
