@@ -196,10 +196,39 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 }
 .file-preview .ext.pdf{background:#c0392b;}
 .file-preview .ext.doc,.file-preview .ext.docx{background:#2d5fb3;}
+.file-preview .ext.jpg,.file-preview .ext.jpeg,.file-preview .ext.png{background:#7b4fc0;}
+.file-preview .ext.xls,.file-preview .ext.xlsx,.file-preview .ext.xlsm{background:#1e7d46;}
 .file-preview .fname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
 .file-preview .fpath{font-size:11px;color:var(--text-muted);font-style:italic;}
 
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+
+/* ===================== DRAG & DROP ZONE ===================== */
+.dropzone{
+    border:2px dashed var(--border);
+    border-radius:var(--radius-sm);
+    background:var(--surface-2);
+    padding:18px 16px;
+    text-align:center;
+    color:var(--text-dim);
+    font-size:14px;
+    cursor:pointer;
+    transition:border-color .2s, background .2s, color .2s, transform .15s;
+    margin-bottom:12px;
+}
+.dropzone:hover{border-color:var(--navy-400);background:var(--surface-3);}
+.dropzone .dz-icon{font-size:24px;display:block;margin-bottom:6px;}
+.dropzone.dragover{
+    border-color:var(--accent);
+    background:rgba(107,164,255,.14);
+    color:var(--text);
+    transform:scale(1.005);
+}
+.dropzone .dz-files{
+    margin-top:8px;font-size:12px;color:var(--text-muted);
+    word-break:break-word;line-height:1.4;
+}
+.dropzone.dragover .dz-files{color:var(--accent-soft);}
 
 /* ===================== EDIT PDF ===================== */
 .edit-toolbar{
@@ -212,34 +241,47 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 #editorContainer{display:none;}
 
 .editor-grid{
-    display:grid;
-    grid-template-columns:220px 1fr;
+    display:flex;
+    flex-direction:column;
     gap:16px;
+}
+.edit-area{order:1;min-width:0;}
+.page-strip-wrap{order:2;}
+.page-strip-title{
+    margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:1px;
+    color:var(--text-dim);
 }
 .page-list{
     background:var(--surface-2);
     border:1px solid var(--border-soft);
     border-radius:var(--radius-sm);
     padding:12px;
-    max-height:75vh;overflow-y:auto;
+    display:flex;flex-direction:row;
+    overflow-x:auto;overflow-y:hidden;
+    gap:12px;
 }
-.page-list h4{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);}
 .page-thumb{
-    margin-bottom:10px;cursor:pointer;
-    border:2px solid transparent;border-radius:6px;
+    flex:0 0 112px;width:112px;
+    cursor:pointer;
+    border:3px solid transparent;border-radius:6px;
     overflow:hidden;position:relative;
-    background:#fff;transition:border-color .15s;
+    background:#fff;transition:border-color .15s, box-shadow .15s, transform .15s;
 }
 .page-thumb:hover{border-color:var(--navy-400);}
-.page-thumb.selected{border-color:var(--accent);box-shadow:0 0 0 3px rgba(107,164,255,.2);}
+.page-thumb.selected{
+    border-color:var(--accent);
+    box-shadow:0 0 0 4px rgba(107,164,255,.45), 0 6px 18px rgba(107,164,255,.4);
+    transform:translateY(-3px);
+}
 .page-thumb canvas{width:100%;height:auto;display:block;}
 .page-info{
     font-size:11px;text-align:center;
     background:rgba(10,22,40,.85);color:var(--text);
     padding:3px;
 }
-
-.edit-area{min-width:0;}
+.page-thumb.selected .page-info{
+    background:var(--accent);color:#06121f;font-weight:700;
+}
 
 .canvas-wrap{
     position:relative;
@@ -369,20 +411,14 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     .tab-btn span.tab-icon{font-size:18px;}
 
     .editor-grid{
-        grid-template-columns:1fr;
         gap:12px;
     }
     .page-list{
-        order:2;
-        max-height:none;
-        display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;
         gap:8px;padding:10px;
     }
-    .page-list h4{display:none;}
     .page-thumb{
-        margin-bottom:0;flex:0 0 90px;width:90px;
+        flex:0 0 90px;width:90px;
     }
-    .edit-area{order:1;}
 
     .edit-toolbar{
         position:sticky;top:0;z-index:5;
@@ -450,8 +486,8 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 <!-- ============ COLLECT ============ -->
 <div id="collect" class="tabcontent visible">
     <div class="card">
-        <h2>Collect PDF & Word files</h2>
-        <p class="lead">Pick a main folder. Every PDF, DOC and DOCX inside its subfolders will be listed for review, then copied into a new <strong>Combined</strong> folder.</p>
+        <h2>Collect PDF, Word, Excel &amp; image files</h2>
+        <p class="lead">Pick a main folder. Every PDF, DOC, DOCX, XLS, XLSX, XLSM, JPG, JPEG and PNG inside its subfolders will be listed for review, then copied into a new <strong>Combined</strong> folder.</p>
         <div class="row">
             <button id="selectDirBtn" class="btn">📂 Select main folder</button>
             <button id="confirmCollectBtn" class="btn success" style="display:none;">✔ Copy these files</button>
@@ -471,6 +507,11 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     <div class="card">
         <h2>Merge multiple PDFs into one</h2>
         <p class="lead">Pick the PDFs you want to combine — they'll be merged in the order shown.</p>
+        <div class="dropzone" id="mergeDrop">
+            <span class="dz-icon">🔗</span>
+            Drag &amp; drop PDFs here, or click to browse
+            <div class="dz-files" id="mergeDropFiles">No files selected</div>
+        </div>
         <div class="row">
             <input type="file" id="pdfFiles" multiple accept="application/pdf" />
             <button id="mergeBtn" class="btn">🔗 Merge & download</button>
@@ -485,6 +526,11 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     <div class="card">
         <h2>Edit a PDF</h2>
         <p class="lead">Rotate, delete, reorder pages. Add text or signatures. Redact sensitive areas.</p>
+        <div class="dropzone" id="editDrop">
+            <span class="dz-icon">✏️</span>
+            Drag &amp; drop a PDF here, or click to browse
+            <div class="dz-files" id="editDropFiles">No file selected</div>
+        </div>
         <div class="row">
             <input type="file" id="editFileInput" accept="application/pdf" />
             <button id="loadPdfBtn" class="btn">Load PDF</button>
@@ -503,7 +549,6 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
             </div>
 
             <div class="editor-grid">
-                <div class="page-list" id="pageList"></div>
                 <div class="edit-area">
                     <div class="canvas-wrap" id="canvasWrap">
                         <div class="canvas-stage" id="canvasStage">
@@ -545,6 +590,10 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                         <button id="cancelAnnotation" class="btn danger">✘ Cancel</button>
                     </div>
                 </div>
+                <div class="page-strip-wrap">
+                    <h4 class="page-strip-title">Pages — drag to reorder</h4>
+                    <div class="page-list" id="pageList"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -555,6 +604,11 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     <div class="card">
         <h2>Compress a PDF</h2>
         <p class="lead">Reduce PDF size by re-encoding embedded images at a lower resolution and quality. Text stays sharp; large photos get smaller.</p>
+        <div class="dropzone" id="compressDrop">
+            <span class="dz-icon">🗜️</span>
+            Drag &amp; drop a PDF here, or click to browse
+            <div class="dz-files" id="compressDropFiles">No file selected</div>
+        </div>
         <div class="row">
             <input type="file" id="compressFileInput" accept="application/pdf" />
         </div>
@@ -644,7 +698,7 @@ function renderFilePreview(files) {
     if (!files.length) {
         const empty = document.createElement('div');
         empty.className = 'preview-empty';
-        empty.textContent = 'No PDF or Word files in this folder.';
+        empty.textContent = 'No matching files (PDF, Word, Excel or images) in this folder.';
         filePreviewEl.appendChild(empty);
         return;
     }
@@ -688,7 +742,7 @@ selectDirBtnEl.addEventListener('click', async () => {
         const targetFiles = allFiles.filter(f => extensions.includes(f.extension.toLowerCase()));
         renderFilePreview(targetFiles);
         if (!targetFiles.length) {
-            status.textContent = 'No PDF or Word files found in this folder.';
+            status.textContent = 'No matching files (PDF, Word, Excel or images) found in this folder.';
             status.className='status err';
             return;
         }
@@ -883,7 +937,7 @@ document.getElementById('loadPdfBtn').addEventListener('click', async () => {
 // ---- thumbnails ----
 function renderPageList() {
     const pageList = document.getElementById('pageList');
-    pageList.innerHTML = '<h4>Pages</h4>';
+    pageList.innerHTML = '';
     for (let i = 0; i < pages.length; i++) {
         const p = pages[i];
         const thumbDiv = document.createElement('div');
@@ -1866,6 +1920,81 @@ document.getElementById('compressBtn').addEventListener('click', async () => {
         console.error(e);
     }
 });
+
+// =============================================================
+//  5. DRAG & DROP (Merge · Edit · Compress)
+// =============================================================
+const isPdfFile = f => f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+
+// Assign a File array onto a real <input type=file> via DataTransfer.
+function assignFiles(inputEl, fileArray, keepExisting){
+    const dt = new DataTransfer();
+    if (keepExisting) Array.from(inputEl.files).forEach(f => dt.items.add(f));
+    fileArray.forEach(f => dt.items.add(f));
+    inputEl.files = dt.files;
+}
+
+function describeFiles(inputEl, emptyMsg){
+    const fs = inputEl.files;
+    if (!fs || !fs.length) return emptyMsg;
+    if (fs.length === 1) return fs[0].name;
+    return `${fs.length} files selected: ` + Array.from(fs).map(f => f.name).join(', ');
+}
+
+function setupDropzone(zoneEl, inputEl, opts){
+    opts = opts || {};
+    const multiple = !!opts.multiple;
+    const accept   = opts.accept || (() => true);
+    const labelEl  = opts.labelEl || null;
+    const emptyMsg = opts.emptyMsg || 'No file selected';
+    const onDrop   = opts.onDrop || null;
+
+    function refreshLabel(){ if (labelEl) labelEl.textContent = describeFiles(inputEl, emptyMsg); }
+
+    ['dragenter','dragover'].forEach(ev =>
+        zoneEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zoneEl.classList.add('dragover'); })
+    );
+    ['dragleave','dragend'].forEach(ev =>
+        zoneEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); zoneEl.classList.remove('dragover'); })
+    );
+    zoneEl.addEventListener('drop', e => {
+        e.preventDefault(); e.stopPropagation();
+        zoneEl.classList.remove('dragover');
+        let files = Array.from(e.dataTransfer.files || []).filter(accept);
+        if (!files.length) return;
+        if (!multiple) files = [files[0]];
+        assignFiles(inputEl, files, multiple);
+        refreshLabel();
+        if (onDrop) onDrop(inputEl.files);
+    });
+    // Click the zone to open the native picker.
+    zoneEl.addEventListener('click', () => inputEl.click());
+    // Keep the label in sync when the user picks via the input itself.
+    inputEl.addEventListener('change', refreshLabel);
+    refreshLabel();
+}
+
+// Prevent the browser from navigating away when a file is dropped outside a zone.
+['dragover','drop'].forEach(ev =>
+    window.addEventListener(ev, e => { e.preventDefault(); }, false)
+);
+
+setupDropzone(
+    document.getElementById('mergeDrop'),
+    document.getElementById('pdfFiles'),
+    { multiple:true, accept:isPdfFile, labelEl:document.getElementById('mergeDropFiles'), emptyMsg:'No files selected' }
+);
+setupDropzone(
+    document.getElementById('editDrop'),
+    document.getElementById('editFileInput'),
+    { multiple:false, accept:isPdfFile, labelEl:document.getElementById('editDropFiles'), emptyMsg:'No file selected',
+      onDrop:() => document.getElementById('loadPdfBtn').click() }
+);
+setupDropzone(
+    document.getElementById('compressDrop'),
+    document.getElementById('compressFileInput'),
+    { multiple:false, accept:isPdfFile, labelEl:document.getElementById('compressDropFiles'), emptyMsg:'No file selected' }
+);
 </script>
 </body>
 </html>
