@@ -65,18 +65,18 @@ header{
 
 /* Tabs */
 .tabs{
-    display:flex;gap:6px;background:var(--surface);
-    padding:5px;border-radius:var(--radius);
+    display:flex;gap:5px;background:var(--surface);
+    padding:4px;border-radius:var(--radius);
     border:1px solid var(--border-soft);
-    margin-bottom:14px;overflow-x:auto;scrollbar-width:none;
+    margin-bottom:12px;overflow-x:auto;scrollbar-width:none;
 }
 .tabs::-webkit-scrollbar{display:none;}
 .tab-btn{
     flex:1 1 auto;min-width:max-content;
     background:transparent;border:none;color:var(--text-dim);
-    padding:11px 16px;border-radius:9px;cursor:pointer;
-    font-size:14px;font-weight:500;font-family:inherit;
-    transition:all .2s;display:flex;align-items:center;gap:8px;
+    padding:7px 13px;border-radius:8px;cursor:pointer;
+    font-size:13px;font-weight:500;font-family:inherit;
+    transition:all .2s;display:flex;align-items:center;gap:7px;
     justify-content:center;white-space:nowrap;
 }
 .tab-btn:hover{color:var(--text);background:rgba(255,255,255,.03);}
@@ -208,16 +208,16 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     border:2px dashed var(--border);
     border-radius:var(--radius-sm);
     background:var(--surface-2);
-    padding:18px 16px;
+    padding:13px 16px;
     text-align:center;
     color:var(--text-dim);
-    font-size:14px;
+    font-size:13.5px;
     cursor:pointer;
     transition:border-color .2s, background .2s, color .2s, transform .15s;
     margin-bottom:12px;
 }
 .dropzone:hover{border-color:var(--navy-400);background:var(--surface-3);}
-.dropzone .dz-icon{font-size:24px;display:block;margin-bottom:6px;}
+.dropzone .dz-icon{font-size:20px;display:block;margin-bottom:3px;}
 .dropzone.dragover{
     border-color:var(--accent);
     background:rgba(107,164,255,.14);
@@ -226,9 +226,19 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 }
 .dropzone .dz-text{
     display:inline-block;margin-top:2px;
-    word-break:break-word;line-height:1.4;
+    word-break:break-word;line-height:1.35;
 }
 .dropzone.dragover .dz-text{color:var(--accent-soft);}
+
+/* Dropzone + action button side by side (keeps the card short) */
+.dz-row{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch;margin-bottom:12px;}
+.dz-row .dropzone{flex:1 1 260px;margin-bottom:0;display:flex;flex-direction:column;justify-content:center;}
+.dz-row .dz-actions{display:flex;flex-direction:column;justify-content:center;gap:8px;flex:0 0 auto;}
+.dz-row .dz-actions .btn{white-space:nowrap;}
+@media (max-width:560px){
+    .dz-row .dz-actions{flex:1 1 100%;}
+    .dz-row .dz-actions .btn{width:100%;}
+}
 
 /* ===================== EDIT PDF ===================== */
 .edit-toolbar{
@@ -289,7 +299,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     border:1px solid var(--border-soft);
     border-radius:var(--radius-sm);
     overflow:auto;
-    max-height:74vh;
+    max-height:78vh;
     margin-bottom:12px;
     user-select:none;
     -webkit-user-select:none;
@@ -520,13 +530,15 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     <div class="card">
         <h2>Merge multiple PDFs into one</h2>
         <p class="lead">Pick the PDFs you want to combine — they'll be merged in the order shown.</p>
-        <div class="dropzone" id="mergeDrop">
-            <span class="dz-icon">🔗</span>
-            <span class="dz-text" id="mergeDropText">Drag &amp; drop PDFs here, or click to browse</span>
-        </div>
-        <input type="file" id="pdfFiles" multiple accept="application/pdf" style="display:none;" />
-        <div class="row">
-            <button id="mergeBtn" class="btn">🔗 Merge & download</button>
+        <div class="dz-row">
+            <div class="dropzone" id="mergeDrop">
+                <span class="dz-icon">🔗</span>
+                <span class="dz-text" id="mergeDropText">Drag &amp; drop PDFs here, or click to browse</span>
+            </div>
+            <input type="file" id="pdfFiles" multiple accept="application/pdf" style="display:none;" />
+            <div class="dz-actions">
+                <button id="mergeBtn" class="btn">🔗 Merge & download</button>
+            </div>
         </div>
         <div id="mergeStatus" class="status"></div>
         <div class="note">Tip: select the PDFs from the <em>Combined</em> folder you generated in the Collect tab.</div>
@@ -538,13 +550,15 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     <div class="card">
         <h2>Edit a PDF</h2>
         <p class="lead">Rotate, delete, reorder pages. Add text or signatures. Redact sensitive areas.</p>
-        <div class="dropzone" id="editDrop">
-            <span class="dz-icon">✏️</span>
-            <span class="dz-text" id="editDropText">Drag &amp; drop a PDF here, or click to browse</span>
-        </div>
-        <input type="file" id="editFileInput" accept="application/pdf" style="display:none;" />
-        <div class="row">
-            <button id="loadPdfBtn" class="btn">Load PDF</button>
+        <div class="dz-row">
+            <div class="dropzone" id="editDrop">
+                <span class="dz-icon">✏️</span>
+                <span class="dz-text" id="editDropText">Drag &amp; drop a PDF here, or click to browse</span>
+            </div>
+            <input type="file" id="editFileInput" accept="application/pdf" style="display:none;" />
+            <div class="dz-actions">
+                <button id="loadPdfBtn" class="btn">Load PDF</button>
+            </div>
         </div>
         <div id="editStatus" class="status"></div>
 
@@ -617,22 +631,24 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     <div class="card">
         <h2>Compress a PDF</h2>
         <p class="lead">Reduce PDF size by re-encoding embedded images at a lower resolution and quality. Text stays sharp; large photos get smaller.</p>
-        <div class="dropzone" id="compressDrop">
-            <span class="dz-icon">🗜️</span>
-            <span class="dz-text" id="compressDropText">Drag &amp; drop a PDF here, or click to browse</span>
-        </div>
-        <input type="file" id="compressFileInput" accept="application/pdf" style="display:none;" />
-        <div class="row" style="margin-top:8px;">
-            <label class="field">
-                Quality preset:
-                <select id="compressPreset">
-                    <option value="high">High quality (light compression)</option>
-                    <option value="medium" selected>Balanced (recommended)</option>
-                    <option value="low">Strong compression (smaller files)</option>
-                    <option value="extreme">Extreme (smallest, lower image quality)</option>
-                </select>
-            </label>
-            <button id="compressBtn" class="btn gold">🗜️ Compress & download</button>
+        <div class="dz-row">
+            <div class="dropzone" id="compressDrop">
+                <span class="dz-icon">🗜️</span>
+                <span class="dz-text" id="compressDropText">Drag &amp; drop a PDF here, or click to browse</span>
+            </div>
+            <input type="file" id="compressFileInput" accept="application/pdf" style="display:none;" />
+            <div class="dz-actions">
+                <label class="field">
+                    Quality preset:
+                    <select id="compressPreset">
+                        <option value="high">High quality (light compression)</option>
+                        <option value="medium" selected>Balanced (recommended)</option>
+                        <option value="low">Strong compression (smaller files)</option>
+                        <option value="extreme">Extreme (smallest, lower image quality)</option>
+                    </select>
+                </label>
+                <button id="compressBtn" class="btn gold">🗜️ Compress & download</button>
+            </div>
         </div>
         <progress id="compressProgress" value="0" max="100" style="display:none;"></progress>
         <div id="compressStatus" class="status"></div>
@@ -1010,24 +1026,26 @@ async function renderMainPage() {
     const dispNatW = isSide ? pdfH : pdfW;
     const dispNatH = isSide ? pdfW : pdfH;
 
-    // Fit the page like A4 in Word: keep the full width visible and the page
-    // sized to roughly the viewport height (so it doesn't fill the whole screen).
-    // Then apply the user's zoom multiplier on top.
+    // Default to roughly 100% (actual size): 1 PDF point ≈ 1/72", shown at ~96 CSS
+    // dpi → scale 1.333. On screens too narrow for that, fall back to fitting the
+    // width so nothing gets cut off. The user's CTRL+wheel zoom multiplies this.
     const wrapWidth = canvasWrap.clientWidth || 600;
-    const viewportH = window.innerHeight || 800;
     const fitW = wrapWidth / dispNatW;
-    const fitH = (viewportH * 0.72) / dispNatH;   // ≈ A4-in-Word height
-    const baseScale = Math.min(fitW, fitH);
+    const NORMAL_SCALE = 96 / 72;                  // ≈ 1.333 → "100%"
+    const baseScale = Math.min(fitW, NORMAL_SCALE);
     const scale = Math.max(0.05, baseScale * zoomLevel);
 
-    // Render the page at the chosen scale (cancel any in-flight render first).
+    // Render at the device pixel ratio so text stays crisp (no blur), while the
+    // CSS size stays at `scale`. This is the key fix for the fuzzy look.
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
     if (currentRenderTask) { try { currentRenderTask.cancel(); } catch {} currentRenderTask = null; }
     const renderViewport = page.getViewport({ scale });
-    mainCanvas.width  = Math.floor(renderViewport.width);
-    mainCanvas.height = Math.floor(renderViewport.height);
+    mainCanvas.width  = Math.floor(renderViewport.width  * dpr);
+    mainCanvas.height = Math.floor(renderViewport.height * dpr);
     const ctx = mainCanvas.getContext('2d');
+    const transform = dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null;
     try {
-        currentRenderTask = page.render({ canvasContext: ctx, viewport: renderViewport });
+        currentRenderTask = page.render({ canvasContext: ctx, viewport: renderViewport, transform });
         await currentRenderTask.promise;
         currentRenderTask = null;
     } catch (e) {
