@@ -236,9 +236,11 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 .dz-row .dropzone{flex:1 1 240px;margin-bottom:0;display:flex;flex-direction:column;justify-content:center;}
 .dz-row .dz-actions{display:flex;flex-direction:column;justify-content:center;gap:8px;flex:0 0 auto;}
 .dz-row .dz-actions .btn{white-space:nowrap;}
+.compress-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
 @media (max-width:560px){
     .dz-row .dz-actions{flex:1 1 100%;}
     .dz-row .dz-actions .btn{width:100%;}
+    .compress-controls{flex-direction:column;align-items:stretch;}
 }
 
 /* ===================== EDIT PDF ===================== */
@@ -672,16 +674,18 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
             </div>
             <input type="file" id="compressFileInput" accept="application/pdf" style="display:none;" />
             <div class="dz-actions">
-                <label class="field">
-                    Quality preset:
-                    <select id="compressPreset">
-                        <option value="high">High quality (light compression)</option>
-                        <option value="medium" selected>Balanced (recommended)</option>
-                        <option value="low">Strong compression (smaller files)</option>
-                        <option value="extreme">Extreme (smallest, lower image quality)</option>
-                    </select>
-                </label>
-                <button id="compressBtn" class="btn gold sm">🗜️ Compress & download</button>
+                <div class="compress-controls">
+                    <label class="field">
+                        Quality preset:
+                        <select id="compressPreset">
+                            <option value="high">High quality (light compression)</option>
+                            <option value="medium" selected>Balanced (recommended)</option>
+                            <option value="low">Strong compression (smaller files)</option>
+                            <option value="extreme">Extreme (smallest, lower image quality)</option>
+                        </select>
+                    </label>
+                    <button id="compressBtn" class="btn gold sm">🗜️ Compress & download</button>
+                </div>
             </div>
         </div>
         <progress id="compressProgress" value="0" max="100" style="display:none;"></progress>
