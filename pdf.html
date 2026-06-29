@@ -330,7 +330,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 .annotation-item.draggable{cursor:grab;}
 .annotation-item.draggable.dragging{cursor:grabbing;}
 .annotation-item.text-ann{
-    color:#000;background:rgba(255,255,255,.7);
+    color:#000;background:transparent;
     padding:1px 3px;font-family:'Roboto',sans-serif;
     line-height:1.15;white-space:pre;
     border:1px dashed transparent;
@@ -412,7 +412,12 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 /* Merge reorderable file list */
 .merge-list{margin:0 auto 12px;max-width:640px;display:flex;flex-direction:column;gap:6px;}
 .merge-item{display:flex;align-items:center;gap:10px;background:var(--surface-2);
-    border:1px solid var(--border-soft);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--text);}
+    border:1px solid var(--border-soft);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--text);
+    cursor:grab;}
+.merge-item:active{cursor:grabbing;}
+.merge-item.drag-src{opacity:.45;}
+.merge-item.drag-over{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+.merge-item .grip{flex:0 0 auto;color:var(--text-muted);font-size:14px;line-height:1;cursor:grab;user-select:none;}
 .merge-item .idx{flex:0 0 auto;color:var(--text-muted);font-variant-numeric:tabular-nums;min-width:20px;text-align:right;}
 .merge-item .mname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .merge-item .mbtns{flex:0 0 auto;display:flex;gap:4px;}
@@ -902,6 +907,7 @@ async function getUniqueName(dirHandle, fileName) {
 //  2. MERGE
 // =============================================================
 let mergeFiles = [];   // ordered list the user can rearrange before merging
+let mergeDragIndex = null;
 
 function renderMergeList(){
     const list  = document.getElementById('mergeList');
@@ -912,22 +918,57 @@ function renderMergeList(){
         if (label) label.textContent = 'Drag & drop PDFs here, or click to browse';
         return;
     }
-    if (label) label.textContent = `${mergeFiles.length} file(s) — add more or reorder below`;
+    if (label) label.textContent = `${mergeFiles.length} file(s) — add more, or drag to reorder`;
     list.style.display = 'flex';
     list.innerHTML = '';
     mergeFiles.forEach((f, i) => {
-        const item = document.createElement('div'); item.className = 'merge-item';
+        const item = document.createElement('div');
+        item.className = 'merge-item';
+        item.draggable = true;
+        item.dataset.index = i;
+
+        const grip = document.createElement('span'); grip.className = 'grip'; grip.textContent = '⠿'; grip.title = 'Drag to reorder';
         const idx  = document.createElement('span'); idx.className = 'idx'; idx.textContent = (i + 1) + '.';
         const name = document.createElement('span'); name.className = 'mname'; name.textContent = f.name;
         const btns = document.createElement('div'); btns.className = 'mbtns';
-        const up = document.createElement('button'); up.textContent = '▲'; up.title = 'Move up'; up.disabled = i === 0;
-        up.addEventListener('click', () => { const t = mergeFiles[i-1]; mergeFiles[i-1] = mergeFiles[i]; mergeFiles[i] = t; renderMergeList(); });
-        const down = document.createElement('button'); down.textContent = '▼'; down.title = 'Move down'; down.disabled = i === mergeFiles.length - 1;
-        down.addEventListener('click', () => { const t = mergeFiles[i+1]; mergeFiles[i+1] = mergeFiles[i]; mergeFiles[i] = t; renderMergeList(); });
         const rm = document.createElement('button'); rm.textContent = '✕'; rm.title = 'Remove';
+        // Don't let a click on the remove button start a drag-then-reorder
+        rm.draggable = false;
+        rm.addEventListener('mousedown', e => e.stopPropagation());
         rm.addEventListener('click', () => { mergeFiles.splice(i, 1); renderMergeList(); });
-        btns.append(up, down, rm);
-        item.append(idx, name, btns);
+        btns.append(rm);
+        item.append(grip, idx, name, btns);
+
+        // --- drag & drop reordering ---
+        item.addEventListener('dragstart', e => {
+            mergeDragIndex = i;
+            item.classList.add('drag-src');
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', String(i)); } catch {}
+        });
+        item.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            item.classList.add('drag-over');
+        });
+        item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+        item.addEventListener('drop', e => {
+            e.preventDefault();
+            item.classList.remove('drag-over');
+            const from = mergeDragIndex;
+            const to = i;
+            if (from === null || from === to) return;
+            const moved = mergeFiles.splice(from, 1)[0];   // pull out the dragged file
+            mergeFiles.splice(to, 0, moved);               // insert at the target slot; rest shift down
+            mergeDragIndex = null;
+            renderMergeList();
+        });
+        item.addEventListener('dragend', () => {
+            item.classList.remove('drag-src');
+            document.querySelectorAll('.merge-item.drag-over').forEach(n => n.classList.remove('drag-over'));
+            mergeDragIndex = null;
+        });
+
         list.appendChild(item);
     });
 }
