@@ -650,10 +650,6 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                         <button type="button" class="swatch active" data-color="#000000" style="background:#000000;" title="Black"></button>
                         <button type="button" class="swatch" data-color="#ffffff" style="background:#ffffff;" title="White"></button>
                         <button type="button" class="swatch" data-color="#808080" style="background:#808080;" title="Gray"></button>
-                        <button type="button" class="swatch" data-color="#c0392b" style="background:#c0392b;" title="Red"></button>
-                        <button type="button" class="swatch" data-color="#1e7d46" style="background:#1e7d46;" title="Green"></button>
-                        <button type="button" class="swatch" data-color="#2d5fb3" style="background:#2d5fb3;" title="Blue"></button>
-                        <button type="button" class="swatch" data-color="#d4a017" style="background:#d4a017;" title="Yellow"></button>
                     </span>
                     <label class="field">Other <input type="color" id="brushColor" value="#000000" style="width:38px;padding:2px;" /></label>
                     <label class="field">Thickness <input type="range" id="brushWidth" min="2" max="48" value="12" style="width:110px;" /></label>
@@ -1303,26 +1299,67 @@ function updateConfirmVisibility(){
     }
 }
 function updatePlacementHint(){
-    if (activeTool === 'placeText') {
-        placementHint.style.display = 'block';
-        placementHint.textContent = 'Click on the page, then type';
-    } else if (activeTool === 'placeImage') {
-        placementHint.style.display = 'block';
-        placementHint.textContent = 'Tap on the page to place signature';
-    } else if (activeTool === 'redact') {
-        placementHint.style.display = 'block';
-        placementHint.textContent = 'Drag a rectangle to redact';
-    } else if (pendingAnnotation && pendingAnnotation.type === 'rect' && pendingAnnotation.pending
-               && pendingAnnotation.pageIndex === currentPage) {
-        placementHint.style.display = 'block';
-        placementHint.textContent = 'Drag the edges to adjust · click an empty area to apply';
-    } else {
-        placementHint.style.display = 'none';
+    // On-canvas guidance overlays were removed per user request — they took up
+    // space on mobile and didn't auto-dismiss. Always keep the hint hidden.
+    placementHint.style.display = 'none';
+}
+
+function placeCaretEnd(el){
+    try {
+        el.focus();
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        r.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+    } catch {}
+}
+// Build the editable/static text element for a text annotation (single source of
+// truth used by both the renderer and the place-on-tap handler).
+function createTextAnnElement(ann, pdfW, pdfH, scale){
+    const div = document.createElement('div');
+    div.className = 'annotation-item text-ann';
+    div.dataset.type = 'text';
+    if (ann.pending) div.classList.add('pending');
+    const x = ann.x * scale;
+    const baselineTop = (pdfH - ann.y) * scale;
+    const fontPx = ann.size * scale;
+    const ascent = fontPx * 0.8;
+    div.style.left = x + 'px';
+    div.style.top = (baselineTop - ascent) + 'px';
+    div.style.fontSize = fontPx + 'px';
+    div.style.color = ann.color || '#111111';
+    if (ann.rotate) {
+        div.style.transform = `rotate(${ann.rotate}deg)`;
+        div.style.transformOrigin = 'left top';
     }
+    if (ann.pending) {
+        div.classList.add('editing');
+        div.setAttribute('contenteditable', 'true');
+        div.spellcheck = false;
+        div.textContent = ann.text || '';
+        div.addEventListener('input', () => { ann.text = readEditableText(div); });
+        const mh = document.createElement('div');
+        mh.className = 'move-handle';
+        mh.setAttribute('contenteditable', 'false');
+        mh.title = 'Drag to move';
+        attachDragHandlers(mh, ann, div);
+        div.appendChild(mh);
+    } else {
+        div.textContent = ann.text;
+    }
+    return div;
 }
 
 function drawAnnotation(ann, idx, pdfW, pdfH, scale) {
     if (ann.type === 'brush') return;   // brush strokes are drawn on the SVG layer
+    if (ann.type === 'text') {
+        const el = createTextAnnElement(ann, pdfW, pdfH, scale);
+        el.dataset.index = idx;
+        overlay.appendChild(el);
+        return;
+    }
     const div = document.createElement('div');
     div.className = 'annotation-item';
     div.dataset.index = idx;
@@ -1351,49 +1388,13 @@ function drawAnnotation(ann, idx, pdfW, pdfH, scale) {
         img.src = ann.dataUrl;
         img.draggable = false;
         div.appendChild(img);
-    } else if (ann.type === 'text') {
-        div.classList.add('text-ann');
-        const x = ann.x * scale;
-        const lines = (ann.text || '').split('\n').length;
-        const baselineTop = (pdfH - ann.y) * scale;
-        const fontPx = ann.size * scale;
-        const ascent = fontPx * 0.8;
-        div.style.left = x + 'px';
-        div.style.top = (baselineTop - ascent) + 'px';
-        div.style.fontSize = fontPx + 'px';
-        div.style.color = ann.color || '#111111';
-        if (ann.rotate) {
-            div.style.transform = `rotate(${ann.rotate}deg)`;
-            div.style.transformOrigin = 'left top';
-        }
-        if (ann.pending) {
-            div.classList.add('editing');
-            div.setAttribute('contenteditable', 'true');
-            div.spellcheck = false;
-            div.textContent = ann.text || '';
-            div.addEventListener('input', () => { ann.text = readEditableText(div); });
-            // Enter should insert a line break, not submit anything
-        } else {
-            div.textContent = ann.text;
-        }
-        ann._lines = lines;
     }
 
-    // Only PENDING annotations are interactive.
+    // Only PENDING annotations are interactive (text is handled above).
     if (ann.pending) {
-        if (ann.type === 'text') {
-            // Typed directly on the page; only a move handle (sizing via toolbar).
-            const mh = document.createElement('div');
-            mh.className = 'move-handle';
-            mh.setAttribute('contenteditable', 'false');
-            mh.title = 'Drag to move';
-            attachDragHandlers(mh, ann, div);
-            div.appendChild(mh);
-        } else {
-            div.classList.add('draggable');
-            attachDragHandlers(div, ann);
-            addResizeHandles(div, ann);
-        }
+        div.classList.add('draggable');
+        attachDragHandlers(div, ann);
+        addResizeHandles(div, ann);
     }
     // Confirmed annotations are visually finalized — no controls, no drag.
 
@@ -1740,6 +1741,22 @@ async function rerenderKeepText(){
     await renderMainPage();
     focusPendingText(true);
 }
+// Update the live editing element in place (no re-render) so the mobile keyboard
+// stays open while changing size / rotation / color.
+function updateEditingTextStyle(){
+    const el = overlay.querySelector('.text-ann.editing');
+    const a = getPendingText();
+    if (!el || !a) return;
+    const scale = parseFloat(canvasStage.dataset.scale) || 1;
+    const pdfH  = parseFloat(canvasStage.dataset.pdfH)  || 0;
+    const fontPx = a.size * scale;
+    const ascent = fontPx * 0.8;
+    el.style.fontSize = fontPx + 'px';
+    el.style.top = ((pdfH - a.y) * scale - ascent) + 'px';
+    el.style.color = a.color || '#111111';
+    if (a.rotate) { el.style.transform = `rotate(${a.rotate}deg)`; el.style.transformOrigin = 'left top'; }
+    else { el.style.transform = ''; }
+}
 async function commitPendingText(){
     const a = getPendingText();
     if (!a) { showTextControls(false); resetToolState(true); return; }
@@ -1773,11 +1790,11 @@ btnAddText.addEventListener('click', () => {
 });
 textSizeUpBtn.addEventListener('click', () => {
     const a = getPendingText(); if (!a) return;
-    a.size = Math.min(200, a.size + 2); rerenderKeepText();
+    a.size = Math.min(200, a.size + 2); updateEditingTextStyle();
 });
 textSizeDownBtn.addEventListener('click', () => {
     const a = getPendingText(); if (!a) return;
-    a.size = Math.max(6, a.size - 2); rerenderKeepText();
+    a.size = Math.max(6, a.size - 2); updateEditingTextStyle();
 });
 textColorInput.addEventListener('input', () => {
     const a = getPendingText(); if (!a) return;
@@ -1787,7 +1804,7 @@ textColorInput.addEventListener('input', () => {
 });
 textRotateBtn.addEventListener('click', () => {
     const a = getPendingText(); if (!a) return;
-    a.rotate = ((a.rotate || 0) + 90) % 360; rerenderKeepText();
+    a.rotate = ((a.rotate || 0) + 90) % 360; updateEditingTextStyle();
 });
 textDeleteBtn.addEventListener('click', async () => {
     const a = getPendingText();
@@ -1972,7 +1989,10 @@ canvasWrap.addEventListener('click', async (e) => {
     const pdfYTop = c.localY / c.scale;
     const pageObj = pages[currentPage];
     if (activeTool === 'placeText') {
-        // Drop an editable text box right where the user clicked and start typing.
+        // Drop an editable text box right where the user tapped and start typing.
+        // Build + focus it SYNCHRONOUSLY (inside this tap) so the mobile keyboard
+        // opens and the caret lands in it — awaiting a re-render first breaks that.
+        const scale = parseFloat(canvasStage.dataset.scale) || c.scale;
         const ann = {
             type: 'text', text: '',
             size: DEFAULT_TEXT_SIZE,
@@ -1986,10 +2006,12 @@ canvasWrap.addEventListener('click', async (e) => {
         activeTool = null;
         setToolButtons(false);
         canvasWrap.style.cursor = 'default';
+        canvasWrap.style.touchAction = '';
         showTextControls(true);
-        updatePlacementHint();
-        await renderMainPage();
-        focusPendingText(true);
+        const el = createTextAnnElement(ann, c.pdfW, c.pdfH, scale);
+        el.dataset.index = pageObj.annotations.length - 1;
+        overlay.appendChild(el);
+        placeCaretEnd(el);
         return;
     }
     // placeImage
@@ -2085,6 +2107,7 @@ async function pointerUpWrap(e) {
     redactColorBox.classList.remove('visible');
     setToolButtons(false);
     canvasWrap.style.cursor = 'default';
+    canvasWrap.style.touchAction = '';
     // No confirm bar: the user adjusts by dragging the rectangle's edges, then
     // clicks an empty area of the page to apply. Arm that click on the NEXT tick
     // so this gesture's own trailing 'click' event doesn't commit instantly.
@@ -2140,9 +2163,50 @@ async function brushUp(e){
 canvasWrap.addEventListener('mousedown',  pointerDownWrap);
 canvasWrap.addEventListener('mousemove',  pointerMoveWrap);
 canvasWrap.addEventListener('mouseup',    pointerUpWrap);
-canvasWrap.addEventListener('touchstart', (e)=>{ if(activeTool==='redact'||activeTool==='brush'){ pointerDownWrap(e);} }, { passive:false });
-canvasWrap.addEventListener('touchmove',  (e)=>{ if(isDrawing){ pointerMoveWrap(e);} }, { passive:false });
-canvasWrap.addEventListener('touchend',   (e)=>{ if(activeTool==='brush'||isDrawing){ pointerUpWrap(e);} });
+
+// --- touch: 1 finger = draw/scroll, 2 fingers = pinch-zoom the PAGE only ---
+let pinching = false, pinchStartDist = 0, pinchStartZoom = 1;
+function touchDist(t){ const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY; return Math.hypot(dx, dy); }
+
+canvasWrap.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        // Cancel any stroke in progress and start a pinch.
+        if (isDrawing) {
+            brushStroke = null;
+            if (brushPreviewEl) { brushPreviewEl.remove(); brushPreviewEl = null; }
+            redactStart = null;
+            if (redactPreviewEl) { redactPreviewEl.remove(); redactPreviewEl = null; }
+            isDrawing = false;
+        }
+        pinching = true;
+        pinchStartDist = touchDist(e.touches);
+        pinchStartZoom = zoomLevel;
+        e.preventDefault();
+        return;
+    }
+    if (pinching) return;
+    if (activeTool === 'redact' || activeTool === 'brush') pointerDownWrap(e);
+}, { passive:false });
+
+canvasWrap.addEventListener('touchmove', (e) => {
+    if (pinching && e.touches.length === 2) {
+        e.preventDefault();
+        const d = touchDist(e.touches);
+        if (pinchStartDist > 0) {
+            zoomLevel = Math.min(6, Math.max(0.3, pinchStartZoom * (d / pinchStartDist)));
+            renderMainPage();
+        }
+        return;
+    }
+    if (pinching) return;
+    if (isDrawing) pointerMoveWrap(e);
+}, { passive:false });
+
+canvasWrap.addEventListener('touchend', (e) => {
+    if (pinching) { if (e.touches.length < 2) pinching = false; return; }
+    if (activeTool === 'brush' || isDrawing) pointerUpWrap(e);
+});
+canvasWrap.addEventListener('touchcancel', () => { pinching = false; });
 
 // Finalize a pending redaction (records history so it can be undone).
 async function commitPendingRedaction(){
