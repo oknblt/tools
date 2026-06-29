@@ -389,7 +389,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 }
 
 .input-panel{
-    display:none;margin-top:12px;padding:14px;
+    display:none;margin-top:10px;padding:10px 12px;
     background:var(--surface-2);
     border:1px solid var(--border-soft);
     border-radius:var(--radius-sm);
@@ -410,6 +410,14 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 .input-panel textarea:focus{outline:none;border-color:var(--accent);}
 .field-label{color:var(--text-dim);font-size:13px;margin-right:4px;}
 .hint-line{margin-top:6px;font-size:12px;color:var(--text-muted);font-style:italic;}
+
+/* Brush swatches + freehand layer */
+.swatches{display:inline-flex;gap:5px;align-items:center;}
+.swatch{width:20px;height:20px;border-radius:5px;cursor:pointer;padding:0;
+    border:1px solid rgba(255,255,255,.35);box-shadow:0 1px 2px rgba(0,0,0,.4);}
+.swatch.active{outline:2px solid var(--accent);outline-offset:1px;}
+.btn.active-tool{background:var(--accent);color:#06121f;border-color:var(--accent);}
+.brush-layer{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;}
 
 /* Merge reorderable file list */
 .merge-list{margin:0 auto 12px;max-width:640px;display:flex;flex-direction:column;gap:6px;}
@@ -599,6 +607,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                 <button id="btnAddText" class="btn ghost sm">✍️ Add text</button>
                 <button id="btnAddSig" class="btn ghost sm">🖼️ Add signature</button>
                 <button id="btnRedact" class="btn ghost sm">⬛ Redact</button>
+                <button id="btnBrush" class="btn ghost sm" title="Freehand brush to cover areas">🖌️ Brush</button>
                 <button id="btnRotate" class="btn ghost sm">🔄 Rotate 90°</button>
                 <button id="btnUndo" class="btn ghost sm" disabled title="Undo last change">↶ Undo</button>
                 <button id="btnDeletePage" class="btn ghost sm">🗑️ Delete page</button>
@@ -616,7 +625,6 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                     <button id="textDelete" class="btn danger sm" title="Delete this text">🗑️</button>
                     <button id="textDone" class="btn success sm">✔ Done</button>
                 </div>
-                <div class="hint-line">Click on the page, then type directly. Drag the text to move it.</div>
             </div>
 
             <div id="sigFileBox" class="input-panel">
@@ -633,7 +641,25 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                     <label class="field"><input type="radio" name="redactColor" value="white" /> White</label>
                     <button id="cancelRedact" class="btn ghost">Cancel</button>
                 </div>
-                <div class="hint-line">Drag a rectangle on the page to redact, then drag its edges to adjust. Click an empty area of the page to apply.</div>
+            </div>
+
+            <div id="brushBox" class="input-panel">
+                <div class="row">
+                    <span class="field-label">Brush</span>
+                    <span class="swatches" id="brushSwatches">
+                        <button type="button" class="swatch active" data-color="#000000" style="background:#000000;" title="Black"></button>
+                        <button type="button" class="swatch" data-color="#ffffff" style="background:#ffffff;" title="White"></button>
+                        <button type="button" class="swatch" data-color="#808080" style="background:#808080;" title="Gray"></button>
+                        <button type="button" class="swatch" data-color="#c0392b" style="background:#c0392b;" title="Red"></button>
+                        <button type="button" class="swatch" data-color="#1e7d46" style="background:#1e7d46;" title="Green"></button>
+                        <button type="button" class="swatch" data-color="#2d5fb3" style="background:#2d5fb3;" title="Blue"></button>
+                        <button type="button" class="swatch" data-color="#d4a017" style="background:#d4a017;" title="Yellow"></button>
+                    </span>
+                    <label class="field">Other <input type="color" id="brushColor" value="#000000" style="width:38px;padding:2px;" /></label>
+                    <label class="field">Thickness <input type="range" id="brushWidth" min="2" max="48" value="12" style="width:110px;" /></label>
+                    <span id="brushWidthVal" class="field-label">12</span>
+                    <button id="brushDone" class="btn ghost sm">Close</button>
+                </div>
             </div>
 
             <div id="annotationConfirmBox" class="annotation-confirm">
@@ -1021,6 +1047,10 @@ let fontBytes = null;
 let zoomLevel = 1;          // user zoom multiplier (CTRL + mouse-wheel)
 let currentRenderTask = null;  // active pdf.js render task (so we can cancel on re-render)
 let redactArmed = false;    // a freshly-drawn redaction can be committed by clicking empty space
+let brushColor = '#000000'; // freehand brush color
+let brushWidth = 12;        // freehand brush thickness (PDF units)
+let brushStroke = null;     // points (PDF coords) of the stroke currently being drawn
+let brushPreviewEl = null;  // live <polyline> while drawing
 
 const canvasWrap   = document.getElementById('canvasWrap');
 const canvasStage  = document.getElementById('canvasStage');
@@ -1210,9 +1240,46 @@ async function renderMainPage() {
     overlay.innerHTML = '';
     pageObj.annotations.forEach((ann, idx) => drawAnnotation(ann, idx, pdfW, pdfH, scale));
 
+    // freehand brush layer (SVG) on top of the annotation divs
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const brushLayer = document.createElementNS(SVGNS, 'svg');
+    brushLayer.setAttribute('class', 'brush-layer');
+    brushLayer.setAttribute('id', 'brushLayer');
+    brushLayer.setAttribute('width', pdfW * scale);
+    brushLayer.setAttribute('height', pdfH * scale);
+    overlay.appendChild(brushLayer);
+    pageObj.annotations.forEach(ann => { if (ann.type === 'brush') addBrushPath(brushLayer, ann, scale, pdfH); });
+    brushPreviewEl = null;
+
     updateConfirmVisibility();
     updatePlacementHint();
     showTextControls(activeTool === 'placeText' || !!getPendingText());
+}
+
+// Convert a stroke's PDF-coord points to an SVG "points" string in stage px.
+function brushPointsAttr(points, scale, pdfH){
+    return points.map(p => (p.x * scale) + ',' + ((pdfH - p.y) * scale)).join(' ');
+}
+function addBrushPath(svg, ann, scale, pdfH){
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    if (ann.points.length === 1){
+        const p = ann.points[0];
+        const c = document.createElementNS(SVGNS, 'circle');
+        c.setAttribute('cx', p.x * scale);
+        c.setAttribute('cy', (pdfH - p.y) * scale);
+        c.setAttribute('r', (ann.width * scale) / 2);
+        c.setAttribute('fill', ann.color);
+        svg.appendChild(c);
+        return;
+    }
+    const pl = document.createElementNS(SVGNS, 'polyline');
+    pl.setAttribute('points', brushPointsAttr(ann.points, scale, pdfH));
+    pl.setAttribute('fill', 'none');
+    pl.setAttribute('stroke', ann.color);
+    pl.setAttribute('stroke-width', ann.width * scale);
+    pl.setAttribute('stroke-linecap', 'round');
+    pl.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(pl);
 }
 
 // CTRL + mouse-wheel to zoom the page in/out.
@@ -1255,6 +1322,7 @@ function updatePlacementHint(){
 }
 
 function drawAnnotation(ann, idx, pdfW, pdfH, scale) {
+    if (ann.type === 'brush') return;   // brush strokes are drawn on the SVG layer
     const div = document.createElement('div');
     div.className = 'annotation-item';
     div.dataset.index = idx;
@@ -1551,6 +1619,13 @@ function applyAnnotationPosition(element, ann, scale, pdfH) {
 const btnAddText        = document.getElementById('btnAddText');
 const btnAddSig         = document.getElementById('btnAddSig');
 const btnRedact         = document.getElementById('btnRedact');
+const btnBrush          = document.getElementById('btnBrush');
+const brushBox          = document.getElementById('brushBox');
+const brushColorInput   = document.getElementById('brushColor');
+const brushWidthInput   = document.getElementById('brushWidth');
+const brushWidthVal     = document.getElementById('brushWidthVal');
+const brushDoneBtn      = document.getElementById('brushDone');
+const brushSwatches     = document.getElementById('brushSwatches');
 const btnRotate         = document.getElementById('btnRotate');
 const btnUndo           = document.getElementById('btnUndo');
 const btnDeletePage     = document.getElementById('btnDeletePage');
@@ -1619,6 +1694,7 @@ function setToolButtons(disabled){
     btnAddText.disabled = disabled;
     btnAddSig.disabled  = disabled;
     btnRedact.disabled  = disabled;
+    btnBrush.disabled   = disabled;
 }
 function resetToolState(hideConfirm = true) {
     activeTool = null;
@@ -1627,7 +1703,10 @@ function resetToolState(hideConfirm = true) {
     showTextControls(false);
     sigFileBox.classList.remove('visible');
     redactColorBox.classList.remove('visible');
+    if (typeof brushBox !== 'undefined' && brushBox) brushBox.classList.remove('visible');
+    if (typeof btnBrush !== 'undefined' && btnBrush) btnBrush.classList.remove('active-tool');
     canvasWrap.style.cursor = 'default';
+    canvasWrap.style.touchAction = '';
     if (hideConfirm && !pendingAnnotation) {
         annotationConfirmBox.classList.remove('visible');
     }
@@ -1768,6 +1847,7 @@ btnRedact.addEventListener('click', () => {
     showTextControls(false);
     setToolButtons(true);
     canvasWrap.style.cursor = 'crosshair';
+    canvasWrap.style.touchAction = 'none';
     updatePlacementHint();
 });
 cancelRedactBtn.addEventListener('click', () => {
@@ -1779,6 +1859,51 @@ function getRedactColor() {
     const checked = document.querySelector('input[name="redactColor"]:checked');
     return (checked && checked.value === 'white') ? 'white' : 'black';
 }
+
+// ---- freehand brush ----
+function deactivateBrush(){
+    activeTool = null;
+    isDrawing = false;
+    brushStroke = null;
+    if (brushPreviewEl){ brushPreviewEl.remove(); brushPreviewEl = null; }
+    brushBox.classList.remove('visible');
+    btnBrush.classList.remove('active-tool');
+    setToolButtons(false);
+    canvasWrap.style.cursor = 'default';
+    canvasWrap.style.touchAction = '';
+    updatePlacementHint();
+}
+btnBrush.addEventListener('click', () => {
+    if (activeTool === 'brush') { deactivateBrush(); return; }   // toggle off
+    if (activeTool || pendingAnnotation) return;
+    activeTool = 'brush';
+    brushBox.classList.add('visible');
+    showTextControls(false);
+    sigFileBox.classList.remove('visible');
+    redactColorBox.classList.remove('visible');
+    setToolButtons(true);
+    btnBrush.disabled = false;                 // keep brush clickable so it can toggle off
+    btnBrush.classList.add('active-tool');
+    canvasWrap.style.cursor = 'crosshair';
+    canvasWrap.style.touchAction = 'none';
+    updatePlacementHint();
+});
+brushDoneBtn.addEventListener('click', deactivateBrush);
+brushSwatches.addEventListener('click', (e) => {
+    const sw = e.target.closest('.swatch');
+    if (!sw) return;
+    brushColor = sw.dataset.color;
+    brushColorInput.value = brushColor;
+    brushSwatches.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s === sw));
+});
+brushColorInput.addEventListener('input', () => {
+    brushColor = brushColorInput.value;
+    brushSwatches.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+});
+brushWidthInput.addEventListener('input', () => {
+    brushWidth = parseInt(brushWidthInput.value) || 12;
+    brushWidthVal.textContent = brushWidth;
+});
 
 btnRotate.addEventListener('click', async () => {
     if (currentPage < 0) return;
@@ -1893,6 +2018,7 @@ canvasWrap.addEventListener('click', async (e) => {
 let redactStart = null;
 let redactPreviewEl = null;
 function pointerDownWrap(e) {
+    if (activeTool === 'brush') { brushDown(e); return; }
     if (activeTool !== 'redact') return;
     e.preventDefault();
     const c = getStageCoords(e);
@@ -1910,6 +2036,7 @@ function pointerDownWrap(e) {
     overlay.appendChild(redactPreviewEl);
 }
 function pointerMoveWrap(e) {
+    if (activeTool === 'brush') { if (isDrawing) brushMove(e); return; }
     if (!isDrawing || !redactStart || !redactPreviewEl) return;
     e.preventDefault();
     const c = getStageCoords(e);
@@ -1923,6 +2050,7 @@ function pointerMoveWrap(e) {
     redactPreviewEl.style.height = h + 'px';
 }
 async function pointerUpWrap(e) {
+    if (activeTool === 'brush') { await brushUp(e); return; }
     if (!isDrawing || !redactStart) return;
     isDrawing = false;
     const c = getStageCoords(e);
@@ -1964,12 +2092,57 @@ async function pointerUpWrap(e) {
     setTimeout(() => { redactArmed = true; }, 0);
     await renderMainPage();
 }
+
+// ---- freehand brush stroke (PDF-coord points) ----
+function brushDown(e){
+    e.preventDefault();
+    const c = getStageCoords(e);
+    brushStroke = [{ x: c.localX / c.scale, y: c.pdfH - (c.localY / c.scale) }];
+    isDrawing = true;
+    const svg = document.getElementById('brushLayer');
+    if (svg){
+        const SVGNS = 'http://www.w3.org/2000/svg';
+        brushPreviewEl = document.createElementNS(SVGNS, 'polyline');
+        brushPreviewEl.setAttribute('fill', 'none');
+        brushPreviewEl.setAttribute('stroke', brushColor);
+        brushPreviewEl.setAttribute('stroke-width', brushWidth * c.scale);
+        brushPreviewEl.setAttribute('stroke-linecap', 'round');
+        brushPreviewEl.setAttribute('stroke-linejoin', 'round');
+        brushPreviewEl.setAttribute('points', brushPointsAttr(brushStroke, c.scale, c.pdfH));
+        svg.appendChild(brushPreviewEl);
+    }
+}
+function brushMove(e){
+    if (!brushStroke) return;
+    e.preventDefault();
+    const c = getStageCoords(e);
+    brushStroke.push({ x: c.localX / c.scale, y: c.pdfH - (c.localY / c.scale) });
+    if (brushPreviewEl) brushPreviewEl.setAttribute('points', brushPointsAttr(brushStroke, c.scale, c.pdfH));
+}
+async function brushUp(e){
+    if (!brushStroke){ isDrawing = false; return; }
+    isDrawing = false;
+    const stroke = brushStroke;
+    brushStroke = null;
+    if (brushPreviewEl){ brushPreviewEl.remove(); brushPreviewEl = null; }
+    pushHistory();
+    pages[currentPage].annotations.push({
+        type: 'brush',
+        points: stroke,
+        color: brushColor,
+        width: brushWidth,
+        pageIndex: currentPage,
+        pending: false
+    });
+    await renderMainPage();   // brush stays active so the user can keep drawing
+}
+
 canvasWrap.addEventListener('mousedown',  pointerDownWrap);
 canvasWrap.addEventListener('mousemove',  pointerMoveWrap);
 canvasWrap.addEventListener('mouseup',    pointerUpWrap);
-canvasWrap.addEventListener('touchstart', (e)=>{ if(activeTool==='redact'){ pointerDownWrap(e);} }, { passive:false });
+canvasWrap.addEventListener('touchstart', (e)=>{ if(activeTool==='redact'||activeTool==='brush'){ pointerDownWrap(e);} }, { passive:false });
 canvasWrap.addEventListener('touchmove',  (e)=>{ if(isDrawing){ pointerMoveWrap(e);} }, { passive:false });
-canvasWrap.addEventListener('touchend',   (e)=>{ if(isDrawing){ pointerUpWrap(e);} });
+canvasWrap.addEventListener('touchend',   (e)=>{ if(activeTool==='brush'||isDrawing){ pointerUpWrap(e);} });
 
 // Finalize a pending redaction (records history so it can be undone).
 async function commitPendingRedaction(){
@@ -2128,6 +2301,25 @@ downloadEditedBtn.addEventListener('click', async () => {
                         borderColor: fill,
                         borderWidth: 0,
                     });
+                } else if (ann.type === 'brush') {
+                    const col = hexToRgb(ann.color);
+                    const color = PDFLib.rgb(col.r, col.g, col.b);
+                    const pts = ann.points || [];
+                    const cap = PDFLib.LineCapStyle ? PDFLib.LineCapStyle.Round : undefined;
+                    if (pts.length === 1) {
+                        copiedPage.drawCircle({ x: pts[0].x, y: pts[0].y, size: ann.width / 2, color });
+                    } else {
+                        for (let k = 1; k < pts.length; k++) {
+                            const opts = {
+                                start: { x: pts[k-1].x, y: pts[k-1].y },
+                                end:   { x: pts[k].x,   y: pts[k].y },
+                                thickness: ann.width,
+                                color
+                            };
+                            if (cap) opts.lineCap = cap;
+                            copiedPage.drawLine(opts);
+                        }
+                    }
                 }
             }
         }
