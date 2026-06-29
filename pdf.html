@@ -47,28 +47,28 @@ body{
 
 /* Header */
 header{
-    display:flex;align-items:center;gap:14px;
-    margin-bottom:24px;
+    display:flex;align-items:center;gap:11px;
+    margin-bottom:14px;
 }
 .logo{
-    width:48px;height:48px;border-radius:12px;
+    width:38px;height:38px;border-radius:10px;
     background:linear-gradient(135deg,var(--navy-500),var(--accent));
-    display:grid;place-items:center;font-size:24px;
+    display:grid;place-items:center;font-size:19px;
     box-shadow:var(--shadow-md);
 }
-.title h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.2px;}
+.title h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.2px;line-height:1.15;}
 .title .sub-brand{
-    font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;
-    color:var(--accent);margin-top:1px;
+    font-size:9.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--accent);margin-top:0;
 }
-.title .sub{font-size:13px;color:var(--text-dim);margin-top:2px;}
+.title .sub{font-size:11.5px;color:var(--text-dim);margin-top:1px;}
 
 /* Tabs */
 .tabs{
     display:flex;gap:6px;background:var(--surface);
-    padding:6px;border-radius:var(--radius);
+    padding:5px;border-radius:var(--radius);
     border:1px solid var(--border-soft);
-    margin-bottom:20px;overflow-x:auto;scrollbar-width:none;
+    margin-bottom:14px;overflow-x:auto;scrollbar-width:none;
 }
 .tabs::-webkit-scrollbar{display:none;}
 .tab-btn{
@@ -90,7 +90,7 @@ header{
     background:var(--surface);
     border:1px solid var(--border-soft);
     border-radius:var(--radius);
-    padding:24px;
+    padding:18px;
     box-shadow:var(--shadow-md);
 }
 .tabcontent{display:none;}
@@ -224,11 +224,11 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     color:var(--text);
     transform:scale(1.005);
 }
-.dropzone .dz-files{
-    margin-top:8px;font-size:12px;color:var(--text-muted);
+.dropzone .dz-text{
+    display:inline-block;margin-top:2px;
     word-break:break-word;line-height:1.4;
 }
-.dropzone.dragover .dz-files{color:var(--accent-soft);}
+.dropzone.dragover .dz-text{color:var(--accent-soft);}
 
 /* ===================== EDIT PDF ===================== */
 .edit-toolbar{
@@ -288,16 +288,21 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     background:var(--navy-900);
     border:1px solid var(--border-soft);
     border-radius:var(--radius-sm);
-    overflow:hidden;
+    overflow:auto;
+    max-height:74vh;
     margin-bottom:12px;
     user-select:none;
     -webkit-user-select:none;
-    touch-action:none;
+    touch-action:pan-x pan-y;
+}
+/* In-flow scroll content — establishes scroll area & centers the page */
+.canvas-scroll{
+    position:relative;
+    margin:0 auto;
 }
 /* Inner stage that ROTATES with the page (overlay travels with canvas) */
 .canvas-stage{
-    position:relative;
-    margin:0 auto;
+    position:absolute;
     transform-origin:center center;
     transition:transform .25s ease;
 }
@@ -346,12 +351,20 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 .resize-handle.ne{top:-8px;right:-8px;cursor:nesw-resize;}
 .resize-handle.sw{bottom:-8px;left:-8px;cursor:nesw-resize;}
 .resize-handle.se{bottom:-8px;right:-8px;cursor:nwse-resize;}
+.resize-handle.n{top:-8px;left:50%;margin-left:-7px;cursor:ns-resize;}
+.resize-handle.s{bottom:-8px;left:50%;margin-left:-7px;cursor:ns-resize;}
+.resize-handle.e{right:-8px;top:50%;margin-top:-7px;cursor:ew-resize;}
+.resize-handle.w{left:-8px;top:50%;margin-top:-7px;cursor:ew-resize;}
 @media (max-width:780px){
     .resize-handle{width:18px;height:18px;}
     .resize-handle.nw{top:-10px;left:-10px;}
     .resize-handle.ne{top:-10px;right:-10px;}
     .resize-handle.sw{bottom:-10px;left:-10px;}
     .resize-handle.se{bottom:-10px;right:-10px;}
+    .resize-handle.n{top:-10px;margin-left:-9px;}
+    .resize-handle.s{bottom:-10px;margin-left:-9px;}
+    .resize-handle.e{right:-10px;margin-top:-9px;}
+    .resize-handle.w{left:-10px;margin-top:-9px;}
 }
 
 .placement-hint{
@@ -509,11 +522,10 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
         <p class="lead">Pick the PDFs you want to combine — they'll be merged in the order shown.</p>
         <div class="dropzone" id="mergeDrop">
             <span class="dz-icon">🔗</span>
-            Drag &amp; drop PDFs here, or click to browse
-            <div class="dz-files" id="mergeDropFiles">No files selected</div>
+            <span class="dz-text" id="mergeDropText">Drag &amp; drop PDFs here, or click to browse</span>
         </div>
+        <input type="file" id="pdfFiles" multiple accept="application/pdf" style="display:none;" />
         <div class="row">
-            <input type="file" id="pdfFiles" multiple accept="application/pdf" />
             <button id="mergeBtn" class="btn">🔗 Merge & download</button>
         </div>
         <div id="mergeStatus" class="status"></div>
@@ -528,11 +540,10 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
         <p class="lead">Rotate, delete, reorder pages. Add text or signatures. Redact sensitive areas.</p>
         <div class="dropzone" id="editDrop">
             <span class="dz-icon">✏️</span>
-            Drag &amp; drop a PDF here, or click to browse
-            <div class="dz-files" id="editDropFiles">No file selected</div>
+            <span class="dz-text" id="editDropText">Drag &amp; drop a PDF here, or click to browse</span>
         </div>
+        <input type="file" id="editFileInput" accept="application/pdf" style="display:none;" />
         <div class="row">
-            <input type="file" id="editFileInput" accept="application/pdf" />
             <button id="loadPdfBtn" class="btn">Load PDF</button>
         </div>
         <div id="editStatus" class="status"></div>
@@ -548,46 +559,48 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                 <button id="downloadEditedBtn" class="btn success sm" style="margin-left:auto;">⬇️ Download</button>
             </div>
 
+            <div id="textInputBox" class="input-panel">
+                <label class="field block">Text<textarea id="textContent" placeholder="Type text… (multi-line supported)" rows="2"></textarea></label>
+                <div class="row">
+                    <label class="field">Size <input type="number" id="textSize" value="16" min="6" max="96" style="width:70px;" /></label>
+                    <button id="applyText" class="btn">Next: place on page</button>
+                    <button id="cancelText" class="btn ghost">Cancel</button>
+                </div>
+            </div>
+
+            <div id="sigFileBox" class="input-panel">
+                <div class="row">
+                    <input type="file" id="sigFile" accept="image/png,image/jpeg" />
+                    <button id="cancelSig" class="btn ghost">Cancel</button>
+                </div>
+            </div>
+
+            <div id="redactColorBox" class="input-panel">
+                <div class="row">
+                    <span class="field-label">Redaction color:</span>
+                    <label class="field"><input type="radio" name="redactColor" value="black" checked /> Black</label>
+                    <label class="field"><input type="radio" name="redactColor" value="white" /> White</label>
+                    <button id="cancelRedact" class="btn ghost">Cancel</button>
+                </div>
+                <div class="hint-line">Drag a rectangle on the page to redact, then drag its edges to adjust. Click an empty area of the page to apply.</div>
+            </div>
+
+            <div id="annotationConfirmBox" class="annotation-confirm">
+                <span class="label" id="annotationLabel">Drag corners to resize · drag center to move · then apply.</span>
+                <button id="applyAnnotation" class="btn success">✔ Apply</button>
+                <button id="cancelAnnotation" class="btn danger">✘ Cancel</button>
+            </div>
+
             <div class="editor-grid">
                 <div class="edit-area">
                     <div class="canvas-wrap" id="canvasWrap">
-                        <div class="canvas-stage" id="canvasStage">
-                            <canvas id="mainCanvas"></canvas>
-                            <div class="overlay" id="overlay"></div>
+                        <div class="canvas-scroll" id="canvasScroll">
+                            <div class="canvas-stage" id="canvasStage">
+                                <canvas id="mainCanvas"></canvas>
+                                <div class="overlay" id="overlay"></div>
+                            </div>
                         </div>
                         <div id="placementHint" class="placement-hint" style="display:none;">Tap on the page to place</div>
-                    </div>
-
-                    <div id="textInputBox" class="input-panel">
-                        <label class="field block">Text<textarea id="textContent" placeholder="Type text… (multi-line supported)" rows="2"></textarea></label>
-                        <div class="row">
-                            <label class="field">Size <input type="number" id="textSize" value="16" min="6" max="96" style="width:70px;" /></label>
-                            <button id="applyText" class="btn">Next: place on page</button>
-                            <button id="cancelText" class="btn ghost">Cancel</button>
-                        </div>
-                    </div>
-
-                    <div id="sigFileBox" class="input-panel">
-                        <div class="row">
-                            <input type="file" id="sigFile" accept="image/png,image/jpeg" />
-                            <button id="cancelSig" class="btn ghost">Cancel</button>
-                        </div>
-                    </div>
-
-                    <div id="redactColorBox" class="input-panel">
-                        <div class="row">
-                            <span class="field-label">Redaction color:</span>
-                            <label class="field"><input type="radio" name="redactColor" value="black" checked /> Black</label>
-                            <label class="field"><input type="radio" name="redactColor" value="white" /> White</label>
-                            <button id="cancelRedact" class="btn ghost">Cancel</button>
-                        </div>
-                        <div class="hint-line">Drag a rectangle on the page to redact.</div>
-                    </div>
-
-                    <div id="annotationConfirmBox" class="annotation-confirm">
-                        <span class="label" id="annotationLabel">Drag corners to resize · drag center to move · then apply.</span>
-                        <button id="applyAnnotation" class="btn success">✔ Apply</button>
-                        <button id="cancelAnnotation" class="btn danger">✘ Cancel</button>
                     </div>
                 </div>
                 <div class="page-strip-wrap">
@@ -606,12 +619,9 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
         <p class="lead">Reduce PDF size by re-encoding embedded images at a lower resolution and quality. Text stays sharp; large photos get smaller.</p>
         <div class="dropzone" id="compressDrop">
             <span class="dz-icon">🗜️</span>
-            Drag &amp; drop a PDF here, or click to browse
-            <div class="dz-files" id="compressDropFiles">No file selected</div>
+            <span class="dz-text" id="compressDropText">Drag &amp; drop a PDF here, or click to browse</span>
         </div>
-        <div class="row">
-            <input type="file" id="compressFileInput" accept="application/pdf" />
-        </div>
+        <input type="file" id="compressFileInput" accept="application/pdf" style="display:none;" />
         <div class="row" style="margin-top:8px;">
             <label class="field">
                 Quality preset:
@@ -878,6 +888,9 @@ let pendingAnnotation = null;
 let isDrawing = false;
 let drawingPreview = null;
 let fontBytes = null;
+let zoomLevel = 1;          // user zoom multiplier (CTRL + mouse-wheel)
+let currentRenderTask = null;  // active pdf.js render task (so we can cancel on re-render)
+let redactArmed = false;    // a freshly-drawn redaction can be committed by clicking empty space
 
 const canvasWrap   = document.getElementById('canvasWrap');
 const canvasStage  = document.getElementById('canvasStage');
@@ -923,6 +936,7 @@ document.getElementById('loadPdfBtn').addEventListener('click', async () => {
         }
         currentPage = 0;
         pendingAnnotation = null;
+        zoomLevel = 1;
         editStatus.textContent = `Loaded ${numPages} page(s) · ${fmtBytes(originalPdfBytes.byteLength)}`;
         editStatus.className='status ok';
         document.getElementById('editorContainer').style.display = 'block';
@@ -978,6 +992,8 @@ async function renderThumbnail(origIndex, canvas) {
 }
 
 // ---- main page ----
+const canvasScroll = document.getElementById('canvasScroll');
+
 async function renderMainPage() {
     if (currentPage < 0 || currentPage >= pages.length) return;
     const pageObj = pages[currentPage];
@@ -988,39 +1004,58 @@ async function renderMainPage() {
     const pdfW = baseViewport.width;
     const pdfH = baseViewport.height;
 
-    // available width (account for wrap padding)
-    const wrapWidth = canvasWrap.clientWidth;
-    // when rotated 90/270, the displayed width equals the original height.
-    // We size the stage to fit the *displayed* width within wrapWidth.
     const rotation = pageObj.rotation % 360;
     const isSide = rotation === 90 || rotation === 270;
-    const displayedNaturalWidth  = isSide ? pdfH : pdfW;
-    const scale = wrapWidth / displayedNaturalWidth;
+    // Displayed bounding box swaps W/H when rotated 90/270.
+    const dispNatW = isSide ? pdfH : pdfW;
+    const dispNatH = isSide ? pdfW : pdfH;
 
+    // Fit the page like A4 in Word: keep the full width visible and the page
+    // sized to roughly the viewport height (so it doesn't fill the whole screen).
+    // Then apply the user's zoom multiplier on top.
+    const wrapWidth = canvasWrap.clientWidth || 600;
+    const viewportH = window.innerHeight || 800;
+    const fitW = wrapWidth / dispNatW;
+    const fitH = (viewportH * 0.72) / dispNatH;   // ≈ A4-in-Word height
+    const baseScale = Math.min(fitW, fitH);
+    const scale = Math.max(0.05, baseScale * zoomLevel);
+
+    // Render the page at the chosen scale (cancel any in-flight render first).
+    if (currentRenderTask) { try { currentRenderTask.cancel(); } catch {} currentRenderTask = null; }
     const renderViewport = page.getViewport({ scale });
-    mainCanvas.width  = renderViewport.width;
-    mainCanvas.height = renderViewport.height;
+    mainCanvas.width  = Math.floor(renderViewport.width);
+    mainCanvas.height = Math.floor(renderViewport.height);
     const ctx = mainCanvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+    try {
+        currentRenderTask = page.render({ canvasContext: ctx, viewport: renderViewport });
+        await currentRenderTask.promise;
+        currentRenderTask = null;
+    } catch (e) {
+        if (e && e.name === 'RenderingCancelledException') return; // a newer render took over
+        currentRenderTask = null;
+        throw e;
+    }
 
-    // size canvas-stage to canvas natural CSS size
-    canvasStage.style.width  = (pdfW * scale) + 'px';
-    canvasStage.style.height = (pdfH * scale) + 'px';
-    canvasStage.style.transform = rotation ? `rotate(${rotation}deg)` : '';
-
-    // size canvas-wrap height: when rotated 90/270 the bounding box of the
-    // rotated stage is height x width swapped. Use the displayed dimensions.
+    const stageW = pdfW * scale;
+    const stageH = pdfH * scale;
     const displayedW = isSide ? (pdfH * scale) : (pdfW * scale);
     const displayedH = isSide ? (pdfW * scale) : (pdfH * scale);
-    canvasWrap.style.height = displayedH + 'px';
-    // Center the stage horizontally within the wrap when rotated
-    canvasStage.style.position = 'absolute';
-    canvasStage.style.left = ((displayedW - (pdfW*scale))/2) + 'px';
-    canvasStage.style.top  = ((displayedH - (pdfH*scale))/2) + 'px';
 
-    // ensure canvas natural CSS scales fit
-    mainCanvas.style.width  = (pdfW * scale) + 'px';
-    mainCanvas.style.height = (pdfH * scale) + 'px';
+    // In-flow scroll content sized to the displayed bounding box. margin:0 auto
+    // centers it horizontally when narrower than the wrap; when wider (zoomed in)
+    // it overflows and the wrap scrolls.
+    canvasScroll.style.width  = displayedW + 'px';
+    canvasScroll.style.height = displayedH + 'px';
+
+    // Stage = the actual page canvas, centered inside the bounding box and rotated.
+    canvasStage.style.width  = stageW + 'px';
+    canvasStage.style.height = stageH + 'px';
+    canvasStage.style.left = ((displayedW - stageW) / 2) + 'px';
+    canvasStage.style.top  = ((displayedH - stageH) / 2) + 'px';
+    canvasStage.style.transform = rotation ? `rotate(${rotation}deg)` : '';
+
+    mainCanvas.style.width  = stageW + 'px';
+    mainCanvas.style.height = stageH + 'px';
 
     // store scale for drag math
     canvasStage.dataset.scale = scale;
@@ -1035,9 +1070,21 @@ async function renderMainPage() {
     updatePlacementHint();
 }
 
+// CTRL + mouse-wheel to zoom the page in/out.
+canvasWrap.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey || !pdfJsDoc) return;
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    zoomLevel = Math.min(6, Math.max(0.3, zoomLevel * factor));
+    renderMainPage();
+}, { passive: false });
+
 function updateConfirmVisibility(){
     const box = document.getElementById('annotationConfirmBox');
-    if (pendingAnnotation && pendingAnnotation.pageIndex === currentPage && pendingAnnotation.x !== undefined) {
+    // Redaction rectangles don't use the confirm bar — they're applied by
+    // clicking an empty area of the page. Only text & images use it.
+    if (pendingAnnotation && pendingAnnotation.type !== 'rect'
+        && pendingAnnotation.pageIndex === currentPage && pendingAnnotation.x !== undefined) {
         box.classList.add('visible');
     } else {
         box.classList.remove('visible');
@@ -1050,6 +1097,10 @@ function updatePlacementHint(){
     } else if (activeTool === 'redact') {
         placementHint.style.display = 'block';
         placementHint.textContent = 'Drag a rectangle to redact';
+    } else if (pendingAnnotation && pendingAnnotation.type === 'rect' && pendingAnnotation.pending
+               && pendingAnnotation.pageIndex === currentPage) {
+        placementHint.style.display = 'block';
+        placementHint.textContent = 'Drag the edges to adjust · click an empty area to apply';
     } else {
         placementHint.style.display = 'none';
     }
@@ -1117,8 +1168,13 @@ function drawAnnotation(ann, idx, pdfW, pdfH, scale) {
 //  RESIZE HANDLES (only on pending)
 // =============================================================
 function addResizeHandles(element, ann) {
-    const corners = ['nw','ne','sw','se'];
-    corners.forEach(corner => {
+    // Corners for everything; edges (left/right/top/bottom) for rectangles & images
+    // so the user can pull a single side independently.
+    let handles = ['nw','ne','sw','se'];
+    if (ann.type === 'rect' || ann.type === 'image') {
+        handles = handles.concat(['n','s','e','w']);
+    }
+    handles.forEach(corner => {
         const h = document.createElement('div');
         h.className = 'resize-handle ' + corner;
         h.dataset.corner = corner;
@@ -1138,6 +1194,7 @@ function attachResizeHandler(handle, element, ann, corner) {
         e.stopPropagation();
         const point = getPoint(e);
         resizing = true;
+        redactArmed = false;   // don't let the resize's trailing click apply the redaction
         startClientX = point.clientX;
         startClientY = point.clientY;
         startAnnX = ann.x;
@@ -1170,34 +1227,27 @@ function attachResizeHandler(handle, element, ann, corner) {
         const pdfDYTop = stageDY / scale; // delta in screen-y converted to pdf top-down units
 
         if (ann.type === 'rect' || ann.type === 'image') {
-            // PDF rect anchored at bottom-left (ann.x, ann.y) with width/height.
-            // Visual corners (looking at unrotated page top-down):
-            //   nw = top-left,    se = bottom-right
-            //   ne = top-right,   sw = bottom-left
-            // PDF y is bottom-up; visual top = ann.y + ann.height; visual bottom = ann.y.
+            // PDF rect anchored at bottom-left (ann.x, ann.y), y axis bottom-up.
+            // Handle name encodes which edges move: contains 'e'/'w' for right/left,
+            // 'n'/'s' for top/bottom. Corners contain two letters; edges just one.
             let newX = startAnnX, newY = startAnnY, newW = startW, newH = startH;
-            if (corner === 'se') {
-                // bottom-right in screen = (anchor.x + width, anchor.y) in PDF.
-                // user drags bottom-right: width changes by +pdfDX, but bottom edge moves down (screen) which means PDF y decreases by pdfDYTop.
+            const hasE = corner.indexOf('e') !== -1;
+            const hasW = corner.indexOf('w') !== -1;
+            const hasN = corner.indexOf('n') !== -1;
+            const hasS = corner.indexOf('s') !== -1;
+            if (hasE) {                          // right edge: width grows to the right
                 newW = Math.max(8, startW + pdfDX);
-                const dY = pdfDYTop; // pdfDYTop>0 means user moved DOWN on screen => bottom edge moved down => height grows AND ann.y decreases.
-                newH = Math.max(8, startH + dY);
-                newY = startAnnY - dY;
-            } else if (corner === 'ne') {
-                newW = Math.max(8, startW + pdfDX);
-                // top edge moves => height = startH - pdfDYTop (moving top-edge up grows height); ann.y unchanged
-                newH = Math.max(8, startH - pdfDYTop);
-            } else if (corner === 'sw') {
+            }
+            if (hasW) {                          // left edge: width grows to the left, anchor moves
                 newW = Math.max(8, startW - pdfDX);
                 newX = startAnnX + pdfDX;
-                const dY = pdfDYTop;
-                newH = Math.max(8, startH + dY);
-                newY = startAnnY - dY;
-            } else if (corner === 'nw') {
-                newW = Math.max(8, startW - pdfDX);
-                newX = startAnnX + pdfDX;
+            }
+            if (hasN) {                          // top edge: bottom anchor stays, height changes
                 newH = Math.max(8, startH - pdfDYTop);
-                // ann.y unchanged (anchor still at bottom-left in PDF)
+            }
+            if (hasS) {                          // bottom edge: moves down, anchor y decreases
+                newH = Math.max(8, startH + pdfDYTop);
+                newY = startAnnY - pdfDYTop;
             }
             ann.x = newX; ann.y = newY; ann.width = newW; ann.height = newH;
             applyAnnotationPosition(element, ann, scale, pdfH);
@@ -1228,6 +1278,7 @@ function attachResizeHandler(handle, element, ann, corner) {
         document.removeEventListener('touchmove', onMove);
         document.removeEventListener('touchend',  onUp);
         document.removeEventListener('touchcancel', onUp);
+        setTimeout(() => { redactArmed = true; }, 0);  // re-arm after this gesture's click
     }
     handle.addEventListener('mousedown',  onDown);
     handle.addEventListener('touchstart', onDown, { passive:false });
@@ -1252,6 +1303,7 @@ function attachDragHandlers(element, ann) {
         e.preventDefault();
         const point = getPoint(e);
         dragging = true;
+        redactArmed = false;   // don't let the drag's trailing click apply the redaction
         element.classList.add('dragging');
         startClientX = point.clientX;
         startClientY = point.clientY;
@@ -1293,6 +1345,7 @@ function attachDragHandlers(element, ann) {
         document.removeEventListener('touchmove', onPointerMove);
         document.removeEventListener('touchend',  onPointerUp);
         document.removeEventListener('touchcancel', onPointerUp);
+        setTimeout(() => { redactArmed = true; }, 0);  // re-arm after this gesture's click
     }
     element.addEventListener('mousedown',  onPointerDown);
     element.addEventListener('touchstart', onPointerDown, { passive:false });
@@ -1545,6 +1598,15 @@ function getStageCoords(e) {
 
 // Use canvasStage for clicks/mouse — but stage rotates, so we listen on the wrap and translate.
 canvasWrap.addEventListener('click', async (e) => {
+    // Apply a pending redaction when the user clicks an empty area of the page.
+    if (redactArmed && pendingAnnotation && pendingAnnotation.type === 'rect' && pendingAnnotation.pending) {
+        const onItem = e.target && e.target.closest && e.target.closest('.annotation-item');
+        if (!onItem) {
+            redactArmed = false;
+            await commitPendingRedaction();
+        }
+        return;
+    }
     if (activeTool !== 'placeText' && activeTool !== 'placeImage') return;
     const c = getStageCoords(e);
     if (c.localX < 0 || c.localY < 0 || c.localX > c.pdfW * c.scale || c.localY > c.pdfH * c.scale) return;
@@ -1645,8 +1707,11 @@ async function pointerUpWrap(e) {
     redactColorBox.classList.remove('visible');
     setToolButtons(false);
     canvasWrap.style.cursor = 'default';
-    annotationConfirmBox.classList.add('visible');
-    updatePlacementHint();
+    // No confirm bar: the user adjusts by dragging the rectangle's edges, then
+    // clicks an empty area of the page to apply. Arm that click on the NEXT tick
+    // so this gesture's own trailing 'click' event doesn't commit instantly.
+    redactArmed = false;
+    setTimeout(() => { redactArmed = true; }, 0);
     await renderMainPage();
 }
 canvasWrap.addEventListener('mousedown',  pointerDownWrap);
@@ -1655,6 +1720,32 @@ canvasWrap.addEventListener('mouseup',    pointerUpWrap);
 canvasWrap.addEventListener('touchstart', (e)=>{ if(activeTool==='redact'){ pointerDownWrap(e);} }, { passive:false });
 canvasWrap.addEventListener('touchmove',  (e)=>{ if(isDrawing){ pointerMoveWrap(e);} }, { passive:false });
 canvasWrap.addEventListener('touchend',   (e)=>{ if(isDrawing){ pointerUpWrap(e);} });
+
+// Finalize a pending redaction (records history so it can be undone).
+async function commitPendingRedaction(){
+    if (!pendingAnnotation || pendingAnnotation.type !== 'rect') return;
+    pushHistory();
+    const pageObj = pages[pendingAnnotation.pageIndex];
+    const idx = pageObj.annotations.findIndex(a => a === pendingAnnotation);
+    if (idx !== -1) pageObj.annotations[idx].pending = false;
+    pendingAnnotation = null;
+    redactArmed = false;
+    placementHint.style.display = 'none';
+    await renderMainPage();
+}
+// Press Esc to discard a redaction you haven't applied yet.
+document.addEventListener('keydown', async (e) => {
+    if (e.key !== 'Escape') return;
+    if (pendingAnnotation && pendingAnnotation.type === 'rect' && pendingAnnotation.pending) {
+        const pageObj = pages[pendingAnnotation.pageIndex];
+        const idx = pageObj.annotations.findIndex(a => a === pendingAnnotation);
+        if (idx !== -1) pageObj.annotations.splice(idx, 1);
+        pendingAnnotation = null;
+        redactArmed = false;
+        placementHint.style.display = 'none';
+        await renderMainPage();
+    }
+});
 
 // Apply — confirms the pending annotation; pushes a snapshot before so the user
 // can roll back via the Undo toolbar button.
@@ -1982,18 +2073,24 @@ function setupDropzone(zoneEl, inputEl, opts){
 setupDropzone(
     document.getElementById('mergeDrop'),
     document.getElementById('pdfFiles'),
-    { multiple:true, accept:isPdfFile, labelEl:document.getElementById('mergeDropFiles'), emptyMsg:'No files selected' }
+    { multiple:true, accept:isPdfFile,
+      labelEl:document.getElementById('mergeDropText'),
+      emptyMsg:'Drag & drop PDFs here, or click to browse' }
 );
 setupDropzone(
     document.getElementById('editDrop'),
     document.getElementById('editFileInput'),
-    { multiple:false, accept:isPdfFile, labelEl:document.getElementById('editDropFiles'), emptyMsg:'No file selected',
+    { multiple:false, accept:isPdfFile,
+      labelEl:document.getElementById('editDropText'),
+      emptyMsg:'Drag & drop a PDF here, or click to browse',
       onDrop:() => document.getElementById('loadPdfBtn').click() }
 );
 setupDropzone(
     document.getElementById('compressDrop'),
     document.getElementById('compressFileInput'),
-    { multiple:false, accept:isPdfFile, labelEl:document.getElementById('compressDropFiles'), emptyMsg:'No file selected' }
+    { multiple:false, accept:isPdfFile,
+      labelEl:document.getElementById('compressDropText'),
+      emptyMsg:'Drag & drop a PDF here, or click to browse' }
 );
 </script>
 </body>
