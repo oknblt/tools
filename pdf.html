@@ -97,7 +97,7 @@ header{
 .tabcontent.visible{display:block;animation:fade .25s ease;}
 @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
 
-h2{margin:0 0 6px;font-size:18px;font-weight:600;}
+h2{margin:0 0 12px;font-size:13.5px;font-weight:500;color:var(--text-dim);letter-spacing:.2px;}
 .lead{color:var(--text-dim);font-size:14px;margin:0 0 20px;line-height:1.5;}
 
 /* Buttons & Inputs */
@@ -231,8 +231,9 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 .dropzone.dragover .dz-text{color:var(--accent-soft);}
 
 /* Dropzone + action button side by side (keeps the card short) */
-.dz-row{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch;margin-bottom:12px;}
-.dz-row .dropzone{flex:1 1 260px;margin-bottom:0;display:flex;flex-direction:column;justify-content:center;}
+.dz-row{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch;
+    margin:2px auto 12px;max-width:640px;}
+.dz-row .dropzone{flex:1 1 240px;margin-bottom:0;display:flex;flex-direction:column;justify-content:center;}
 .dz-row .dz-actions{display:flex;flex-direction:column;justify-content:center;gap:8px;flex:0 0 auto;}
 .dz-row .dz-actions .btn{white-space:nowrap;}
 @media (max-width:560px){
@@ -298,12 +299,11 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     background:var(--navy-900);
     border:1px solid var(--border-soft);
     border-radius:var(--radius-sm);
-    overflow:auto;
-    max-height:78vh;
+    overflow-x:auto;
     margin-bottom:12px;
     user-select:none;
     -webkit-user-select:none;
-    touch-action:pan-x pan-y;
+    touch-action:auto;
 }
 /* In-flow scroll content — establishes scroll area & centers the page */
 .canvas-scroll{
@@ -409,6 +409,33 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 .field-label{color:var(--text-dim);font-size:13px;margin-right:4px;}
 .hint-line{margin-top:6px;font-size:12px;color:var(--text-muted);font-style:italic;}
 
+/* Merge reorderable file list */
+.merge-list{margin:0 auto 12px;max-width:640px;display:flex;flex-direction:column;gap:6px;}
+.merge-item{display:flex;align-items:center;gap:10px;background:var(--surface-2);
+    border:1px solid var(--border-soft);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--text);}
+.merge-item .idx{flex:0 0 auto;color:var(--text-muted);font-variant-numeric:tabular-nums;min-width:20px;text-align:right;}
+.merge-item .mname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.merge-item .mbtns{flex:0 0 auto;display:flex;gap:4px;}
+.merge-item .mbtns button{background:var(--navy-700);border:1px solid var(--border-soft);color:var(--text);
+    border-radius:6px;cursor:pointer;font-size:12px;line-height:1;padding:4px 8px;font-family:inherit;}
+.merge-item .mbtns button:hover:not(:disabled){background:var(--navy-600);}
+.merge-item .mbtns button:disabled{opacity:.3;cursor:not-allowed;}
+
+/* Editable text annotation (type directly on the page) */
+.annotation-item.text-ann.editing{
+    background:rgba(107,164,255,.16);
+    outline:1px dashed var(--accent);
+    color:inherit;cursor:text;min-width:6px;min-height:1em;
+}
+.text-ann .move-handle{
+    position:absolute;top:-13px;left:-13px;width:19px;height:19px;
+    background:var(--accent);border-radius:5px;cursor:grab;z-index:6;
+    box-shadow:0 1px 4px rgba(0,0,0,.5);touch-action:none;
+    display:flex;align-items:center;justify-content:center;
+}
+.text-ann .move-handle::before{content:'✥';font-size:12px;color:#06121f;line-height:1;}
+.text-ann .move-handle:active{cursor:grabbing;}
+
 /* Confirm bar — sticky at the bottom on mobile so Apply never get lost */
 .annotation-confirm{
     display:none;
@@ -510,18 +537,16 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 <div id="collect" class="tabcontent visible">
     <div class="card">
         <h2>Collect PDF, Word, Excel &amp; image files</h2>
-        <p class="lead">Pick a main folder. Every PDF, DOC, DOCX, XLS, XLSX, XLSM, JPG, JPEG and PNG inside its subfolders will be listed for review, then copied into a new <strong>Combined</strong> folder.</p>
         <div class="row">
-            <button id="selectDirBtn" class="btn">📂 Select main folder</button>
-            <button id="confirmCollectBtn" class="btn success" style="display:none;">✔ Copy these files</button>
-            <button id="cancelCollectBtn" class="btn ghost" style="display:none;">Cancel</button>
+            <button id="selectDirBtn" class="btn sm">📂 Select main folder</button>
+            <button id="confirmCollectBtn" class="btn success sm" style="display:none;">✔ Copy these files</button>
+            <button id="cancelCollectBtn" class="btn ghost sm" style="display:none;">Cancel</button>
         </div>
         <div id="progressContainer" style="display:none;">
             <progress id="progressBar" value="0" max="100"></progress>
         </div>
         <div id="collectStatus" class="status"></div>
         <div id="filePreview" class="file-preview" style="display:none;"></div>
-        <div class="note">Your browser will ask permission to write files inside the folder you choose. Tip: in the picker, you can either click a folder once and press <strong>Select</strong>, or double-click to enter and then <strong>Select</strong>. Both work. Requires Chrome, Edge, or Opera.</div>
     </div>
 </div>
 
@@ -529,7 +554,6 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 <div id="merge" class="tabcontent">
     <div class="card">
         <h2>Merge multiple PDFs into one</h2>
-        <p class="lead">Pick the PDFs you want to combine — they'll be merged in the order shown.</p>
         <div class="dz-row">
             <div class="dropzone" id="mergeDrop">
                 <span class="dz-icon">🔗</span>
@@ -537,11 +561,11 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
             </div>
             <input type="file" id="pdfFiles" multiple accept="application/pdf" style="display:none;" />
             <div class="dz-actions">
-                <button id="mergeBtn" class="btn">🔗 Merge & download</button>
+                <button id="mergeBtn" class="btn sm">🔗 Merge & download</button>
             </div>
         </div>
+        <div id="mergeList" class="merge-list" style="display:none;"></div>
         <div id="mergeStatus" class="status"></div>
-        <div class="note">Tip: select the PDFs from the <em>Combined</em> folder you generated in the Collect tab.</div>
     </div>
 </div>
 
@@ -549,15 +573,16 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 <div id="edit" class="tabcontent">
     <div class="card">
         <h2>Edit a PDF</h2>
-        <p class="lead">Rotate, delete, reorder pages. Add text or signatures. Redact sensitive areas.</p>
-        <div class="dz-row">
-            <div class="dropzone" id="editDrop">
-                <span class="dz-icon">✏️</span>
-                <span class="dz-text" id="editDropText">Drag &amp; drop a PDF here, or click to browse</span>
-            </div>
-            <input type="file" id="editFileInput" accept="application/pdf" style="display:none;" />
-            <div class="dz-actions">
-                <button id="loadPdfBtn" class="btn">Load PDF</button>
+        <div id="editIntro">
+            <div class="dz-row">
+                <div class="dropzone" id="editDrop">
+                    <span class="dz-icon">✏️</span>
+                    <span class="dz-text" id="editDropText">Drag &amp; drop a PDF here, or click to browse</span>
+                </div>
+                <input type="file" id="editFileInput" accept="application/pdf" style="display:none;" />
+                <div class="dz-actions">
+                    <button id="loadPdfBtn" class="btn sm">Load PDF</button>
+                </div>
             </div>
         </div>
         <div id="editStatus" class="status"></div>
@@ -570,16 +595,21 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                 <button id="btnRotate" class="btn ghost sm">🔄 Rotate 90°</button>
                 <button id="btnUndo" class="btn ghost sm" disabled title="Undo last change">↶ Undo</button>
                 <button id="btnDeletePage" class="btn ghost sm">🗑️ Delete page</button>
+                <button id="reopenPdfBtn" class="btn ghost sm" title="Open a different PDF">📂 Open another</button>
                 <button id="downloadEditedBtn" class="btn success sm" style="margin-left:auto;">⬇️ Download</button>
             </div>
 
-            <div id="textInputBox" class="input-panel">
-                <label class="field block">Text<textarea id="textContent" placeholder="Type text… (multi-line supported)" rows="2"></textarea></label>
+            <div id="textControls" class="input-panel">
                 <div class="row">
-                    <label class="field">Size <input type="number" id="textSize" value="16" min="6" max="96" style="width:70px;" /></label>
-                    <button id="applyText" class="btn">Next: place on page</button>
-                    <button id="cancelText" class="btn ghost">Cancel</button>
+                    <span class="field-label">Text</span>
+                    <button id="textSizeDown" class="btn ghost sm" title="Smaller">A−</button>
+                    <button id="textSizeUp" class="btn ghost sm" title="Larger">A+</button>
+                    <label class="field">Color <input type="color" id="textColor" value="#111111" style="width:38px;padding:2px;" /></label>
+                    <button id="textRotate" class="btn ghost sm" title="Rotate text 90°">🔄</button>
+                    <button id="textDelete" class="btn danger sm" title="Delete this text">🗑️</button>
+                    <button id="textDone" class="btn success sm">✔ Done</button>
                 </div>
+                <div class="hint-line">Click on the page, then type directly. Drag the text to move it.</div>
             </div>
 
             <div id="sigFileBox" class="input-panel">
@@ -630,7 +660,6 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
 <div id="compress" class="tabcontent">
     <div class="card">
         <h2>Compress a PDF</h2>
-        <p class="lead">Reduce PDF size by re-encoding embedded images at a lower resolution and quality. Text stays sharp; large photos get smaller.</p>
         <div class="dz-row">
             <div class="dropzone" id="compressDrop">
                 <span class="dz-icon">🗜️</span>
@@ -647,12 +676,11 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
                         <option value="extreme">Extreme (smallest, lower image quality)</option>
                     </select>
                 </label>
-                <button id="compressBtn" class="btn gold">🗜️ Compress & download</button>
+                <button id="compressBtn" class="btn gold sm">🗜️ Compress & download</button>
             </div>
         </div>
         <progress id="compressProgress" value="0" max="100" style="display:none;"></progress>
         <div id="compressStatus" class="status"></div>
-        <div class="note">Two strategies are tried: a lossless re-save (best for text-heavy documents) and a JPEG rasterization at the chosen DPI. Whichever produces the smaller file wins — and if neither beats the original, the original is kept and no download starts.</div>
     </div>
 </div>
 
@@ -675,6 +703,13 @@ function fmtBytes(n){
     if(n<1024)return n+' B';
     if(n<1024*1024)return (n/1024).toFixed(1)+' KB';
     return (n/(1024*1024)).toFixed(2)+' MB';
+}
+function hexToRgb(hex){
+    hex = (hex || '#111111').replace('#','');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const n = parseInt(hex, 16);
+    if (isNaN(n)) return { r:0.07, g:0.07, b:0.07 };
+    return { r:((n>>16)&255)/255, g:((n>>8)&255)/255, b:(n&255)/255 };
 }
 
 // pdf.js worker
@@ -866,16 +901,50 @@ async function getUniqueName(dirHandle, fileName) {
 // =============================================================
 //  2. MERGE
 // =============================================================
+let mergeFiles = [];   // ordered list the user can rearrange before merging
+
+function renderMergeList(){
+    const list  = document.getElementById('mergeList');
+    const label = document.getElementById('mergeDropText');
+    if (!mergeFiles.length){
+        list.style.display = 'none';
+        list.innerHTML = '';
+        if (label) label.textContent = 'Drag & drop PDFs here, or click to browse';
+        return;
+    }
+    if (label) label.textContent = `${mergeFiles.length} file(s) — add more or reorder below`;
+    list.style.display = 'flex';
+    list.innerHTML = '';
+    mergeFiles.forEach((f, i) => {
+        const item = document.createElement('div'); item.className = 'merge-item';
+        const idx  = document.createElement('span'); idx.className = 'idx'; idx.textContent = (i + 1) + '.';
+        const name = document.createElement('span'); name.className = 'mname'; name.textContent = f.name;
+        const btns = document.createElement('div'); btns.className = 'mbtns';
+        const up = document.createElement('button'); up.textContent = '▲'; up.title = 'Move up'; up.disabled = i === 0;
+        up.addEventListener('click', () => { const t = mergeFiles[i-1]; mergeFiles[i-1] = mergeFiles[i]; mergeFiles[i] = t; renderMergeList(); });
+        const down = document.createElement('button'); down.textContent = '▼'; down.title = 'Move down'; down.disabled = i === mergeFiles.length - 1;
+        down.addEventListener('click', () => { const t = mergeFiles[i+1]; mergeFiles[i+1] = mergeFiles[i]; mergeFiles[i] = t; renderMergeList(); });
+        const rm = document.createElement('button'); rm.textContent = '✕'; rm.title = 'Remove';
+        rm.addEventListener('click', () => { mergeFiles.splice(i, 1); renderMergeList(); });
+        btns.append(up, down, rm);
+        item.append(idx, name, btns);
+        list.appendChild(item);
+    });
+}
+function addMergeFiles(arr){
+    (arr || []).forEach(f => { if (isPdfFile(f)) mergeFiles.push(f); });
+    renderMergeList();
+}
+
 document.getElementById('mergeBtn').addEventListener('click', async () => {
-    const files = document.getElementById('pdfFiles').files;
     const status = document.getElementById('mergeStatus');
     status.className='status';
-    if (!files.length) { status.textContent = 'Select at least one PDF.'; status.className='status err'; return; }
+    if (!mergeFiles.length) { status.textContent = 'Add at least one PDF.'; status.className='status err'; return; }
     status.textContent = 'Merging…';
     try{
         const { PDFDocument } = PDFLib;
         const mergedPdf = await PDFDocument.create();
-        for (const file of files) {
+        for (const file of mergeFiles) {
             const buf = await file.arrayBuffer();
             const pdf = await PDFDocument.load(buf, { ignoreEncryption: true });
             const copied = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
@@ -883,7 +952,7 @@ document.getElementById('mergeBtn').addEventListener('click', async () => {
         }
         const bytes = await mergedPdf.save();
         downloadBlob(bytes, 'merged.pdf', 'application/pdf');
-        status.textContent = `✅ Merged ${files.length} file(s) — ${fmtBytes(bytes.byteLength)}`;
+        status.textContent = `✅ Merged ${mergeFiles.length} file(s) — ${fmtBytes(bytes.byteLength)}`;
         status.className='status ok';
     }catch(e){
         status.textContent = '❌ ' + e.message;
@@ -956,12 +1025,21 @@ document.getElementById('loadPdfBtn').addEventListener('click', async () => {
         editStatus.textContent = `Loaded ${numPages} page(s) · ${fmtBytes(originalPdfBytes.byteLength)}`;
         editStatus.className='status ok';
         document.getElementById('editorContainer').style.display = 'block';
+        document.getElementById('editIntro').style.display = 'none';
         renderPageList();
         await renderMainPage();
     }catch(e){
         editStatus.textContent = '❌ ' + e.message;
         editStatus.className='status err';
     }
+});
+
+// Show the dropzone again to open a different PDF.
+document.getElementById('reopenPdfBtn').addEventListener('click', () => {
+    document.getElementById('editIntro').style.display = '';
+    document.getElementById('editFileInput').value = '';
+    document.getElementById('editDropText').textContent = 'Drag & drop a PDF here, or click to browse';
+    document.getElementById('editIntro').scrollIntoView({ behavior:'smooth', block:'nearest' });
 });
 
 // ---- thumbnails ----
@@ -975,9 +1053,12 @@ function renderPageList() {
         thumbDiv.draggable = true;
         thumbDiv.dataset.index = i;
         thumbDiv.addEventListener('click', async () => {
+            if (i === currentPage) return;
+            // Save any text being typed before leaving the page.
+            if (getPendingText()) { await commitPendingText(); }
             currentPage = i;
             resetToolState();
-            // also drop pending if user navigates away with one un-applied
+            // drop any other un-applied pending annotation
             pendingAnnotation = null;
             await renderMainPage();
             renderPageList();
@@ -1086,6 +1167,7 @@ async function renderMainPage() {
 
     updateConfirmVisibility();
     updatePlacementHint();
+    showTextControls(activeTool === 'placeText' || !!getPendingText());
 }
 
 // CTRL + mouse-wheel to zoom the page in/out.
@@ -1099,9 +1181,9 @@ canvasWrap.addEventListener('wheel', (e) => {
 
 function updateConfirmVisibility(){
     const box = document.getElementById('annotationConfirmBox');
-    // Redaction rectangles don't use the confirm bar — they're applied by
-    // clicking an empty area of the page. Only text & images use it.
-    if (pendingAnnotation && pendingAnnotation.type !== 'rect'
+    // Only image (signature) placement uses the confirm bar now.
+    // Redactions apply on empty-click; text uses its own controls + Done.
+    if (pendingAnnotation && pendingAnnotation.type === 'image'
         && pendingAnnotation.pageIndex === currentPage && pendingAnnotation.x !== undefined) {
         box.classList.add('visible');
     } else {
@@ -1109,9 +1191,12 @@ function updateConfirmVisibility(){
     }
 }
 function updatePlacementHint(){
-    if (activeTool === 'placeText' || activeTool === 'placeImage') {
+    if (activeTool === 'placeText') {
         placementHint.style.display = 'block';
-        placementHint.textContent = activeTool === 'placeText' ? 'Tap on the page to place text' : 'Tap on the page to place signature';
+        placementHint.textContent = 'Click on the page, then type';
+    } else if (activeTool === 'placeImage') {
+        placementHint.style.display = 'block';
+        placementHint.textContent = 'Tap on the page to place signature';
     } else if (activeTool === 'redact') {
         placementHint.style.display = 'block';
         placementHint.textContent = 'Drag a rectangle to redact';
@@ -1156,30 +1241,57 @@ function drawAnnotation(ann, idx, pdfW, pdfH, scale) {
     } else if (ann.type === 'text') {
         div.classList.add('text-ann');
         const x = ann.x * scale;
-        // ann.y is the BASELINE of the first line (PDF coords).
-        // CSS top of the DIV should be one line-height ABOVE the baseline so the text visually sits where the user tapped.
         const lines = (ann.text || '').split('\n').length;
         const baselineTop = (pdfH - ann.y) * scale;
         const fontPx = ann.size * scale;
-        // Approximate ascent: most fonts ≈ 0.8 of em-size. Use 0.8 to align baseline with the bottom of the first line.
         const ascent = fontPx * 0.8;
         div.style.left = x + 'px';
         div.style.top = (baselineTop - ascent) + 'px';
-        div.textContent = ann.text;
         div.style.fontSize = fontPx + 'px';
+        div.style.color = ann.color || '#111111';
+        if (ann.rotate) {
+            div.style.transform = `rotate(${ann.rotate}deg)`;
+            div.style.transformOrigin = 'left top';
+        }
+        if (ann.pending) {
+            div.classList.add('editing');
+            div.setAttribute('contenteditable', 'true');
+            div.spellcheck = false;
+            div.textContent = ann.text || '';
+            div.addEventListener('input', () => { ann.text = readEditableText(div); });
+            // Enter should insert a line break, not submit anything
+        } else {
+            div.textContent = ann.text;
+        }
         ann._lines = lines;
     }
 
-    // Only PENDING annotations are draggable & resizable
+    // Only PENDING annotations are interactive.
     if (ann.pending) {
-        div.classList.add('draggable');
-        attachDragHandlers(div, ann);
-        // Add resize handles
-        addResizeHandles(div, ann);
+        if (ann.type === 'text') {
+            // Typed directly on the page; only a move handle (sizing via toolbar).
+            const mh = document.createElement('div');
+            mh.className = 'move-handle';
+            mh.setAttribute('contenteditable', 'false');
+            mh.title = 'Drag to move';
+            attachDragHandlers(mh, ann, div);
+            div.appendChild(mh);
+        } else {
+            div.classList.add('draggable');
+            attachDragHandlers(div, ann);
+            addResizeHandles(div, ann);
+        }
     }
     // Confirmed annotations are visually finalized — no controls, no drag.
 
     overlay.appendChild(div);
+}
+
+// Read text out of a contentEditable, preserving line breaks and ignoring the
+// absolutely-positioned handle elements (which carry no text / use ::before).
+function readEditableText(el){
+    let t = el.innerText != null ? el.innerText : el.textContent;
+    return (t || '').replace(/\n$/, '');
 }
 
 // =============================================================
@@ -1306,7 +1418,8 @@ function attachResizeHandler(handle, element, ann, corner) {
 //  DRAGGING (FIXED — no re-render during drag)
 //  Only PENDING annotations are draggable.
 // =============================================================
-function attachDragHandlers(element, ann) {
+function attachDragHandlers(element, ann, moveEl) {
+    moveEl = moveEl || element;   // listen on `element`, but move/position `moveEl`
     let dragging = false;
     let startClientX = 0, startClientY = 0;
     let startAnnX = 0, startAnnY = 0;
@@ -1322,7 +1435,7 @@ function attachDragHandlers(element, ann) {
         const point = getPoint(e);
         dragging = true;
         redactArmed = false;   // don't let the drag's trailing click apply the redaction
-        element.classList.add('dragging');
+        moveEl.classList.add('dragging');
         startClientX = point.clientX;
         startClientY = point.clientY;
         startAnnX = ann.x;
@@ -1352,12 +1465,12 @@ function attachDragHandlers(element, ann) {
         const pdfDY = -stageDY / scale;
         ann.x = startAnnX + pdfDX;
         ann.y = startAnnY + pdfDY;
-        applyAnnotationPosition(element, ann, scale, pdfH);
+        applyAnnotationPosition(moveEl, ann, scale, pdfH);
     }
     function onPointerUp() {
         if (!dragging) return;
         dragging = false;
-        element.classList.remove('dragging');
+        moveEl.classList.remove('dragging');
         document.removeEventListener('mousemove', onPointerMove);
         document.removeEventListener('mouseup',   onPointerUp);
         document.removeEventListener('touchmove', onPointerMove);
@@ -1396,13 +1509,15 @@ const btnRedact         = document.getElementById('btnRedact');
 const btnRotate         = document.getElementById('btnRotate');
 const btnUndo           = document.getElementById('btnUndo');
 const btnDeletePage     = document.getElementById('btnDeletePage');
-const textInputBox      = document.getElementById('textInputBox');
 const sigFileBox        = document.getElementById('sigFileBox');
 const redactColorBox    = document.getElementById('redactColorBox');
-const textContent       = document.getElementById('textContent');
-const textSize          = document.getElementById('textSize');
-const applyTextBtn      = document.getElementById('applyText');
-const cancelTextBtn     = document.getElementById('cancelText');
+const textControls      = document.getElementById('textControls');
+const textColorInput    = document.getElementById('textColor');
+const textSizeUpBtn     = document.getElementById('textSizeUp');
+const textSizeDownBtn   = document.getElementById('textSizeDown');
+const textRotateBtn     = document.getElementById('textRotate');
+const textDeleteBtn     = document.getElementById('textDelete');
+const textDoneBtn       = document.getElementById('textDone');
 const sigFileInput      = document.getElementById('sigFile');
 const cancelSigBtn      = document.getElementById('cancelSig');
 const cancelRedactBtn   = document.getElementById('cancelRedact');
@@ -1410,6 +1525,7 @@ const annotationConfirmBox = document.getElementById('annotationConfirmBox');
 const applyAnnotationBtn   = document.getElementById('applyAnnotation');
 const cancelAnnotationBtn  = document.getElementById('cancelAnnotation');
 const downloadEditedBtn    = document.getElementById('downloadEditedBtn');
+const DEFAULT_TEXT_SIZE = 18;
 
 // =============================================================
 //  HISTORY (UNDO)
@@ -1463,7 +1579,7 @@ function resetToolState(hideConfirm = true) {
     activeTool = null;
     isDrawing = false;
     setToolButtons(false);
-    textInputBox.classList.remove('visible');
+    showTextControls(false);
     sigFileBox.classList.remove('visible');
     redactColorBox.classList.remove('visible');
     canvasWrap.style.cursor = 'default';
@@ -1473,47 +1589,101 @@ function resetToolState(hideConfirm = true) {
     updatePlacementHint();
 }
 
-// Auto-grow textarea
-function autoGrowTextarea() {
-    textContent.style.height = 'auto';
-    textContent.style.height = Math.min(240, textContent.scrollHeight + 2) + 'px';
+// ---- text-on-page editing ----
+function showTextControls(show){
+    if (show) textControls.classList.add('visible');
+    else textControls.classList.remove('visible');
 }
-textContent.addEventListener('input', autoGrowTextarea);
+function getPendingText(){
+    return (pendingAnnotation && pendingAnnotation.type === 'text') ? pendingAnnotation : null;
+}
+function focusPendingText(caretToEnd){
+    const el = overlay.querySelector('.text-ann.editing');
+    if (!el) return;
+    el.focus();
+    if (caretToEnd) {
+        try {
+            const r = document.createRange();
+            r.selectNodeContents(el);
+            r.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(r);
+        } catch {}
+    }
+}
+async function rerenderKeepText(){
+    await renderMainPage();
+    focusPendingText(true);
+}
+async function commitPendingText(){
+    const a = getPendingText();
+    if (!a) { showTextControls(false); resetToolState(true); return; }
+    const el = overlay.querySelector('.text-ann.editing');
+    if (el) a.text = readEditableText(el);
+    const po = pages[a.pageIndex];
+    if (!a.text.trim()) {                       // nothing typed → discard
+        const i = po.annotations.indexOf(a);
+        if (i !== -1) po.annotations.splice(i, 1);
+    } else {
+        pushHistory();
+        const i = po.annotations.indexOf(a);
+        if (i !== -1) po.annotations[i].pending = false;
+    }
+    pendingAnnotation = null;
+    showTextControls(false);
+    setToolButtons(false);
+    updatePlacementHint();
+    await renderMainPage();
+}
 
 btnAddText.addEventListener('click', () => {
     if (activeTool || pendingAnnotation) return;
-    activeTool = 'text';
-    textInputBox.classList.add('visible');
+    activeTool = 'placeText';
     sigFileBox.classList.remove('visible');
     redactColorBox.classList.remove('visible');
+    showTextControls(true);
     setToolButtons(true);
-    textContent.value = '';
-    textSize.value = '16';
-    autoGrowTextarea();
-    setTimeout(()=>textContent.focus(), 50);
-});
-applyTextBtn.addEventListener('click', () => {
-    const txt = textContent.value;  // keep newlines/spaces; just verify non-empty
-    if (!txt.trim()) { alert('Please enter some text.'); return; }
-    const size = parseInt(textSize.value) || 16;
-    activeTool = 'placeText';
-    pendingAnnotation = { type: 'text', text: txt, size, pageIndex: currentPage, pending: true };
-    textInputBox.classList.remove('visible');
-    setToolButtons(false);
-    canvasWrap.style.cursor = 'crosshair';
+    canvasWrap.style.cursor = 'text';
     updatePlacementHint();
 });
-cancelTextBtn.addEventListener('click', () => {
-    pendingAnnotation = null;
-    resetToolState(true);
-    annotationConfirmBox.classList.remove('visible');
+textSizeUpBtn.addEventListener('click', () => {
+    const a = getPendingText(); if (!a) return;
+    a.size = Math.min(200, a.size + 2); rerenderKeepText();
 });
+textSizeDownBtn.addEventListener('click', () => {
+    const a = getPendingText(); if (!a) return;
+    a.size = Math.max(6, a.size - 2); rerenderKeepText();
+});
+textColorInput.addEventListener('input', () => {
+    const a = getPendingText(); if (!a) return;
+    a.color = textColorInput.value;
+    const el = overlay.querySelector('.text-ann.editing');
+    if (el) el.style.color = a.color;
+});
+textRotateBtn.addEventListener('click', () => {
+    const a = getPendingText(); if (!a) return;
+    a.rotate = ((a.rotate || 0) + 90) % 360; rerenderKeepText();
+});
+textDeleteBtn.addEventListener('click', async () => {
+    const a = getPendingText();
+    if (a) {
+        const po = pages[a.pageIndex];
+        const i = po.annotations.indexOf(a);
+        if (i !== -1) po.annotations.splice(i, 1);
+        pendingAnnotation = null;
+    }
+    showTextControls(false);
+    resetToolState(true);
+    await renderMainPage();
+});
+textDoneBtn.addEventListener('click', commitPendingText);
 
 btnAddSig.addEventListener('click', () => {
     if (activeTool || pendingAnnotation) return;
     activeTool = 'signature';
     sigFileBox.classList.add('visible');
-    textInputBox.classList.remove('visible');
+    showTextControls(false);
     redactColorBox.classList.remove('visible');
     setToolButtons(true);
     sigFileInput.value='';
@@ -1550,7 +1720,7 @@ btnRedact.addEventListener('click', () => {
     activeTool = 'redact';
     redactColorBox.classList.add('visible');
     sigFileBox.classList.remove('visible');
-    textInputBox.classList.remove('visible');
+    showTextControls(false);
     setToolButtons(true);
     canvasWrap.style.cursor = 'crosshair';
     updatePlacementHint();
@@ -1631,12 +1801,29 @@ canvasWrap.addEventListener('click', async (e) => {
     const pdfX = c.localX / c.scale;
     const pdfYTop = c.localY / c.scale;
     const pageObj = pages[currentPage];
-    if (activeTool === 'placeText' && pendingAnnotation) {
-        pendingAnnotation.x = pdfX;
-        pendingAnnotation.y = c.pdfH - pdfYTop; // baseline-ish (pdf-lib draws from baseline)
-        pendingAnnotation.pageIndex = currentPage;
-        pageObj.annotations.push(pendingAnnotation);
-    } else if (activeTool === 'placeImage' && pendingAnnotation) {
+    if (activeTool === 'placeText') {
+        // Drop an editable text box right where the user clicked and start typing.
+        const ann = {
+            type: 'text', text: '',
+            size: DEFAULT_TEXT_SIZE,
+            color: textColorInput.value || '#111111',
+            rotate: 0,
+            x: pdfX, y: c.pdfH - pdfYTop,
+            pageIndex: currentPage, pending: true
+        };
+        pendingAnnotation = ann;
+        pageObj.annotations.push(ann);
+        activeTool = null;
+        setToolButtons(false);
+        canvasWrap.style.cursor = 'default';
+        showTextControls(true);
+        updatePlacementHint();
+        await renderMainPage();
+        focusPendingText(true);
+        return;
+    }
+    // placeImage
+    if (activeTool === 'placeImage' && pendingAnnotation) {
         const img = new Image();
         img.src = pendingAnnotation.dataUrl;
         await new Promise(r => { img.onload = r; img.onerror = r; });
@@ -1824,6 +2011,8 @@ function handleDragEnd(){
 // Download edited PDF
 downloadEditedBtn.addEventListener('click', async () => {
     if (!pdfDoc || pages.length === 0) return;
+    // Save any text still being typed so it isn't missed in the export.
+    if (getPendingText()) { await commitPendingText(); }
     const editStatus = document.getElementById('editStatus');
     editStatus.textContent = 'Building edited PDF…';
     editStatus.className='status';
@@ -1859,18 +2048,21 @@ downloadEditedBtn.addEventListener('click', async () => {
                         // Strip / transliterate characters Helvetica's WinAnsi can't encode.
                         textToDraw = sanitizeForWinAnsi(textToDraw);
                     }
+                    const col = hexToRgb(ann.color);
+                    const rot = ann.rotate ? PDFLib.degrees(ann.rotate) : undefined;
                     // Multi-line: split on \n, draw each line; PDF y is bottom-up baseline.
-                    // Treat ann.y as the baseline of the FIRST line (closest to user's tap origin).
                     const lines = textToDraw.split('\n');
                     const lineHeight = ann.size * 1.2;
                     for (let li = 0; li < lines.length; li++) {
-                        copiedPage.drawText(lines[li], {
+                        const opts = {
                             x: ann.x,
                             y: ann.y - li * lineHeight,
                             size: ann.size,
                             font: useFont,
-                            color: PDFLib.rgb(0,0,0)
-                        });
+                            color: PDFLib.rgb(col.r, col.g, col.b)
+                        };
+                        if (rot) opts.rotate = rot;
+                        copiedPage.drawText(lines[li], opts);
                     }
                 } else if (ann.type === 'image') {
                     const imgBytes = await (await fetch(ann.dataUrl)).arrayBuffer();
@@ -2057,6 +2249,7 @@ function setupDropzone(zoneEl, inputEl, opts){
     const labelEl  = opts.labelEl || null;
     const emptyMsg = opts.emptyMsg || 'No file selected';
     const onDrop   = opts.onDrop || null;
+    const onFiles  = opts.onFiles || null;
 
     function refreshLabel(){ if (labelEl) labelEl.textContent = describeFiles(inputEl, emptyMsg); }
 
@@ -2074,12 +2267,16 @@ function setupDropzone(zoneEl, inputEl, opts){
         if (!multiple) files = [files[0]];
         assignFiles(inputEl, files, multiple);
         refreshLabel();
+        if (onFiles) onFiles(Array.from(inputEl.files));
         if (onDrop) onDrop(inputEl.files);
     });
     // Click the zone to open the native picker.
     zoneEl.addEventListener('click', () => inputEl.click());
     // Keep the label in sync when the user picks via the input itself.
-    inputEl.addEventListener('change', refreshLabel);
+    inputEl.addEventListener('change', () => {
+        refreshLabel();
+        if (onFiles) onFiles(Array.from(inputEl.files));
+    });
     refreshLabel();
 }
 
@@ -2092,8 +2289,7 @@ setupDropzone(
     document.getElementById('mergeDrop'),
     document.getElementById('pdfFiles'),
     { multiple:true, accept:isPdfFile,
-      labelEl:document.getElementById('mergeDropText'),
-      emptyMsg:'Drag & drop PDFs here, or click to browse' }
+      onFiles:(files) => { addMergeFiles(files); document.getElementById('pdfFiles').value = ''; } }
 );
 setupDropzone(
     document.getElementById('editDrop'),
