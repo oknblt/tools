@@ -32,6 +32,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tv-header{background:#2f2f2f;padding:5px 6px;display:flex;justify-content:space-between;align-items:center;gap:6px;flex-shrink:0}
 .tv-header select{background:#444;color:#fff;border:1px solid #555;padding:6px 8px;border-radius:5px;cursor:pointer;font-size:12px;flex:1;min-width:0;min-height:32px}
 .tv-header select:focus{outline:none;border-color:#667eea}
+.channel-badge{background:#4CAF50;padding:2px 6px;border-radius:3px;font-size:9px;font-weight:bold;flex-shrink:0}
+.channel-badge.iptv{background:#ff9800}
 .tv-screen{flex:1;background:#000;position:relative;display:flex;align-items:center;justify-content:center;min-height:0;overflow:hidden}
 .tv-screen video{width:100%;height:100%;object-fit:contain;background:#000;display:block}
 .overlay-controls{position:absolute;top:6px;right:6px;display:flex;gap:5px;z-index:10;opacity:.85}
@@ -115,6 +117,7 @@ if(sessionStorage.getItem('bulut_auth')!=='1') window.location.href='index.html'
 // ================================================================
 var TV_CHANNELS = {
   "": { url: "", source: "" },
+
 
   "Halk TV":      { url: "https://halktv-live.daioncdn.net/halktv/halktv.m3u8", source: "IPTV" },
   "NTV":          { url: "https://dygvideo.dygdigital.com/live/hls/ntv4puhu", source: "IPTV" },
@@ -326,6 +329,7 @@ function createTVBoxes(count) {
     box.innerHTML =
       '<div class="tv-header">' +
         '<select id="sel-' + i + '" onchange="changeChannel(' + i + ',this.value)">' + generateChannelOptions() + '</select>' +
+        '<span class="channel-badge" id="badge-' + i + '" style="display:none">TRT</span>' +
       '</div>' +
       '<div class="tv-screen" id="scr-' + i + '">' +
         '<div class="overlay-controls">' +
@@ -339,6 +343,7 @@ function createTVBoxes(count) {
       element: box,
       screen: box.querySelector('#scr-' + i),
       select: box.querySelector('#sel-' + i),
+      badge: box.querySelector('#badge-' + i),
       muteBtn: box.querySelector('#mute-' + i),
       currentChannel: null, video: null, hls: null
     });
@@ -362,6 +367,7 @@ function changeChannel(boxIndex, channelName) {
   if (!channel || !channelName) {
     box.screen.insertAdjacentHTML('beforeend', '<div class="placeholder">&#128250; Kanal secin</div>');
     box.currentChannel = null;
+    box.badge.style.display = 'none';
     if (soloIndex === boxIndex) soloIndex = -1;
     updateMuteButtons();
     updateChannelNav();
@@ -370,6 +376,9 @@ function changeChannel(boxIndex, channelName) {
 
   box.screen.insertAdjacentHTML('beforeend',
     '<div class="loading"><div class="spinner"></div><div>Yukleniyor...</div><small style="color:#999">' + channelName + '</small></div>');
+  box.badge.textContent = channel.source;
+  box.badge.className = 'channel-badge' + (channel.source === 'TRT' ? '' : ' iptv');
+  box.badge.style.display = 'inline-block';
 
   var video = document.createElement('video');
   video.autoplay = true;
