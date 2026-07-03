@@ -254,6 +254,16 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
   outline-offset:12px;
   border-radius:12px;
 }
+/* Global drop highlight — covers the preview area whenever image files are dragged over the window */
+.preview-area.drag-over::after{
+  content:'📥 Drop images to add pages';
+  position:absolute;inset:8px;
+  border:3px dashed #27ae60;border-radius:12px;
+  background:rgba(39,174,96,.14);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;color:#2ecc71;
+  pointer-events:none;z-index:5;
+}
 </style>
 </head>
 <body>
@@ -267,10 +277,7 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 
 <!-- MAIN PREVIEW -->
 <div class="preview-area" id="previewArea">
-  <div class="empty-state" id="emptyState"
-    ondragover="event.preventDefault();this.classList.add('drag-over')"
-    ondragleave="this.classList.remove('drag-over')"
-    ondrop="onDropFiles(event)">
+  <div class="empty-state" id="emptyState">
     <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
     <p style="font-size:16px;font-weight:700;opacity:1;">Welcome</p>
     <p style="font-size:12px;opacity:0.7;margin-top:-8px;">Document Scanner — Bulut Projects</p>
@@ -402,14 +409,47 @@ let redactColor  = 'white'; // 'white' or 'black'
 let tReady  = false;
 const selectedPages = new Set();
 
-/* ═══ DRAG & DROP ═══ */
-function onDropFiles(e){
-  e.preventDefault();
-  document.getElementById('emptyState').classList.remove('drag-over');
-  const dt=e.dataTransfer;
-  if(!dt||!dt.files||!dt.files.length)return;
-  addPages({target:{files:dt.files}});
-}
+/* ═══ DRAG & DROP (global) ═══
+ * Pencerenin tamamı bırakma alanı: sayfa varken de, boşken de,
+ * tek seferde birden fazla dosya da bırakılabilir.
+ * Not: küçük resim (thumbnail) sıralama sürüklemeleri 'Files' tipi
+ * taşımadığı için bu handler'lar onlara karışmaz. */
+(function(){
+  const previewAreaEl=document.getElementById('previewArea');
+  let dragDepth=0;
+  function isFileDrag(e){
+    const t=e.dataTransfer&&e.dataTransfer.types;
+    if(!t) return false;
+    for(let i=0;i<t.length;i++) if(t[i]==='Files') return true;
+    return false;
+  }
+  window.addEventListener('dragenter',e=>{
+    if(!isFileDrag(e)) return;
+    e.preventDefault();
+    dragDepth++;
+    previewAreaEl.classList.add('drag-over');
+  });
+  window.addEventListener('dragover',e=>{
+    if(!isFileDrag(e)) return;
+    e.preventDefault(); // olmazsa tarayıcı dosyayı yeni sekmede açar
+    e.dataTransfer.dropEffect='copy';
+  });
+  window.addEventListener('dragleave',e=>{
+    if(!isFileDrag(e)) return;
+    dragDepth=Math.max(0,dragDepth-1);
+    if(dragDepth===0) previewAreaEl.classList.remove('drag-over');
+  });
+  window.addEventListener('drop',e=>{
+    if(!isFileDrag(e)) return;
+    e.preventDefault();
+    dragDepth=0;
+    previewAreaEl.classList.remove('drag-over');
+    document.getElementById('emptyState').classList.remove('drag-over');
+    const files=Array.from(e.dataTransfer.files||[]).filter(f=>f.type&&f.type.startsWith('image/'));
+    if(!files.length) return;
+    addPages({target:{files,value:''}});
+  });
+})();
 
 /* ═══ EXIF + AUTO-ROTATE ═══ */
 function applyOrientation(img, ori, cb){
@@ -1149,6 +1189,122 @@ function snapCornerToEdge(corner, edge, w, h, searchR){
   return best||corner;
 }
 
+/* ═══ Hough çizgi tabanlı belge tespiti ═══
+ * Tekil kenar piksellerine güvenmek yerine, kenar haritasındaki BASKIN
+ * DOĞRULARI bulur (Hough dönüşümü), yatay/dikey gruplara ayırır ve en iyi
+ * 2 yatay + 2 dikey doğru kombinasyonunun kesişiminden belge dörtgenini
+ * çıkarır. Böylece arka plandaki gürültü pikselleri köşe sanılmaz —
+ * köşeler her zaman iki gerçek kenar çizgisinin kesişimidir. */
+function houghDetectQuad(edge,w,h){
+  const pts=[];
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++) if(edge[y*w+x]===2){pts.push(x,y);}
+  const nPts=pts.length/2;
+  if(nPts<60) return null;
+
+  const D2R=Math.PI/180;
+  const nTheta=180;
+  const diag=Math.ceil(Math.hypot(w,h));
+  const rhoRes=2;
+  const nRho=Math.floor(2*diag/rhoRes)+1;
+  const cosT=new Float32Array(nTheta), sinT=new Float32Array(nTheta);
+  for(let t=0;t<nTheta;t++){cosT[t]=Math.cos(t*D2R);sinT[t]=Math.sin(t*D2R);}
+
+  // Akümülatör (nokta sayısı çoksa örnekle)
+  const acc=new Int32Array(nTheta*nRho);
+  const skip=Math.max(1,Math.floor(nPts/7000));
+  for(let i=0;i<nPts;i+=skip){
+    const x=pts[i*2], y=pts[i*2+1];
+    for(let t=0;t<nTheta;t++){
+      const ri=Math.round((x*cosT[t]+y*sinT[t]+diag)/rhoRes);
+      if(ri>=0&&ri<nRho) acc[t*nRho+ri]++;
+    }
+  }
+
+  let maxV=0; for(let i=0;i<acc.length;i++) if(acc[i]>maxV)maxV=acc[i];
+  if(maxV<15) return null;
+
+  // Yerel maksimumlar (±3° / ±4 rho hücresi bastırma)
+  const thr=Math.max(12,maxV*0.18);
+  const cands=[];
+  for(let t=0;t<nTheta;t++)for(let r=0;r<nRho;r++){
+    const v=acc[t*nRho+r];
+    if(v<thr) continue;
+    let isMax=true;
+    for(let dt=-3;dt<=3&&isMax;dt++){
+      const tt=t+dt; if(tt<0||tt>=nTheta) continue;
+      for(let dr=-4;dr<=4;dr++){
+        const rr=r+dr; if(rr<0||rr>=nRho) continue;
+        const v2=acc[tt*nRho+rr];
+        if(v2>v||(v2===v&&(dt<0||(dt===0&&dr<0)))){isMax=false;break;}
+      }
+    }
+    if(isMax) cands.push({t,rho:r*rhoRes-diag,v});
+  }
+  if(cands.length<4) return null;
+  cands.sort((a,b)=>b.v-a.v);
+
+  // Yataya yakın (üst/alt kenar adayları) ve dikeye yakın (sol/sağ) ayır
+  const Hs=[],Vs=[];
+  for(const c of cands){
+    if(c.t>=45&&c.t<135){ if(Hs.length<10)Hs.push(c); }
+    else if(Vs.length<10)Vs.push(c);
+    if(Hs.length>=10&&Vs.length>=10) break;
+  }
+  if(Hs.length<2||Vs.length<2) return null;
+
+  function inter(l1,l2){
+    const det=cosT[l1.t]*sinT[l2.t]-sinT[l1.t]*cosT[l2.t];
+    if(Math.abs(det)<1e-6) return null;
+    return {
+      x:(l1.rho*sinT[l2.t]-l2.rho*sinT[l1.t])/det,
+      y:(l2.rho*cosT[l1.t]-l1.rho*cosT[l2.t])/det
+    };
+  }
+  const tol=Math.min(w,h)*0.06;
+  const inB=p=>p&&p.x>=-tol&&p.x<=w+tol&&p.y>=-tol&&p.y<=h+tol;
+  const cross=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x);
+  const ang=(o,a,b)=>{
+    const d1x=a.x-o.x,d1y=a.y-o.y,d2x=b.x-o.x,d2y=b.y-o.y;
+    const m=Math.hypot(d1x,d1y)*Math.hypot(d2x,d2y);
+    if(m<1e-6) return 0;
+    return Math.acos(Math.max(-1,Math.min(1,(d1x*d2x+d1y*d2y)/m)))/D2R;
+  };
+
+  let best=null,bestScore=-Infinity;
+  for(let i=0;i<Hs.length;i++)for(let j=i+1;j<Hs.length;j++)
+  for(let k=0;k<Vs.length;k++)for(let l=k+1;l<Vs.length;l++){
+    const h1=Hs[i],h2=Hs[j],v1=Vs[k],v2=Vs[l];
+    const p1=inter(h1,v1),p2=inter(h1,v2),p3=inter(h2,v1),p4=inter(h2,v2);
+    if(!inB(p1)||!inB(p2)||!inB(p3)||!inB(p4)) continue;
+    // Köşeleri konuma göre sırala
+    const ps=[p1,p2,p3,p4];
+    let tl=ps[0],tr=ps[0],bl=ps[0],br=ps[0];
+    for(const p of ps){
+      if(p.x+p.y<tl.x+tl.y)tl=p;
+      if(p.x+p.y>br.x+br.y)br=p;
+      if(p.x-p.y>tr.x-tr.y)tr=p;
+      if(p.x-p.y<bl.x-bl.y)bl=p;
+    }
+    if(new Set([tl,tr,bl,br]).size!==4) continue;
+    // Dışbükeylik kontrolü
+    const c1=cross(tl,tr,br),c2=cross(tr,br,bl),c3=cross(br,bl,tl),c4=cross(bl,tl,tr);
+    if(!((c1>0&&c2>0&&c3>0&&c4>0)||(c1<0&&c2<0&&c3<0&&c4<0))) continue;
+    // Alan makul olmalı (görüntünün %15–99.5'i)
+    const ar=quadArea(tl,tr,bl,br)/(w*h);
+    if(ar<0.15||ar>0.995) continue;
+    // Köşe açıları perspektif payıyla 90°'ye yakın olmalı
+    const a1=ang(tl,tr,bl),a2=ang(tr,tl,br),a3=ang(br,tr,bl),a4=ang(bl,tl,br);
+    if(Math.min(a1,a2,a3,a4)<55||Math.max(a1,a2,a3,a4)>125) continue;
+    // Skor: çizgi oyları × alan ağırlığı (metin satırları gibi iç çizgiler
+    // güçlü olsa da küçük alan verdiği için sayfa sınırı kazanır)
+    const score=(h1.v+h2.v+v1.v+v2.v)*Math.pow(ar,0.7);
+    if(score>bestScore){bestScore=score;best={tl,tr,bl,br};}
+  }
+  if(!best) return null;
+  const cl=p=>({x:Math.max(0,Math.min(w,p.x)),y:Math.max(0,Math.min(h,p.y))});
+  return {tl:cl(best.tl),tr:cl(best.tr),bl:cl(best.bl),br:cl(best.br)};
+}
+
 function autoCrop(){
   tool='crop'; rRect=null; brushPoints=[];
   document.querySelectorAll('.etbtn').forEach(b=>b.classList.remove('on'));
@@ -1158,8 +1314,9 @@ function autoCrop(){
   const src=history[history.length-1]||pages[edIdx].cur;
   const img=new Image();
   img.onload=()=>{
-    // Work at reduced size for speed, then scale results back
-    const MAX=800;
+    // Work at reduced size for speed, then scale results back.
+    // 520px: metin/detay kenarları küçülmede kaybolur, sayfa sınırı belirgin kalır.
+    const MAX=520;
     const scale=Math.min(1,MAX/Math.max(img.width,img.height));
     const sw=Math.round(img.width*scale), sh=Math.round(img.height*scale);
 
@@ -1173,20 +1330,27 @@ function autoCrop(){
       // Run Canny edge detection
       const edge=cannyEdgeDetect(imgData.data,sw,sh);
 
-      // Find document quad — hem edge hem renk verisi geçiliyor (Seçenek B)
-      const q=findDocumentQuad(edge,sw,sh);
+      // 1) Çizgi tabanlı tespit (Hough) — köşeler kenar çizgilerinin kesişimi
+      let result=houghDetectQuad(edge,sw,sh);
 
-      if(q){
+      // 2) Bulamazsa eski nokta tabanlı yönteme dön (+ kenara oturt)
+      if(!result){
+        const q=findDocumentQuad(edge,sw,sh);
+        if(q){
+          const snap=r=>snapCornerToEdge(r,edge,sw,sh,Math.max(4,Math.round(30*scale)));
+          result={tl:snap(q.tl),tr:snap(q.tr),bl:snap(q.bl),br:snap(q.br)};
+        }
+      }
+
+      if(result){
         // Scale back to full image coordinates
         const S=1/scale;
-        const snap=r=>snapCornerToEdge(r,edge,sw,sh,Math.round(30*scale));
-        const tls=snap(q.tl), trs=snap(q.tr), bls=snap(q.bl), brs=snap(q.br);
-
+        const cl=(v,m)=>Math.max(0,Math.min(m,Math.round(v*S)));
         quad={
-          tl:{x:Math.round(tls.x*S), y:Math.round(tls.y*S)},
-          tr:{x:Math.round(trs.x*S), y:Math.round(trs.y*S)},
-          bl:{x:Math.round(bls.x*S), y:Math.round(bls.y*S)},
-          br:{x:Math.round(brs.x*S), y:Math.round(brs.y*S)},
+          tl:{x:cl(result.tl.x,img.width), y:cl(result.tl.y,img.height)},
+          tr:{x:cl(result.tr.x,img.width), y:cl(result.tr.y,img.height)},
+          bl:{x:cl(result.bl.x,img.width), y:cl(result.bl.y,img.height)},
+          br:{x:cl(result.br.x,img.width), y:cl(result.br.y,img.height)},
         };
       } else {
         // Fallback: full image with small margin
