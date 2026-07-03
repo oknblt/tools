@@ -312,6 +312,9 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
   <button class="tbtn" id="tbRotate" onclick="selectedPages.size?batchRotate():rotateCurrent()" disabled>
     <span class="ico">↻</span><span>Rotate</span>
   </button>
+  <button class="tbtn" id="tbAutoAll" onclick="autoCropAll()" disabled>
+    <span class="ico">✨</span><span>Auto</span>
+  </button>
   <button class="tbtn green" id="tbPDF" onclick="openPDFModal()" disabled>
     <span class="ico">📄</span><span>PDF</span>
   </button>
@@ -320,6 +323,16 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 
 
 <input type="file" id="fi" accept="image/*" multiple style="display:none" onchange="addPages(event)">
+
+<!-- AUTO-CROP ALL PROGRESS -->
+<div id="autoAllProg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9997;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#1a2a4a;padding:18px 22px;border-radius:12px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;">
+    <span id="autoAllLabel" style="font-size:13px;font-weight:700;text-align:center;">Auto crop…</span>
+    <div style="height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;">
+      <div id="autoAllBarFill" style="height:100%;width:0%;background:#27ae60;transition:width .25s;"></div>
+    </div>
+  </div>
+</div>
 
 <!-- EDITOR MODAL -->
 <div id="edModal">
@@ -753,6 +766,7 @@ function updateUI(){
   document.getElementById('tbDel').disabled=!hasSel;
   document.getElementById('tbEdit').disabled=!hasSel;
   document.getElementById('tbRotate').disabled=!hasSel;
+  document.getElementById('tbAutoAll').disabled=!has;
   document.getElementById('tbPDF').disabled=!has;
 }
 
@@ -1048,18 +1062,30 @@ function cannyEdgeDetect(data, w, h){
     gray[i] = 0.299*data[i*4] + 0.587*data[i*4+1] + 0.114*data[i*4+2];
   }
 
-  // --- Step 2: Gaussian blur (5x5 kernel) ---
-  const kernel=[2,4,5,4,2, 4,9,12,9,4, 5,12,15,12,5, 4,9,12,9,4, 2,4,5,4,2];
-  const kSum=159;
+  // --- Step 2: Gaussian blur (5x5, ayrılabilir: 1D yatay + 1D dikey ≈ 5x hızlı) ---
+  const k1=[1,4,6,4,1], k1s=16;
+  const tmp=new Float32Array(w*h);
   const blurred=new Float32Array(w*h);
-  for(let y=0;y<h;y++) for(let x=0;x<w;x++){
-    let s=0;
-    for(let ky=0;ky<5;ky++) for(let kx=0;kx<5;kx++){
-      const ny=Math.max(0,Math.min(h-1,y+ky-2));
-      const nx=Math.max(0,Math.min(w-1,x+kx-2));
-      s+=kernel[ky*5+kx]*gray[ny*w+nx];
+  for(let y=0;y<h;y++){
+    const row=y*w;
+    for(let x=0;x<w;x++){
+      let s=0;
+      for(let k=-2;k<=2;k++){
+        const nx=x+k<0?0:(x+k>=w?w-1:x+k);
+        s+=k1[k+2]*gray[row+nx];
+      }
+      tmp[row+x]=s/k1s;
     }
-    blurred[y*w+x]=s/kSum;
+  }
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      let s=0;
+      for(let k=-2;k<=2;k++){
+        const ny=y+k<0?0:(y+k>=h?h-1:y+k);
+        s+=k1[k+2]*tmp[ny*w+x];
+      }
+      blurred[y*w+x]=s/k1s;
+    }
   }
 
   // --- Step 3: Sobel gradients ---
@@ -1305,6 +1331,150 @@ function houghDetectQuad(edge,w,h){
   return {tl:cl(best.tl),tr:cl(best.tr),bl:cl(best.bl),br:cl(best.br)};
 }
 
+/* ═══ Kâğıt maskesi (beyazlık tabanlı bölütleme) ═══
+ * Açık renkli zeminlerde sayfa sınırının kontrastı Canny için çok zayıf
+ * kalabilir (eşikler metnin güçlü kenarlarına göre ayarlanır, soluk sayfa
+ * sınırı elenir). Ancak kâğıt hemen her zaman zeminden daha "beyaz"dır:
+ * min(R,G,B) kâğıtta yüksek, renkli/koyu zeminde düşüktür.
+ * Otsu eşiğiyle kâğıt bölgesi ayrılır, en büyük bileşenin DIŞ sınır
+ * pikselleri temiz bir kenar haritası olarak döndürülür (içerideki metin
+ * delikleri dış sınırı etkilemez). */
+function paperMask(data,w,h){
+  const N=w*h;
+  const wht=new Uint8Array(N);
+  const hist=new Int32Array(256);
+  for(let i=0;i<N;i++){
+    const r=data[i*4],g=data[i*4+1],b=data[i*4+2];
+    const mn=r<g?(r<b?r:b):(g<b?g:b);
+    wht[i]=mn; hist[mn]++;
+  }
+  // Otsu eşiği
+  let sum=0; for(let t=0;t<256;t++) sum+=t*hist[t];
+  let sumB=0,wB=0,maxVar=-1,thr=127;
+  for(let t=0;t<256;t++){
+    wB+=hist[t]; if(!wB) continue;
+    const wF=N-wB; if(!wF) break;
+    sumB+=t*hist[t];
+    const mB=sumB/wB, mF=(sum-sumB)/wF;
+    const v=wB*wF*(mB-mF)*(mB-mF);
+    if(v>maxVar){maxVar=v;thr=t;}
+  }
+  const mask=new Uint8Array(N);
+  for(let i=0;i<N;i++) mask[i]=wht[i]>thr?1:0;
+  // Kutupluluk: belge genelde ortadadır — merkez bölge maskede olmalı
+  const cx0=Math.floor(w*0.4),cx1=Math.ceil(w*0.6);
+  const cy0=Math.floor(h*0.4),cy1=Math.ceil(h*0.6);
+  let cIn=0,cTot=0;
+  for(let y=cy0;y<cy1;y++)for(let x=cx0;x<cx1;x++){cTot++;if(mask[y*w+x])cIn++;}
+  if(cIn<cTot*0.5){ for(let i=0;i<N;i++) mask[i]^=1; }
+  // En büyük bağlı bileşen (merkeze değenlere öncelik)
+  const label=new Int32Array(N);
+  const qx=new Int32Array(N), qy=new Int32Array(N);
+  let nextL=1, bestL=0, bestScore=-1, bestArea=0;
+  for(let sy=0;sy<h;sy++)for(let sx=0;sx<w;sx++){
+    const si=sy*w+sx;
+    if(!mask[si]||label[si]) continue;
+    const L=nextL++;
+    let head=0,tail=0,area=0,touchesCenter=false;
+    label[si]=L; qx[tail]=sx; qy[tail]=sy; tail++;
+    while(head<tail){
+      const x=qx[head],y=qy[head]; head++; area++;
+      if(x>=cx0&&x<cx1&&y>=cy0&&y<cy1) touchesCenter=true;
+      let ni;
+      if(x>0  &&mask[ni=y*w+x-1]&&!label[ni]){label[ni]=L;qx[tail]=x-1;qy[tail]=y;tail++;}
+      if(x<w-1&&mask[ni=y*w+x+1]&&!label[ni]){label[ni]=L;qx[tail]=x+1;qy[tail]=y;tail++;}
+      if(y>0  &&mask[ni=(y-1)*w+x]&&!label[ni]){label[ni]=L;qx[tail]=x;qy[tail]=y-1;tail++;}
+      if(y<h-1&&mask[ni=(y+1)*w+x]&&!label[ni]){label[ni]=L;qx[tail]=x;qy[tail]=y+1;tail++;}
+    }
+    const score=area*(touchesCenter?2:1);
+    if(score>bestScore){bestScore=score;bestL=L;bestArea=area;}
+  }
+  if(!bestL) return null;
+  const areaRatio=bestArea/N;
+  if(areaRatio<0.1||areaRatio>0.99) return null;
+  // Dışarıyı kenarlardan taşır (flood) — bileşen içindeki delikler sayılmaz
+  const outside=new Uint8Array(N);
+  let head=0,tail=0;
+  const push=(x,y)=>{
+    const i=y*w+x;
+    if(!outside[i]&&label[i]!==bestL){outside[i]=1;qx[tail]=x;qy[tail]=y;tail++;}
+  };
+  for(let x=0;x<w;x++){push(x,0);push(x,h-1);}
+  for(let y=0;y<h;y++){push(0,y);push(w-1,y);}
+  while(head<tail){
+    const x=qx[head],y=qy[head]; head++;
+    if(x>0)push(x-1,y); if(x<w-1)push(x+1,y);
+    if(y>0)push(x,y-1); if(y<h-1)push(x,y+1);
+  }
+  // Dış sınır: bileşende olup dışarıya (veya görüntü kenarına) komşu pikseller
+  const edge=new Uint8Array(N);
+  let cnt=0;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=y*w+x;
+    if(label[i]!==bestL) continue;
+    if(x===0||x===w-1||y===0||y===h-1||
+       outside[i-1]||outside[i+1]||outside[i-w]||outside[i+w]){
+      edge[i]=2; cnt++;
+    }
+  }
+  if(cnt<60) return null;
+  return {edge, areaRatio};
+}
+
+/* Dörtgenin her kenarının kenar haritasınca desteklenme oranı (en zayıf kenar).
+ * Hough bazen gürültüden güçlü ama gerçekte var olmayan çizgi seçebilir;
+ * gerçek bir belge sınırında dört kenarın da altında kenar pikselleri bulunur. */
+function quadEdgeSupport(q,edge,w,h){
+  const sides=[[q.tl,q.tr],[q.tr,q.br],[q.br,q.bl],[q.bl,q.tl]];
+  let minSup=1;
+  for(const [a,b] of sides){
+    const N=40; let hit=0;
+    for(let i=0;i<=N;i++){
+      const x=Math.round(a.x+(b.x-a.x)*i/N);
+      const y=Math.round(a.y+(b.y-a.y)*i/N);
+      let found=false;
+      for(let dy=-2;dy<=2&&!found;dy++)for(let dx=-2;dx<=2;dx++){
+        const nx=x+dx, ny=y+dy;
+        if(nx>=0&&ny>=0&&nx<w&&ny<h&&edge[ny*w+nx]===2){found=true;break;}
+      }
+      if(found)hit++;
+    }
+    minSup=Math.min(minSup,hit/(N+1));
+  }
+  return minSup;
+}
+
+/* ═══ Ortak belge tespiti (üç aşamalı) ═══
+ * 1) Kâğıt maskesi sınırı + Hough  → açık/koyu her zeminde en sağlam yol
+ * 2) Canny + Hough                 → maske ayrışmazsa (ör. beyaz zemin üstü beyaz kâğıt)
+ * 3) Eski nokta tabanlı yöntem     → son çare
+ * Dönen quad çalışma (küçültülmüş) koordinatlarındadır; bulunamazsa null. */
+function detectDocQuad(imgData, sw, sh){
+  try{
+    const pm=paperMask(imgData.data,sw,sh);
+    if(pm){
+      let q=houghDetectQuad(pm.edge,sw,sh);
+      if(q){
+        const qa=quadArea(q.tl,q.tr,q.bl,q.br)/(sw*sh);
+        // Dörtgen alanı maske alanıyla tutarlı olmalı (yanlış çizgi seçimine karşı)
+        if(qa>pm.areaRatio*0.7&&qa<pm.areaRatio*1.35) return q;
+      }
+      // Maske sınırı gürültüsüz olduğundan köşe-skoru yöntemi de burada güvenilirdir
+      q=findDocumentQuad(pm.edge,sw,sh);
+      if(q) return q;
+    }
+    const edge=cannyEdgeDetect(imgData.data,sw,sh);
+    let q=houghDetectQuad(edge,sw,sh);
+    if(q&&quadEdgeSupport(q,edge,sw,sh)>=0.45) return q;
+    q=findDocumentQuad(edge,sw,sh);
+    if(q){
+      const snap=r=>snapCornerToEdge(r,edge,sw,sh,8);
+      return {tl:snap(q.tl),tr:snap(q.tr),bl:snap(q.bl),br:snap(q.br)};
+    }
+  }catch(err){ console.error('detectDocQuad error:',err); }
+  return null;
+}
+
 function autoCrop(){
   tool='crop'; rRect=null; brushPoints=[];
   document.querySelectorAll('.etbtn').forEach(b=>b.classList.remove('on'));
@@ -1324,23 +1494,9 @@ function autoCrop(){
     c.width=sw; c.height=sh;
     const ctx=c.getContext('2d');
     ctx.drawImage(img,0,0,sw,sh);
-    const imgData=ctx.getImageData(0,0,sw,sh);
 
     try{
-      // Run Canny edge detection
-      const edge=cannyEdgeDetect(imgData.data,sw,sh);
-
-      // 1) Çizgi tabanlı tespit (Hough) — köşeler kenar çizgilerinin kesişimi
-      let result=houghDetectQuad(edge,sw,sh);
-
-      // 2) Bulamazsa eski nokta tabanlı yönteme dön (+ kenara oturt)
-      if(!result){
-        const q=findDocumentQuad(edge,sw,sh);
-        if(q){
-          const snap=r=>snapCornerToEdge(r,edge,sw,sh,Math.max(4,Math.round(30*scale)));
-          result={tl:snap(q.tl),tr:snap(q.tr),bl:snap(q.bl),br:snap(q.br)};
-        }
-      }
+      const result=detectDocQuad(ctx.getImageData(0,0,sw,sh),sw,sh);
 
       if(result){
         // Scale back to full image coordinates
@@ -1529,6 +1685,115 @@ function applyEd(){
     closeEd();
   };
   img.src=src;
+}
+
+/* ═══ TÜMÜNÜ OTOMATİK KIRP (ana ekran ✨ Auto butonu) ═══
+ * Seçim varsa yalnızca seçili sayfaları, yoksa tüm sayfaları sırayla
+ * otomatik tespit edip perspektif düzeltmeyle kırpar.
+ * pages[i].orig korunur → herhangi bir sayfa sonradan Edit ile açılıp
+ * Reset'lenerek orijinaline döndürülebilir ve elle yeniden kırpılabilir. */
+let autoAllBusy=false;
+
+function autoCropPage(idx, cb){
+  const img=new Image();
+  img.onload=()=>{
+    try{
+      const MAX=520;
+      const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+      const sw=Math.round(img.width*scale), sh=Math.round(img.height*scale);
+      const c=document.createElement('canvas');
+      c.width=sw; c.height=sh;
+      const ctx=c.getContext('2d');
+      ctx.drawImage(img,0,0,sw,sh);
+
+      const q=detectDocQuad(ctx.getImageData(0,0,sw,sh),sw,sh);
+      if(!q){ cb(false); return; }
+
+      const S=1/scale;
+      const cl=(v,m)=>Math.max(0,Math.min(m,Math.round(v*S)));
+      const fq={
+        tl:{x:cl(q.tl.x,img.width), y:cl(q.tl.y,img.height)},
+        tr:{x:cl(q.tr.x,img.width), y:cl(q.tr.y,img.height)},
+        bl:{x:cl(q.bl.x,img.width), y:cl(q.bl.y,img.height)},
+        br:{x:cl(q.br.x,img.width), y:cl(q.br.y,img.height)},
+      };
+
+      // Neredeyse tam kadraj bulunduysa (muhtemelen zaten kırpılmış) dokunma
+      const mrg=Math.min(img.width,img.height)*0.015;
+      const nearFull=
+        fq.tl.x<mrg && fq.tl.y<mrg &&
+        fq.tr.x>img.width-mrg && fq.tr.y<mrg &&
+        fq.bl.x<mrg && fq.bl.y>img.height-mrg &&
+        fq.br.x>img.width-mrg && fq.br.y>img.height-mrg;
+      if(nearFull){ cb(true); return; }
+
+      // applyEd ile aynı çıktı boyutu hesabı + perspektif düzeltme
+      const topW  =Math.hypot(fq.tr.x-fq.tl.x, fq.tr.y-fq.tl.y);
+      const botW  =Math.hypot(fq.br.x-fq.bl.x, fq.br.y-fq.bl.y);
+      const leftH =Math.hypot(fq.bl.x-fq.tl.x, fq.bl.y-fq.tl.y);
+      const rightH=Math.hypot(fq.br.x-fq.tr.x, fq.br.y-fq.tr.y);
+      const outW=Math.round(Math.max(topW,botW));
+      const outH=Math.round(Math.max(leftH,rightH));
+      if(outW<=4||outH<=4){ cb(false); return; }
+
+      const srcCanvas=document.createElement('canvas');
+      srcCanvas.width=img.width; srcCanvas.height=img.height;
+      srcCanvas.getContext('2d').drawImage(img,0,0);
+      const warped=perspectiveWarp(srcCanvas,fq,outW,outH);
+      pages[idx].cur=warped.toDataURL('image/jpeg',0.92);
+      cb(true);
+    }catch(err){
+      console.error('autoCropPage error:',err);
+      cb(false);
+    }
+  };
+  img.onerror=()=>cb(false);
+  img.src=pages[idx].cur;
+}
+
+function autoCropAll(){
+  if(autoAllBusy||!pages.length) return;
+  autoAllBusy=true;
+
+  // Seçim varsa sadece seçilenler, yoksa hepsi
+  const idxs=selectedPages.size?[...selectedPages].sort((a,b)=>a-b)
+                               :pages.map((_,i)=>i);
+  const total=idxs.length;
+  let done=0, okCnt=0, failCnt=0;
+
+  const prog=document.getElementById('autoAllProg');
+  const lbl =document.getElementById('autoAllLabel');
+  const fill=document.getElementById('autoAllBarFill');
+  prog.style.display='flex';
+  fill.style.width='0%';
+
+  function finish(){
+    lbl.textContent=failCnt?('✓ '+okCnt+' cropped — '+failCnt+' skipped (edit manually)')
+                           :('✓ '+okCnt+' page'+(okCnt>1?'s':'')+' auto-cropped');
+    fill.style.width='100%';
+    renderStrip();
+    if(curIdx!==null&&pages.length) selectPage(Math.min(curIdx,pages.length-1));
+    updateUI();
+    setTimeout(()=>{ prog.style.display='none'; autoAllBusy=false; },1400);
+  }
+
+  function step(){
+    if(done>=total||done>=idxs.length){ finish(); return; }
+    const idx=idxs[done];
+    lbl.textContent='Auto crop — page '+(idx+1)+'  ('+(done+1)+'/'+total+')';
+    fill.style.width=Math.round(done/total*100)+'%';
+    // UI'nin nefes alması için küçük gecikmeyle sırayla işle
+    setTimeout(()=>{
+      if(idx>=pages.length){ done++; step(); return; }
+      autoCropPage(idx, ok=>{
+        ok?okCnt++:failCnt++;
+        done++;
+        renderStrip();
+        step();
+      });
+    },30);
+  }
+  step();
 }
 
 /* ═══ LOUPE (köşe aynası) ═══
