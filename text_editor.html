@@ -158,17 +158,68 @@ function setLang(l) {
   document.getElementById('btn-tr').setAttribute('aria-pressed', l === 'tr');
 }
 
-function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
-inp.addEventListener('input', () => autoResize(inp));
-inp.addEventListener('keydown', () => setTimeout(() => autoResize(inp), 0));
-out.addEventListener('input', () => autoResize(out));
-out.addEventListener('keydown', () => setTimeout(() => autoResize(out), 0));
+function autoResize(el) {
+  // Yükseklik değişmeyecekse hiç dokunma (yanıp sönmeyi önler)
+  const prevH = el.style.height;
+  el.style.height = 'auto';
+  const newH = el.scrollHeight + 'px';
+  if (prevH === newH) { el.style.height = prevH; return; }
+  el.style.height = newH;
+}
+function autoResizeStable(el) {
+  // height:auto anlık çökmesi sayfayı yukarı zıplatmasın diye kaydırma konumunu koru
+  const y = window.scrollY;
+  autoResize(el);
+  if (window.scrollY !== y) window.scrollTo(0, y);
+}
+inp.addEventListener('input', () => autoResizeStable(inp));
+out.addEventListener('input', () => autoResizeStable(out));
+
+// Çok yaygın kısa kelimeler: her iki taraf da gerçek kelimeyse satır sonu = kelime sınırı
+const COMMON_WORDS = new Set(['the','a','an','and','or','of','in','on','at','to','for','by','is','are','was','were','be','been','this','that','these','those','it','its','as','with','from','not','no','but','if','they','their','there','has','have','had','will','can','could','would','should','all','also','which','who','last','year','new','more','than','other','some','any','ve','bir','bu','şu','ile','için','olan','olarak','veya','gibi','da','de','yapı','izin','her','çok','daha','en']);
+
+function joinBrokenLines(prev, next) {
+  // prev: şu ana kadar birleşmiş metin, next: yeni satır
+  const endsWithSpace = /[ \t]$/.test(prev);
+  const startsWithSpace = /^[ \t]/.test(next);
+  const p = prev.replace(/[ \t]+$/, '');
+  const n = next.replace(/^[ \t]+/, '');
+  if (!p) return n;
+  if (!n) return p;
+
+  // 1) Satır sonunda ya da yeni satır başında boşluk korunmuşsa: kelime sınırı
+  if (endsWithSpace || startsWithSpace) return p + ' ' + n;
+
+  const lastCh = p.charAt(p.length - 1);
+  const firstCh = n.charAt(0);
+
+  // 2) Tire ile biten satır: tireyi koruyarak yapıştır (self-\nassessment → self-assessment)
+  if (lastCh === '-' && /\p{Ll}/u.test(firstCh)) return p + n;
+
+  // 3) Noktalama sonrası / açılış işareti öncesi: boşluk
+  if (/[.,;:!?)\]»""]/.test(lastCh) || /[([«""]/.test(firstCh)) return p + ' ' + n;
+
+  // 4) Rakam ↔ harf geçişi: boşluk (ör. "166786" + "sqm")
+  const isDigit = c => /\d/.test(c), isLetter = c => /\p{L}/u.test(c);
+  if ((isDigit(lastCh) && isLetter(firstCh)) || (isLetter(lastCh) && isDigit(firstCh))) return p + ' ' + n;
+
+  // 5) Bir taraf bilinen tam kelime, diğer taraf yeterince uzun bir parçaysa: kelime sınırı
+  const prevFrag = (p.match(/[\p{L}\p{N}''-]+$/u) || [''])[0].toLocaleLowerCase('tr-TR');
+  const nextFrag = (n.match(/^[\p{L}\p{N}''-]+/u) || [''])[0].toLocaleLowerCase('tr-TR');
+  if (COMMON_WORDS.has(prevFrag) && ((prevFrag.length >= 3 && nextFrag.length >= 3) || COMMON_WORDS.has(nextFrag))) return p + ' ' + n;
+
+  // 6) Aksi halde kelime ortadan bölünmüştür: doğrudan yapıştır
+  return p + n;
+}
 
 function removeExtraSpaces(text) {
-  const paragraphs = text.split(/\n{2,}/);
-  return paragraphs.map(para =>
-    para.split('\n').map(l => l.trim()).filter(l => l.length > 0).join(' ').replace(/[ \t]+/g, ' ').trim()
-  ).join('\n\n');
+  const paragraphs = text.replace(/\r\n?/g, '\n').split(/\n[ \t]*\n+/);
+  return paragraphs.map(para => {
+    const lines = para.split('\n');
+    let result = lines[0] || '';
+    for (let i = 1; i < lines.length; i++) result = joinBrokenLines(result, lines[i]);
+    return result.replace(/[ \t]+/g, ' ').trim();
+  }).filter(p => p.length > 0).join('\n\n');
 }
 
 const EN_EXCEPTIONS = new Set(['of', 'on', 'and', 'in', 'at', 'to', 'for', 'or', 'nor']);
