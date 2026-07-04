@@ -74,6 +74,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* Tap-to-unmute / tap-to-start hint on a TV box */
 .unmute-hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(102,126,234,.92);border:1px solid rgba(255,255,255,.35);color:#fff;padding:9px 18px;border-radius:22px;font-size:13px;font-weight:600;cursor:pointer;z-index:12;display:none;white-space:nowrap;box-shadow:0 2px 12px rgba(0,0,0,.5)}
 .unmute-hint.show{display:block}
+/* CSS pseudo-fullscreen (triggered from the remote) */
+.tv-box.pfull{position:fixed;inset:0;z-index:600;border:none;border-radius:0}
+.tv-box.pfull .tv-header{display:none}
+body.has-pfull .header,body.has-pfull .channel-nav{display:none}
 /* Toast */
 #voiceToast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(20,20,30,.92);color:#fff;padding:10px 18px;border-radius:22px;font-size:13px;border:1px solid rgba(102,126,234,.4);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:999;max-width:80vw;text-align:center}
 #voiceToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -246,6 +250,8 @@ var drumStartY = 0, drumStartOffset = 0, drumOffset = 0, drumCommitTimer = null;
 var recognition = null, voiceActive = false, toastTimer = null;
 var SEEK_STEP = 10;
 var currentVolume = 100, lastVolume = 100;
+var remoteTarget = 0;   // which TV box the remote currently controls
+var pfullIndex = -1;    // box shown in CSS pseudo-fullscreen (-1 = none)
 
 // ================================================================
 // HELPERS
@@ -264,6 +270,16 @@ var STREAM_PROXY = 'https://tatatam.trt1sultanfatihss.workers.dev/';
 // (use this for streams blocked by CORS/region rather than mixed content):
 var FORCE_PROXY = ['Summer'];
 
+// Cloudflare Workers REFUSE to fetch literal-IP origins ("direct IP
+// access not allowed"). NatGeo / NatGeo Wild live on a bare IP
+// (http://185.102.171.218/...), which is why they still failed while
+// hostname streams (prosto.tv etc.) worked. nip.io is a free wildcard
+// DNS service: "185.102.171.218.nip.io" resolves to that same IP, so
+// swapping the host lets the proxy reach it.
+function deIP(url) {
+  return url.replace(/^(https?:\/\/)(\d{1,3}(?:\.\d{1,3}){3})(?=[:\/])/i, '$1$2.nip.io');
+}
+
 function resolveStreamUrl(url, name) {
   if (!url) return url;
   // Only rewrite when WE are on https; locally everything stays as-is
@@ -271,13 +287,15 @@ function resolveStreamUrl(url, name) {
   if (location.protocol !== 'https:') return url;
   var needsProxy = /^http:\/\//i.test(url) ||
                    (name && FORCE_PROXY.indexOf(name) !== -1);
-  if (needsProxy && url.indexOf(STREAM_PROXY) !== 0) return STREAM_PROXY + url;
+  if (needsProxy && url.indexOf(STREAM_PROXY) !== 0) return STREAM_PROXY + deIP(url);
   return url;
 }
 
 // iOS / iPadOS detection (iPad reports as "MacIntel" with touch support)
 var IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+// Touch devices in general: "tap to unmute" hints only make sense here.
+var HAS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
 // --- Deep mixed-content fix -------------------------------------
 // Proxying only the master .m3u8 is NOT enough: many streams (NatGeo,
@@ -293,7 +311,7 @@ function makeProxyLoader() {
     var inner = new Base(config);
     this.load = function(context, cfg, callbacks) {
       if (/^http:\/\//i.test(context.url) && context.url.indexOf(STREAM_PROXY) !== 0) {
-        context.url = STREAM_PROXY + context.url;
+        context.url = STREAM_PROXY + deIP(context.url);
       }
       inner.load(context, cfg, callbacks);
     };
@@ -348,11 +366,13 @@ function createTVBoxes(count) {
   var container = document.getElementById('gridContainer');
   tvBoxes.forEach(function(box) {
     if (box.hls) { try { box.hls.destroy(); } catch(e){} }
-    if (box.video) { try { box.video.pause(); box.video.src = ''; } catch(e){} }
+    if (box.video) { try { box.video.pause(); box.video.removeAttribute('src'); box.video.load(); } catch(e){} }
   });
   container.innerHTML = '';
   tvBoxes = [];
   soloIndex = -1;
+  pfullIndex = -1;
+  document.body.classList.remove('has-pfull');
   for (var i = 0; i < count; i++) {
     var box = document.createElement('div');
     box.className = 'tv-box';
@@ -365,34 +385,59 @@ function createTVBoxes(count) {
           '<button class="overlay-btn" id="mute-' + i + '" onclick="toggleSolo(' + i + ')">&#128263;</button>' +
           '<button class="overlay-btn" onclick="fullscreen(' + i + ')">&#9638;</button>' +
         '</div>' +
+        '<button class="unmute-hint" id="hint-' + i + '" onclick="tapUnmute(' + i + ')">&#128266; Ses i&ccedil;in dokun</button>' +
         '<div class="placeholder">&#128250; Kanal secin</div>' +
       '</div>';
     container.appendChild(box);
+
+    // ONE persistent <video> per box, reused for every channel.
+    // Safari grants "may play with sound" PER ELEMENT after a user tap;
+    // recreating the element on each channel change threw that
+    // permission away (why iPad went silent again after 1-2 zaps).
+    var video = document.createElement('video');
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:none';
+    (function(idx){ video.addEventListener('click', function(){ toggleSolo(idx); }); })(i);
+    var screen = box.querySelector('#scr-' + i);
+    screen.appendChild(video);
+
     tvBoxes.push({
       element: box,
-      screen: box.querySelector('#scr-' + i),
+      screen: screen,
       select: box.querySelector('#sel-' + i),
       muteBtn: box.querySelector('#mute-' + i),
-      currentChannel: null, video: null, hls: null
+      hintBtn: box.querySelector('#hint-' + i),
+      currentChannel: null, video: video, hls: null
     });
   }
+  remoteTarget = Math.max(0, Math.min(remoteTarget, tvBoxes.length - 1));
   updateMuteButtons();
+}
+
+// Remove transient messages (placeholder / loading / error) from a screen
+function clearScreenMsgs(box) {
+  var els = box.screen.querySelectorAll('.placeholder,.loading,.error-message');
+  for (var i = 0; i < els.length; i++) els[i].remove();
 }
 
 function changeChannel(boxIndex, channelName) {
   var box = tvBoxes[boxIndex];
   var channel = TV_CHANNELS[channelName];
-  if (box.hls) { try { box.hls.destroy(); } catch(e){} box.hls = null; }
-  if (box.video) { try { box.video.pause(); box.video.src = ''; } catch(e){} box.video = null; }
+  var video = box.video;
 
-  box.screen.innerHTML =
-    '<div class="overlay-controls">' +
-      '<button class="overlay-btn" id="mute-' + boxIndex + '" onclick="toggleSolo(' + boxIndex + ')">&#128263;</button>' +
-      '<button class="overlay-btn" onclick="fullscreen(' + boxIndex + ')">&#9638;</button>' +
-    '</div>' +
-    '<button class="unmute-hint" id="hint-' + boxIndex + '" onclick="tapUnmute(' + boxIndex + ')">&#128266; Ses i&ccedil;in dokun</button>';
-  box.muteBtn = box.screen.querySelector('#mute-' + boxIndex);
-  box.hintBtn = box.screen.querySelector('#hint-' + boxIndex);
+  var reqId = Date.now();
+  box._reqId = reqId;          // set FIRST so stale listeners no-op below
+  box._userPaused = false;
+
+  if (box.hls) { try { box.hls.destroy(); } catch(e){} box.hls = null; }
+  try { video.pause(); video.removeAttribute('src'); video.load(); } catch(e){}
+  clearScreenMsgs(box);
+  hideHint(box);
+  video.style.display = 'none';
 
   if (!channel || !channelName) {
     box.screen.insertAdjacentHTML('beforeend', '<div class="placeholder">&#128250; Kanal secin</div>');
@@ -400,24 +445,12 @@ function changeChannel(boxIndex, channelName) {
     if (soloIndex === boxIndex) soloIndex = -1;
     updateMuteButtons();
     updateChannelNav();
+    peerSendState();
     return;
   }
 
   box.screen.insertAdjacentHTML('beforeend',
     '<div class="loading"><div class="spinner"></div><div>Yukleniyor...</div><small style="color:#999">' + channelName + '</small></div>');
-
-  var video = document.createElement('video');
-  video.autoplay = true;
-  video.muted = true;
-  video.playsInline = true;
-  video.setAttribute('playsinline', '');
-  video.setAttribute('webkit-playsinline', '');
-  video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:none';
-  video.addEventListener('click', function(){ toggleSolo(boxIndex); });
-
-  var reqId = Date.now();
-  box._reqId = reqId;
-  box._userPaused = false;
 
   // "Bless" the element while we may still be inside a user gesture
   // (select change / button tap). Safari & Chrome then allow later
@@ -425,7 +458,7 @@ function changeChannel(boxIndex, channelName) {
   try { var bless = video.play(); if (bless && bless.catch) bless.catch(function(){}); } catch(e) {}
 
   var onReady = function() {
-    if (box._reqId !== reqId) { try { video.pause(); video.src=''; } catch(e){} return; }
+    if (box._reqId !== reqId) return;
     var loader = box.screen.querySelector('.loading');
     if (loader) loader.remove();
     video.style.display = 'block';
@@ -435,10 +468,12 @@ function changeChannel(boxIndex, channelName) {
     var p = video.play();
     if (p && p.then) {
       p.then(function() {
+        if (box._reqId !== reqId) return;
         updateMuteButtons(); // will try to unmute the solo box safely
       }).catch(function() {
+        if (box._reqId !== reqId) return;
         // Even muted autoplay was blocked (rare: Low Power Mode etc.)
-        showHint(box, '\u25B6\uFE0F Ba\u015Flatmak i\u00E7in dokun');
+        showHint(box, '\u25B6\uFE0F Ba\u015Flatmak i\u00E7in dokun', true);
       });
     } else {
       updateMuteButtons();
@@ -451,7 +486,7 @@ function changeChannel(boxIndex, channelName) {
     if (loader) loader.remove();
     box.screen.insertAdjacentHTML('beforeend',
       '<div class="error-message">&#10060; ' + msg + '<br>' +
-      '<button onclick="changeChannel(' + boxIndex + ',\'' + channelName + '\')">&#128260; Tekrar dene</button></div>');
+      '<button onclick="changeChannel(' + boxIndex + ',\'' + channelName.replace(/'/g, "\\'") + '\')">&#128260; Tekrar dene</button></div>');
   };
 
   var streamUrl = resolveStreamUrl(channel.url, channelName);
@@ -482,9 +517,7 @@ function changeChannel(boxIndex, channelName) {
     return;
   }
 
-  box.screen.appendChild(video);
-  box.video = video;
-  video.volume = currentVolume / 100;
+  if (!IS_IOS) { try { video.volume = currentVolume / 100; } catch(e){} }
   box.currentChannel = channelName;
   if (soloIndex === -1 && !userMutedAll) soloIndex = boxIndex;
   updateChannelNav();
@@ -497,13 +530,41 @@ function toggleSolo(boxIndex) {
   updateMuteButtons();
 }
 
-function showHint(box, txt) {
+function showHint(box, txt, force) {
   if (!box || !box.hintBtn) return;
+  // Desktop browsers (Chrome etc.) don't need these tap prompts —
+  // audio unlocks fine there, so only show them on touch devices.
+  if (!HAS_TOUCH && !force) return;
   if (txt) box.hintBtn.innerHTML = txt;
   box.hintBtn.classList.add('show');
+  clearTimeout(box._hintT);
+  box._hintT = setTimeout(function(){ hideHint(box); }, 3000);
 }
 function hideHint(box) {
-  if (box && box.hintBtn) box.hintBtn.classList.remove('show');
+  if (!box || !box.hintBtn) return;
+  clearTimeout(box._hintT);
+  box.hintBtn.classList.remove('show');
+}
+
+// CSS pseudo-fullscreen for the remote. Real requestFullscreen() needs
+// a user gesture, and a WebRTC message from the phone doesn't count —
+// browsers would silently reject it. Expanding the box with CSS works
+// from any code path, and channels can still be changed while "full".
+function togglePseudoFull() {
+  if (pfullIndex >= 0) {
+    if (tvBoxes[pfullIndex]) tvBoxes[pfullIndex].element.classList.remove('pfull');
+    document.body.classList.remove('has-pfull');
+    pfullIndex = -1;
+    showToast('\u26F6 Tam ekran kapatildi');
+    return;
+  }
+  var i = Math.max(0, Math.min(remoteTarget, tvBoxes.length - 1));
+  var box = tvBoxes[i];
+  if (!box) return;
+  box.element.classList.add('pfull');
+  document.body.classList.add('has-pfull');
+  pfullIndex = i;
+  showToast('\u26F6 Tam ekran \u2014 TV' + (i + 1));
 }
 
 // Apply the desired audio state to one box WITHOUT ever pausing it.
@@ -602,6 +663,7 @@ function setGrid(layout, btn) {
     if (previous[i]) { tvBoxes[i].select.value = previous[i]; changeChannel(i, previous[i]); }
   }
   updateChannelNav();
+  peerSendState();
 }
 
 // ================================================================
@@ -715,19 +777,21 @@ function updateChannelNav() {
 }
 
 function navChannel(direction) {
-  if (currentGrid !== '1x1' || !tvBoxes[0]) return;
+  var t = (currentGrid === '1x1') ? 0 : Math.max(0, Math.min(remoteTarget, tvBoxes.length - 1));
+  var box = tvBoxes[t];
+  if (!box) return;
   var flat = getFlatChannelList();
   if (!flat.length) return;
-  var current = tvBoxes[0].currentChannel;
+  var current = box.currentChannel;
   var idx = current ? flat.indexOf(current) : 0;
   if (direction === 'first') idx = 0;
   else if (direction === 'last') idx = flat.length - 1;
   else if (direction === 'next') idx = (idx + 1) % flat.length;
   else if (direction === 'prev') idx = (idx - 1 + flat.length) % flat.length;
   var name = flat[idx];
-  tvBoxes[0].select.value = name;
-  changeChannel(0, name);
-  drumSetTo(idx, true);
+  box.select.value = name;
+  changeChannel(t, name);
+  if (currentGrid === '1x1') drumSetTo(idx, true);
 }
 
 // ================================================================
@@ -735,7 +799,7 @@ function navChannel(direction) {
 // ================================================================
 function volTargetIndex() {
   if (soloIndex >= 0 && tvBoxes[soloIndex]) return soloIndex;
-  return 0;
+  return Math.max(0, Math.min(remoteTarget, tvBoxes.length - 1));
 }
 
 function updateVolIcon(v) {
@@ -830,8 +894,9 @@ function peerSendChannels() {
 
 function peerSendState() {
   if (!peerConn) return;
-  var ch = tvBoxes[0] && tvBoxes[0].currentChannel;
-  try { peerConn.send({ action: 'state', channel: ch || '' }); } catch(e) {}
+  var t = Math.max(0, Math.min(remoteTarget, tvBoxes.length - 1));
+  var ch = tvBoxes[t] && tvBoxes[t].currentChannel;
+  try { peerConn.send({ action: 'state', channel: ch || '', target: t + 1, screens: tvBoxes.length }); } catch(e) {}
 }
 
 function showPeerCode(id, connected) {
@@ -913,12 +978,22 @@ function handleRemoteCommand(cmd) {
       showToast((cmd.delta > 0 ? '\u23E9 ' : '\u23EA ') + Math.abs(cmd.delta) + 'sn'); break;
     case 'channel':
       if (cmd.name && TV_CHANNELS[cmd.name]) {
+        var t = Math.max(0, Math.min(remoteTarget, tvBoxes.length - 1));
         var flat = getFlatChannelList();
         var idx = flat.indexOf(cmd.name);
-        if (tvBoxes[0]) { tvBoxes[0].select.value = cmd.name; changeChannel(0, cmd.name); }
-        if (idx >= 0) drumSetTo(idx, true);
-        showToast('\uD83D\uDCFA ' + cmd.name);
+        if (tvBoxes[t]) { tvBoxes[t].select.value = cmd.name; changeChannel(t, cmd.name); }
+        if (currentGrid === '1x1' && idx >= 0) drumSetTo(idx, true);
+        showToast('\uD83D\uDCFA TV' + (t + 1) + ': ' + cmd.name);
       } break;
+    case 'target':
+      var ti = Math.max(0, Math.min(tvBoxes.length - 1, (cmd.index | 0)));
+      remoteTarget = ti;
+      showToast('\uD83C\uDFAF Kumanda \u2192 TV' + (ti + 1));
+      peerSendState();
+      break;
+    case 'fullscreen':
+      togglePseudoFull();
+      break;
     case 'layout':
       if (cmd.layout) {
         var btn = document.querySelector('[data-layout="' + cmd.layout + '"]');

@@ -39,40 +39,44 @@ body{display:flex;flex-direction:column}
 .ch-bar select{flex:1;background:#1a1a28;color:#fff;border:1px solid #333;border-radius:8px;padding:7px 10px;font-size:12px;min-height:36px}
 .ch-go{background:#667eea;border:none;color:#fff;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
 
-/* numpad */
-.numpad-area{background:#0d0d1a;border-bottom:1px solid #1a1a2a;padding:8px 10px;flex-shrink:0}
-.num-display{background:#1a1a28;border:1px solid #2a2a3a;border-radius:8px;padding:6px 12px;font-size:22px;font-weight:700;letter-spacing:.1em;text-align:center;color:#fff;margin-bottom:8px}
-.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.nk{background:#1a1a28;border:1px solid #222;color:#ccc;border-radius:10px;padding:13px 0;font-size:18px;font-weight:600;text-align:center;cursor:pointer;transition:background .1s;user-select:none}
+/* numpad (sits at the bottom of the scroll area) */
+.numpad-area{background:#0d0d1a;border:1px solid #1a1a2a;border-radius:12px;padding:8px;margin-top:4px}
+.num-display{background:#1a1a28;border:1px solid #2a2a3a;border-radius:8px;padding:3px 10px;font-size:18px;font-weight:700;letter-spacing:.1em;text-align:center;color:#fff;margin-bottom:6px}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.nk{background:#1a1a28;border:1px solid #222;color:#ccc;border-radius:9px;padding:9px 0;font-size:15px;font-weight:600;text-align:center;cursor:pointer;transition:background .1s;user-select:none;min-height:38px;display:flex;align-items:center;justify-content:center}
 .nk:active{background:#2a2a40;border-color:#667eea;color:#fff}
-.nk.accent{background:#111830;border-color:#667eea44;font-size:14px}
-.nk.clr{background:#2a1a1a;border-color:#3a2020;color:#f66;font-size:14px}
-.nk.go-btn{background:#667eea;border-color:#667eea;color:#fff;font-size:14px;font-weight:700}
+.nk.accent{background:#111830;border-color:#667eea44;font-size:13px}
+.nk.clr{background:#2a1a1a;border-color:#3a2020;color:#f66;font-size:13px}
+.nk.go-btn{background:#667eea;border-color:#667eea;color:#fff;font-size:13px;font-weight:700}
 
 /* section */
-.sec{margin:10px 0 6px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#444}
+.sec{margin:8px 0 5px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#4a4a5a}
 
 /* now playing */
-.now{background:#0d1420;border:1px solid #1d2a40;border-radius:9px;padding:7px 12px;margin:8px 0 2px;font-size:13px;color:#9fb6ff;display:flex;align-items:center;gap:8px;min-height:34px}
+.now{background:#0d1420;border:1px solid #1d2a40;border-radius:9px;padding:5px 10px;margin:2px 0;font-size:12px;color:#9fb6ff;display:flex;align-items:center;gap:7px;min-height:30px}
 .now b{color:#fff;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.now .live{width:8px;height:8px;border-radius:50%;background:#4CAF50;box-shadow:0 0 6px #4CAF50;flex-shrink:0}
+.now .live{width:7px;height:7px;border-radius:50%;background:#4CAF50;box-shadow:0 0 6px #4CAF50;flex-shrink:0}
+.now .tbadge{background:#24304f;border:1px solid #667eea66;color:#cdd8ff;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;flex-shrink:0}
 
 /* button grids */
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-.gnav{display:grid;grid-template-columns:1fr 2fr 2fr 1fr;gap:7px}
-.rb.big{padding:16px 6px}
-.rb.big span{font-size:22px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.gnav{display:grid;grid-template-columns:1fr 2fr 2fr 1fr;gap:6px}
+.rb.big{padding:11px 4px}
+.rb.big span{font-size:18px}
 
-.rb{background:#111120;border:1px solid #1e1e30;color:#ccc;border-radius:11px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:background .1s,transform .08s;user-select:none}
-.rb span{font-size:18px}
-.rb small{font-size:10px;color:#666;text-align:center}
+.rb{background:#111120;border:1px solid #1e1e30;color:#ccc;border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;transition:background .1s,transform .08s;user-select:none;min-height:46px;justify-content:center}
+.rb span{font-size:15px;line-height:1.2}
+.rb small{font-size:9px;color:#666;text-align:center;line-height:1.1}
 .rb:active{background:#1e1e38;border-color:#667eea;transform:scale(.93)}
 .rb.acc{background:#111830;border-color:#667eea33}
 .rb.grn{background:#0e1e12;border-color:#4CAF5033}
 .rb.red{background:#1e0e0e;border-color:#f4433633}
 .rb.orn{background:#1e160a;border-color:#ff980033}
+.rb.tgt.active{background:#24304f;border-color:#667eea;color:#fff}
+.rb.tgt.active small{color:#cdd8ff}
+.rb.dis{opacity:.3;pointer-events:none}
 
 /* toast */
 #toast{position:fixed;bottom:max(72px,calc(env(safe-area-inset-bottom)+60px));left:50%;transform:translateX(-50%) translateY(14px);background:rgba(15,15,25,.95);color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;border:1px solid rgba(102,126,234,.35);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:9999;white-space:nowrap}
@@ -110,28 +114,18 @@ body{display:flex;flex-direction:column}
     <button class="ch-go" onclick="sendChannel()">Gec</button>
   </div>
 
-  <!-- Number pad -->
-  <div class="numpad-area">
-    <div class="num-display" id="numDisp">–</div>
-    <div class="numpad">
-      <div class="nk" onclick="np(1)">1</div>
-      <div class="nk" onclick="np(2)">2</div>
-      <div class="nk" onclick="np(3)">3</div>
-      <div class="nk" onclick="np(4)">4</div>
-      <div class="nk" onclick="np(5)">5</div>
-      <div class="nk" onclick="np(6)">6</div>
-      <div class="nk" onclick="np(7)">7</div>
-      <div class="nk" onclick="np(8)">8</div>
-      <div class="nk" onclick="np(9)">9</div>
-      <div class="nk accent" onclick="navCmd('first')" title="Ilk kanal">&#8676;</div>
-      <div class="nk" onclick="np(0)">0</div>
-      <div class="nk accent" onclick="navCmd('last')" title="Son kanal">&#8677;</div>
-    </div>
-  </div>
-
   <div class="scroll">
     <!-- Now playing (fed live by the TV) -->
-    <div class="now"><span class="live"></span><span>Şu an:</span><b id="nowPlaying">–</b></div>
+    <div class="now"><span class="tbadge" id="tgtBadge">TV1</span><span class="live"></span><b id="nowPlaying">–</b></div>
+
+    <!-- Which screen does the remote control? -->
+    <div class="sec">Hedef Ekran</div>
+    <div class="g4">
+      <div class="rb tgt active" id="tgt1" onclick="selectTarget(1)"><span>1</span><small>TV1</small></div>
+      <div class="rb tgt dis" id="tgt2" onclick="selectTarget(2)"><span>2</span><small>TV2</small></div>
+      <div class="rb tgt dis" id="tgt3" onclick="selectTarget(3)"><span>3</span><small>TV3</small></div>
+      <div class="rb tgt dis" id="tgt4" onclick="selectTarget(4)"><span>4</span><small>TV4</small></div>
+    </div>
 
     <!-- Channel nav: prev/next are what you press most, so they're big -->
     <div class="sec">Kanal</div>
@@ -151,14 +145,15 @@ body{display:flex;flex-direction:column}
       <div class="rb grn" onclick="cmd('unmute')"><span>&#128266;</span><small>Ses Aç</small></div>
     </div>
 
-    <!-- Playback -->
-    <div class="sec">Oynatma</div>
-    <div class="g2">
-      <div class="rb acc big" onclick="cmd('play')"><span>&#9654;&#65039;</span><small>Devam</small></div>
-      <div class="rb big" onclick="cmd('pause')"><span>&#9208;</span><small>Durdur</small></div>
+    <!-- Playback + fullscreen -->
+    <div class="sec">Oynatma &amp; Görünüm</div>
+    <div class="g3">
+      <div class="rb acc" onclick="cmd('play')"><span>&#9654;&#65039;</span><small>Devam</small></div>
+      <div class="rb" onclick="cmd('pause')"><span>&#9208;</span><small>Durdur</small></div>
+      <div class="rb acc" onclick="cmd('fullscreen')"><span>&#9974;</span><small>Tam Ekran</small></div>
     </div>
 
-    <!-- Seek: one row instead of two -->
+    <!-- Seek: one row -->
     <div class="sec">Sarmak</div>
     <div class="g4">
       <div class="rb" onclick="seek(-30)"><span>&#9194;&#9194;</span><small>30sn</small></div>
@@ -169,10 +164,30 @@ body{display:flex;flex-direction:column}
 
     <!-- Layout -->
     <div class="sec">Düzen</div>
-    <div class="g3" style="margin-bottom:20px">
+    <div class="g3">
       <div class="rb acc" onclick="layout('1x1')"><span>1</span><small>Tek</small></div>
       <div class="rb" onclick="layout('1x2')"><span>1&#xD7;2</span><small>İkili</small></div>
       <div class="rb" onclick="layout('2x2')"><span>2&#xD7;2</span><small>Dörtlü</small></div>
+    </div>
+
+    <!-- Number pad: at the bottom, out of the way -->
+    <div class="sec">Kanal Numarası</div>
+    <div class="numpad-area" style="margin-bottom:20px">
+      <div class="num-display" id="numDisp">–</div>
+      <div class="numpad">
+        <div class="nk" onclick="np(1)">1</div>
+        <div class="nk" onclick="np(2)">2</div>
+        <div class="nk" onclick="np(3)">3</div>
+        <div class="nk" onclick="np(4)">4</div>
+        <div class="nk" onclick="np(5)">5</div>
+        <div class="nk" onclick="np(6)">6</div>
+        <div class="nk" onclick="np(7)">7</div>
+        <div class="nk" onclick="np(8)">8</div>
+        <div class="nk" onclick="np(9)">9</div>
+        <div class="nk clr" onclick="npClear()">Sil</div>
+        <div class="nk" onclick="np(0)">0</div>
+        <div class="nk go-btn" onclick="npGo()">Git</div>
+      </div>
     </div>
   </div>
 </div>
@@ -237,7 +252,38 @@ function onTvData(msg) {
         np.textContent = '–';
       }
     }
+    if (msg.target) setTargetUI(msg.target);
+    if (msg.screens) setScreensUI(msg.screens);
   }
+}
+
+// ---- Target screen (which TV box the remote controls) ----
+var curTarget = 1, screenCount = 1;
+
+function setTargetUI(n) {
+  curTarget = n;
+  for (var i = 1; i <= 4; i++) {
+    var b = document.getElementById('tgt' + i);
+    if (b) b.classList.toggle('active', i === n);
+  }
+  var badge = document.getElementById('tgtBadge');
+  if (badge) badge.textContent = 'TV' + n;
+}
+
+function setScreensUI(count) {
+  screenCount = count;
+  for (var i = 1; i <= 4; i++) {
+    var b = document.getElementById('tgt' + i);
+    if (b) b.classList.toggle('dis', i > count);
+  }
+  if (curTarget > count) setTargetUI(count);
+}
+
+function selectTarget(n) {
+  if (n > screenCount) { toast('TV' + n + ' kapali \u2014 once duzeni buyutun'); return; }
+  send({ action: 'target', index: n - 1 });
+  setTargetUI(n);
+  toast('Kumanda \u2192 TV' + n);
 }
 
 // PeerJS
@@ -270,7 +316,15 @@ function send(obj) {
   conn.send(obj);
 }
 
-function cmd(action) { send({ action: action }); }
+function cmd(action) {
+  send({ action: action });
+  if (action === 'fullscreen') toast('Tam ekran a\u00E7/kapat');
+}
+function npClear() {
+  clearTimeout(numTimer);
+  numBuf = '';
+  document.getElementById('numDisp').textContent = '–';
+}
 function navCmd(dir) {
   var labels = { first:'İlk kanal', last:'Son kanal', next:'Sonraki', prev:'Önceki' };
   send({ action: dir }); toast(labels[dir] || dir);
