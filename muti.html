@@ -10,17 +10,18 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1a1a1a;color:#fff;display:flex;flex-direction:column}
-.header{background:#001f3f;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));box-shadow:0 2px 10px rgba(0,0,0,.3);flex-shrink:0}
-.header-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.header h1{font-size:16px;display:flex;align-items:center;gap:6px;white-space:nowrap}
-.brand-tag{font-size:10px;color:#7aafd4;letter-spacing:.08em;text-transform:uppercase}
-.controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.btn{padding:8px 12px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;transition:background .2s;min-height:36px;white-space:nowrap}
+.header{background:#001f3f;padding:3px 8px;padding-top:max(3px,env(safe-area-inset-top));box-shadow:0 2px 10px rgba(0,0,0,.3);flex-shrink:0}
+.header-row{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.header h1{font-size:13px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.brand-tag{font-size:9px;color:#7aafd4;letter-spacing:.08em;text-transform:uppercase}
+@media(max-width:520px){.brand-tag{display:none}}
+.controls{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.btn{padding:4px 9px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:background .2s;min-height:28px;white-space:nowrap}
 .btn-layout{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25)}
 .btn-layout.active{background:#4CAF50;border-color:#4CAF50}
 .btn-action{background:#fff;color:#001f3f}
 .btn-action:active{background:#ddd}
-.btn-voice{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:8px 12px;font-size:18px;min-height:36px;cursor:pointer;transition:background .15s,box-shadow .15s;display:flex;align-items:center;gap:5px}
+.btn-voice{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:4px 9px;font-size:15px;min-height:28px;cursor:pointer;transition:background .15s,box-shadow .15s;display:flex;align-items:center;gap:4px}
 .btn-voice.listening{background:rgba(220,50,50,.7);border-color:#f66;animation:pulse-mic 1.2s ease-in-out infinite}
 @keyframes pulse-mic{0%,100%{box-shadow:0 0 0 3px rgba(220,50,50,.3)}50%{box-shadow:0 0 0 7px rgba(220,50,50,.1)}}
 .grid-container{flex:1;padding:6px;display:grid;gap:6px;min-height:0;overflow:hidden}
@@ -66,11 +67,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .vol-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #667eea;cursor:pointer;box-shadow:0 0 4px rgba(0,0,0,.4)}
 .vol-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #667eea;cursor:pointer;box-shadow:0 0 4px rgba(0,0,0,.4)}
 /* Peer panel */
-.peer-panel{position:fixed;bottom:70px;right:12px;background:rgba(15,15,25,.95);border:1px solid rgba(76,175,80,.5);border-radius:14px;padding:10px 16px;text-align:center;z-index:998;backdrop-filter:blur(10px);cursor:pointer;transition:all .2s;min-width:110px}
-.peer-panel:hover{transform:scale(1.02)}
-.peer-label{font-size:9px;color:#888;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
-.peer-code{font-size:26px;font-weight:700;letter-spacing:.15em;color:#4CAF50;font-family:monospace}
-.peer-hint{font-size:9px;color:#555;margin-top:4px}
+.peer-panel{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);right:10px;background:rgba(15,15,25,.94);border:1px solid rgba(76,175,80,.5);border-radius:11px;padding:6px 10px;text-align:center;z-index:998;backdrop-filter:blur(10px);min-width:84px}
+.peer-label{font-size:8px;color:#888;letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px}
+.peer-code{font-size:19px;font-weight:800;letter-spacing:.14em;color:#4CAF50;font-family:monospace}
+.peer-hint{font-size:8px;color:#4CAF50;margin-top:2px}
+/* Tap-to-unmute / tap-to-start hint on a TV box */
+.unmute-hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(102,126,234,.92);border:1px solid rgba(255,255,255,.35);color:#fff;padding:9px 18px;border-radius:22px;font-size:13px;font-weight:600;cursor:pointer;z-index:12;display:none;white-space:nowrap;box-shadow:0 2px 12px rgba(0,0,0,.5)}
+.unmute-hint.show{display:block}
 /* Toast */
 #voiceToast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(20,20,30,.92);color:#fff;padding:10px 18px;border-radius:22px;font-size:13px;border:1px solid rgba(102,126,234,.4);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:999;max-width:80vw;text-align:center}
 #voiceToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -272,6 +275,36 @@ function resolveStreamUrl(url, name) {
   return url;
 }
 
+// iOS / iPadOS detection (iPad reports as "MacIntel" with touch support)
+var IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+// --- Deep mixed-content fix -------------------------------------
+// Proxying only the master .m3u8 is NOT enough: many streams (NatGeo,
+// prosto.tv channels like Relaxon/Fire/Kamintv/Nature...) put ABSOLUTE
+// "http://" URLs inside the playlist for their sub-playlists and .ts
+// segments. hls.js then requests those directly and the browser blocks
+// them on GitHub Pages (https). This custom loader rewrites EVERY
+// request hls.js makes, so segments go through the proxy too.
+function makeProxyLoader() {
+  if (location.protocol !== 'https:' || !window.Hls) return null;
+  var Base = Hls.DefaultConfig.loader;
+  function ProxyLoader(config) {
+    var inner = new Base(config);
+    this.load = function(context, cfg, callbacks) {
+      if (/^http:\/\//i.test(context.url) && context.url.indexOf(STREAM_PROXY) !== 0) {
+        context.url = STREAM_PROXY + context.url;
+      }
+      inner.load(context, cfg, callbacks);
+    };
+    this.abort = function() { inner.abort(); };
+    this.destroy = function() { inner.destroy(); };
+    Object.defineProperty(this, 'stats', { get: function(){ return inner.stats; } });
+    Object.defineProperty(this, 'context', { get: function(){ return inner.context; } });
+  }
+  return ProxyLoader;
+}
+
 function getFlatChannelList() {
   var list = [];
   for (var gi = 0; gi < CHANNEL_GROUPS.length; gi++) {
@@ -356,8 +389,10 @@ function changeChannel(boxIndex, channelName) {
     '<div class="overlay-controls">' +
       '<button class="overlay-btn" id="mute-' + boxIndex + '" onclick="toggleSolo(' + boxIndex + ')">&#128263;</button>' +
       '<button class="overlay-btn" onclick="fullscreen(' + boxIndex + ')">&#9638;</button>' +
-    '</div>';
+    '</div>' +
+    '<button class="unmute-hint" id="hint-' + boxIndex + '" onclick="tapUnmute(' + boxIndex + ')">&#128266; Ses i&ccedil;in dokun</button>';
   box.muteBtn = box.screen.querySelector('#mute-' + boxIndex);
+  box.hintBtn = box.screen.querySelector('#hint-' + boxIndex);
 
   if (!channel || !channelName) {
     box.screen.insertAdjacentHTML('beforeend', '<div class="placeholder">&#128250; Kanal secin</div>');
@@ -382,20 +417,32 @@ function changeChannel(boxIndex, channelName) {
 
   var reqId = Date.now();
   box._reqId = reqId;
+  box._userPaused = false;
+
+  // "Bless" the element while we may still be inside a user gesture
+  // (select change / button tap). Safari & Chrome then allow later
+  // programmatic unmuted play() on this same element.
+  try { var bless = video.play(); if (bless && bless.catch) bless.catch(function(){}); } catch(e) {}
 
   var onReady = function() {
     if (box._reqId !== reqId) { try { video.pause(); video.src=''; } catch(e){} return; }
     var loader = box.screen.querySelector('.loading');
     if (loader) loader.remove();
     video.style.display = 'block';
-    video.muted = (soloIndex !== boxIndex);
-    video.play().then(function(){
+    // ALWAYS start muted first: muted+playsinline autoplay is allowed
+    // everywhere (this fixes "channel opens but does not play").
+    video.muted = true;
+    var p = video.play();
+    if (p && p.then) {
+      p.then(function() {
+        updateMuteButtons(); // will try to unmute the solo box safely
+      }).catch(function() {
+        // Even muted autoplay was blocked (rare: Low Power Mode etc.)
+        showHint(box, '\u25B6\uFE0F Ba\u015Flatmak i\u00E7in dokun');
+      });
+    } else {
       updateMuteButtons();
-    }).catch(function(){
-      video.muted = true;
-      video.play().catch(function(){});
-      updateMuteButtons();
-    });
+    }
   };
 
   var onError = function(msg) {
@@ -410,9 +457,12 @@ function changeChannel(boxIndex, channelName) {
   var streamUrl = resolveStreamUrl(channel.url, channelName);
 
   if (window.Hls && Hls.isSupported()) {
-    var hls = new Hls({ enableWorker: true, lowLatencyMode: false,
+    var hlsCfg = { enableWorker: true, lowLatencyMode: false,
       manifestLoadingTimeOut: 12000, manifestLoadingMaxRetry: 2,
-      fragLoadingTimeOut: 20000, fragLoadingMaxRetry: 3 });
+      fragLoadingTimeOut: 20000, fragLoadingMaxRetry: 3 };
+    var PL = makeProxyLoader();
+    if (PL) hlsCfg.loader = PL;
+    var hls = new Hls(hlsCfg);
     hls.loadSource(streamUrl);
     hls.attachMedia(video);
     hls.on(Hls.Events.MANIFEST_PARSED, onReady);
@@ -438,6 +488,7 @@ function changeChannel(boxIndex, channelName) {
   box.currentChannel = channelName;
   if (soloIndex === -1 && !userMutedAll) soloIndex = boxIndex;
   updateChannelNav();
+  peerSendState();
 }
 
 function toggleSolo(boxIndex) {
@@ -446,10 +497,70 @@ function toggleSolo(boxIndex) {
   updateMuteButtons();
 }
 
+function showHint(box, txt) {
+  if (!box || !box.hintBtn) return;
+  if (txt) box.hintBtn.innerHTML = txt;
+  box.hintBtn.classList.add('show');
+}
+function hideHint(box) {
+  if (box && box.hintBtn) box.hintBtn.classList.remove('show');
+}
+
+// Apply the desired audio state to one box WITHOUT ever pausing it.
+// Browsers (esp. Safari) pause or reject when JS unmutes a video with
+// no user gesture — this was the cause of "vol-up stops the video" and
+// "plays but stays silent". We unmute + play(); if that is rejected we
+// fall back to muted playback and show a one-tap unmute hint.
+function applyAudio(box, wantSound) {
+  var v = box.video;
+  if (!v) return;
+  if (!wantSound) {
+    v.muted = true;
+    hideHint(box);
+    if (v.paused && !box._userPaused) { var p0 = v.play(); if (p0 && p0.catch) p0.catch(function(){}); }
+    return;
+  }
+  box._userPaused = false;
+  v.muted = false;
+  var p = v.play();
+  if (p && p.catch) {
+    p.catch(function() {
+      // Autoplay policy refused unmuted playback: keep the picture
+      // running muted and ask for one tap.
+      v.muted = true;
+      var p2 = v.play(); if (p2 && p2.catch) p2.catch(function(){});
+      showHint(box, '\uD83D\uDD0A Ses i\u00E7in dokun');
+    });
+  }
+}
+
+function tapUnmute(boxIndex) {
+  var box = tvBoxes[boxIndex];
+  if (!box || !box.video) return;
+  soloIndex = boxIndex; userMutedAll = false;
+  box.video.muted = false;
+  var p = box.video.play(); if (p && p.catch) p.catch(function(){});
+  hideHint(box);
+  updateMuteButtons();
+}
+
+// Any real user gesture anywhere on the page: use it to unlock audio
+// on the box that is supposed to have sound.
+function gestureUnlock() {
+  tvBoxes.forEach(function(box, i) {
+    if (!box.video || box._userPaused) return;
+    if (soloIndex === i && (box.video.muted || box.video.paused)) {
+      box.video.muted = false;
+      var p = box.video.play(); if (p && p.catch) p.catch(function(){});
+      hideHint(box);
+    }
+  });
+}
+
 function updateMuteButtons() {
   tvBoxes.forEach(function(box, i) {
     var isSolo = (soloIndex === i);
-    if (box.video) { box.video.muted = !isSolo; }
+    if (box.video) applyAudio(box, isSolo);
     if (box.muteBtn) {
       box.muteBtn.textContent = isSolo ? '\uD83D\uDD0A' : '\uD83D\uDD07';
       box.muteBtn.style.background = isSolo ? 'rgba(191,196,197,.85)' : 'rgba(0,0,0,.6)';
@@ -473,11 +584,9 @@ function refreshAll() {
 }
 
 function resumeAll() {
-  tvBoxes.forEach(function(box) {
-    if (box.video && box.video.paused) {
-      if (box.video.muted) { box.video.play().catch(function(){}); }
-      else { box.video.play().catch(function(){ box.video.muted = true; box.video.play().catch(function(){}); }); }
-    }
+  tvBoxes.forEach(function(box, i) {
+    box._userPaused = false;
+    if (box.video && box.video.paused) applyAudio(box, soloIndex === i);
   });
 }
 
@@ -650,9 +759,14 @@ function setVolume(v, fromSlider) {
   var i = volTargetIndex();
   var box = tvBoxes[i];
   if (box && box.video) {
-    box.video.volume = v / 100;
-    if (v > 0) {           // moving the slider up also un-mutes that box
+    // iOS/iPadOS: HTMLMediaElement.volume is READ-ONLY (hardware buttons
+    // control the level). We can only mute / unmute programmatically.
+    if (!IS_IOS) { try { box.video.volume = v / 100; } catch(e){} }
+    if (v > 0) {           // volume up also un-mutes that box (safely)
       soloIndex = i; userMutedAll = false;
+      updateMuteButtons();
+    } else if (IS_IOS) {   // volume 0 on iOS = mute
+      soloIndex = -1; userMutedAll = true;
       updateMuteButtons();
     }
   }
@@ -682,40 +796,62 @@ function _peerStart() {
   var shortId = '';
   for (var i = 0; i < 4; i++) shortId += chars[Math.floor(Math.random() * chars.length)];
   peer = new Peer(shortId, { debug: 0 });
-  peer.on('open', function(id) { showPeerCode(id); });
+  peer.on('open', function(id) { showPeerCode(id, false); });
   peer.on('connection', function(conn) {
     peerConn = conn;
-    var panel = document.getElementById('peerPanel');
-    if (panel) panel.style.display = 'none';
+    // Panel stays visible (user closes it with X); just mark as connected.
+    showPeerCode(peer.id, true);
     showToast('📡 Kumanda bağlandı!', 3000);
+    conn.on('open', function() { peerSendChannels(); peerSendState(); });
     conn.on('data', function(data) {
       try { handleRemoteCommand(typeof data === 'string' ? JSON.parse(data) : data); } catch(e) {}
     });
     conn.on('close', function() {
       peerConn = null;
       showToast('📡 Kumanda bağlantısı kesildi');
-      showPeerCode(peer.id);
+      showPeerCode(peer.id, false);
     });
+    // Some browsers fire 'connection' after the channel is already open
+    if (conn.open) { peerSendChannels(); peerSendState(); }
   });
   peer.on('error', function(e) { showToast('⚠ P2P hata: ' + e.type); });
 }
 
-function showPeerCode(id) {
+// Send the TV's real channel list so the remote's numbers ALWAYS match.
+function peerSendChannels() {
+  if (!peerConn) return;
+  var groups = CHANNEL_GROUPS.map(function(g) {
+    return { label: g.label, channels: g.channels.filter(function(n){
+      return TV_CHANNELS[n] && TV_CHANNELS[n].url;
+    }) };
+  });
+  try { peerConn.send({ action: 'channels', groups: groups }); } catch(e) {}
+}
+
+function peerSendState() {
+  if (!peerConn) return;
+  var ch = tvBoxes[0] && tvBoxes[0].currentChannel;
+  try { peerConn.send({ action: 'state', channel: ch || '' }); } catch(e) {}
+}
+
+function showPeerCode(id, connected) {
   var panel = document.getElementById('peerPanel');
+  var wasHidden = panel && panel.style.display === 'none';
   if (!panel) {
     panel = document.createElement('div');
     panel.id = 'peerPanel';
     panel.className = 'peer-panel';
     document.body.appendChild(panel);
   }
-  panel.innerHTML = 
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">' +
-      '<div class="peer-label">📱 KUMANDA KODU</div>' +
-      '<button onclick="document.getElementById(\'peerPanel\').style.display=\'none\'" style="background:none;border:none;color:#666;font-size:14px;cursor:pointer;padding:0 2px;line-height:1">✕</button>' +
+  panel.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:1px">' +
+      '<div class="peer-label">📱 KOD</div>' +
+      '<button onclick="document.getElementById(\'peerPanel\').style.display=\'none\'" style="background:none;border:none;color:#666;font-size:13px;cursor:pointer;padding:0 2px;line-height:1">✕</button>' +
     '</div>' +
     '<div class="peer-code">' + id + '</div>' +
-    '<div style="font-size:9px;color:#555;margin-top:4px"></div>';
-  panel.style.display = 'block';
+    (connected ? '<div class="peer-hint">✓ kumanda bağlı</div>' : '');
+  // Respect the user's choice: if they closed it with X, keep it closed.
+  if (!wasHidden) panel.style.display = 'block';
 }
 
 // ================================================================
@@ -744,18 +880,28 @@ function handleRemoteCommand(cmd) {
     case 'last':   navChannel('last'); showToast('\u23ED\u23ED Son kanal'); break;
     case 'mute':   muteAll(); showToast('\uD83D\uDD07 Ses kapatildi'); break;
     case 'unmute':
-      if (soloIndex === -1) { soloIndex = 0; userMutedAll = false; updateMuteButtons(); }
+      soloIndex = volTargetIndex(); userMutedAll = false; updateMuteButtons();
       showToast('\uD83D\uDD0A Ses acildi'); break;
     case 'vol_up':
-      setVolume(currentVolume + 10);
-      showToast('\uD83D\uDD0A ' + currentVolume + '%');
+      if (IS_IOS) {
+        soloIndex = volTargetIndex(); userMutedAll = false; updateMuteButtons();
+        showToast('\uD83D\uDD0A Ses acik \u2014 seviye icin cihaz tuslari');
+      } else {
+        setVolume(currentVolume + 10);
+        showToast('\uD83D\uDD0A ' + currentVolume + '%');
+      }
       break;
     case 'vol_down':
-      setVolume(currentVolume - 10);
-      showToast('\uD83D\uDD09 ' + currentVolume + '%');
+      if (IS_IOS) {
+        muteAll();
+        showToast('\uD83D\uDD07 Sessiz \u2014 seviye icin cihaz tuslari');
+      } else {
+        setVolume(currentVolume - 10);
+        showToast('\uD83D\uDD09 ' + currentVolume + '%');
+      }
       break;
     case 'pause':
-      tvBoxes.forEach(function(b){ if (b.video) b.video.pause(); });
+      tvBoxes.forEach(function(b){ b._userPaused = true; if (b.video) b.video.pause(); });
       showToast('\u23F8 Durduruldu'); break;
     case 'play':
       resumeAll(); showToast('\u25B6 Devam ediyor'); break;
@@ -827,7 +973,7 @@ function handleVoiceCommand(transcript) {
   if (/onceki|önceki|previous/.test(t)) { navChannel('prev'); showToast('\u23EE Onceki'); return; }
   if (/ilk kanal|first/.test(t)) { navChannel('first'); showToast('\u23EE\u23EE Ilk kanal'); return; }
   if (/son kanal|last/.test(t)) { navChannel('last'); showToast('\u23ED\u23ED Son kanal'); return; }
-  if (/durdur|pause/.test(t)) { tvBoxes.forEach(function(b){ if(b.video) b.video.pause(); }); showToast('\u23F8 Durduruldu'); return; }
+  if (/durdur|pause/.test(t)) { tvBoxes.forEach(function(b){ b._userPaused = true; if(b.video) b.video.pause(); }); showToast('\u23F8 Durduruldu'); return; }
   if (/devam|play|oynat/.test(t)) { resumeAll(); showToast('\u25B6 Devam'); return; }
   if (/tam ekran|fullscreen/.test(t)) { fullscreen(0); showToast('\u26F6 Tam ekran'); return; }
   if (/geri sar|rewind/.test(t)) { tvBoxes.forEach(function(b){ if(b.video && isFinite(b.video.duration)) b.video.currentTime = Math.max(0, b.video.currentTime - SEEK_STEP); }); showToast('\u23EA ' + SEEK_STEP + 'sn'); return; }
@@ -887,6 +1033,16 @@ function init() {
   updateChannelNav();
   peerInit();
   wsConnect();
+  // iOS: the volume level cannot be changed by a web page (read-only
+  // property; only hardware buttons work), so the slider is misleading —
+  // hide it and keep the speaker icon as a mute/unmute toggle.
+  if (IS_IOS) {
+    var s = document.getElementById('volSlider');
+    if (s) s.style.display = 'none';
+  }
+  // Any tap/click anywhere unlocks audio for the active box
+  document.addEventListener('click', gestureUnlock, true);
+  document.addEventListener('touchend', gestureUnlock, true);
 }
 
 document.addEventListener('DOMContentLoaded', init);

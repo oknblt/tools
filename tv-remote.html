@@ -52,10 +52,18 @@ body{display:flex;flex-direction:column}
 /* section */
 .sec{margin:10px 0 6px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#444}
 
+/* now playing */
+.now{background:#0d1420;border:1px solid #1d2a40;border-radius:9px;padding:7px 12px;margin:8px 0 2px;font-size:13px;color:#9fb6ff;display:flex;align-items:center;gap:8px;min-height:34px}
+.now b{color:#fff;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.now .live{width:8px;height:8px;border-radius:50%;background:#4CAF50;box-shadow:0 0 6px #4CAF50;flex-shrink:0}
+
 /* button grids */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.gnav{display:grid;grid-template-columns:1fr 2fr 2fr 1fr;gap:7px}
+.rb.big{padding:16px 6px}
+.rb.big span{font-size:22px}
 
 .rb{background:#111120;border:1px solid #1e1e30;color:#ccc;border-radius:11px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:background .1s,transform .08s;user-select:none}
 .rb span{font-size:18px}
@@ -122,40 +130,41 @@ body{display:flex;flex-direction:column}
   </div>
 
   <div class="scroll">
-    <!-- Channel nav -->
+    <!-- Now playing (fed live by the TV) -->
+    <div class="now"><span class="live"></span><span>Şu an:</span><b id="nowPlaying">–</b></div>
+
+    <!-- Channel nav: prev/next are what you press most, so they're big -->
     <div class="sec">Kanal</div>
-    <div class="g4">
+    <div class="gnav">
       <div class="rb" onclick="navCmd('first')"><span>&#9198;</span><small>Ilk</small></div>
-      <div class="rb acc" onclick="navCmd('prev')"><span>&#9664;</span><small>Önceki</small></div>
-      <div class="rb acc" onclick="navCmd('next')"><span>&#9654;</span><small>Sonraki</small></div>
+      <div class="rb acc big" onclick="navCmd('prev')"><span>&#9664;</span><small>Önceki</small></div>
+      <div class="rb acc big" onclick="navCmd('next')"><span>&#9654;</span><small>Sonraki</small></div>
       <div class="rb" onclick="navCmd('last')"><span>&#9197;</span><small>Son</small></div>
     </div>
 
     <!-- Volume -->
     <div class="sec">Ses</div>
     <div class="g4">
-      <div class="rb grn" onclick="cmd('unmute')"><span>&#128266;</span><small>Ses Aç</small></div>
+      <div class="rb red" onclick="cmd('mute')"><span>&#128263;</span><small>Sessiz</small></div>
       <div class="rb orn" onclick="cmd('vol_down')"><span>&#10134;</span><small>Azalt</small></div>
       <div class="rb orn" onclick="cmd('vol_up')"><span>&#10133;</span><small>Artır</small></div>
-      <div class="rb red" onclick="cmd('mute')"><span>&#128263;</span><small>Sessiz</small></div>
+      <div class="rb grn" onclick="cmd('unmute')"><span>&#128266;</span><small>Ses Aç</small></div>
     </div>
 
     <!-- Playback -->
     <div class="sec">Oynatma</div>
     <div class="g2">
-      <div class="rb acc" onclick="cmd('play')"><span>&#9654;&#65039;</span><small>Devam</small></div>
-      <div class="rb" onclick="cmd('pause')"><span>&#9208;</span><small>Durdur</small></div>
+      <div class="rb acc big" onclick="cmd('play')"><span>&#9654;&#65039;</span><small>Devam</small></div>
+      <div class="rb big" onclick="cmd('pause')"><span>&#9208;</span><small>Durdur</small></div>
     </div>
 
-    <!-- Seek -->
+    <!-- Seek: one row instead of two -->
     <div class="sec">Sarmak</div>
-    <div class="g2">
-      <div class="rb" onclick="seek(-10)"><span>&#9194;</span><small>10sn Geri</small></div>
-      <div class="rb" onclick="seek(10)"><span>&#9193;</span><small>10sn İleri</small></div>
-    </div>
-    <div class="g2" style="margin-top:7px">
-      <div class="rb" onclick="seek(-30)"><span>&#9194;&#9194;</span><small>30sn Geri</small></div>
-      <div class="rb" onclick="seek(30)"><span>&#9193;&#9193;</span><small>30sn İleri</small></div>
+    <div class="g4">
+      <div class="rb" onclick="seek(-30)"><span>&#9194;&#9194;</span><small>30sn</small></div>
+      <div class="rb" onclick="seek(-10)"><span>&#9194;</span><small>10sn</small></div>
+      <div class="rb" onclick="seek(10)"><span>&#9193;</span><small>10sn</small></div>
+      <div class="rb" onclick="seek(30)"><span>&#9193;&#9193;</span><small>30sn</small></div>
     </div>
 
     <!-- Layout -->
@@ -171,34 +180,65 @@ body{display:flex;flex-direction:column}
 <div id="toast"></div>
 
 <script>
-// Channel list matching multi-tv-final.html
+// Fallback channel list — a 1:1 copy of muti.html's CHANNEL_GROUPS.
+// It is REPLACED automatically by the real list the TV sends on connect,
+// so channel numbers always match even if muti.html changes later.
 var CHANNEL_GROUPS = [
-  { label:"Haber", channels:["Halk TV","NTV","Haber Global", "Habertürk","TV 100","CNN","BBC News","DW TV English","Bloomberg", "France 24 English","France 24 French","BFM TV", "Canal 32", "WDR Fernsehen", "Baden TV", "Alex Berlin", "München TV", "Top Sci-Fi", "Das Erste HD", "hr fernsehen", "Baku TV", "Sky News","BBC Earth","Wonder", "Mythbusters", "Tele 1"] },
-  { label:"TRT",   channels:["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yildiz","TRT Belgesel","TRT Muzik","TRT World"] },
-  { label:"Ulusal",channels:["NOW","Kanal D","Show TV","Star TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","KTV", "Kanal D Romanya","Beyaz TV", "A2"] },
-  { label:"Spor",  channels:["HT Spor","A Spor", "beIN SPORTS XTRA","Fifa", "Redbull TV","MTRSPT 1","Motorvision"] },
-  { label:"Eglence",channels:["FTV","Fashion One", "Power TV","Powerturk","Powertürk Akustik", "NR1","NR1 Turk","NR1 Dance", "Deluxe Music" ,"Latin Zone TV", "Radio Kiss Kiss", "Generations TV","DBM TV", "Beach TV", "Kepez TV","Avia Stream","Fire","Summer", "Kamintv", "Relaxon","Dozhditv","Terrasatv", "Nature", "Winter", "SvetVokrugtv", "GornayaDolina", "Komnata", "Beach TV CSULB","Beach TV Panama City" ] }
+  { label:"Haber", channels:["Halk TV","NTV","Haber Global","Habertürk","TV 100","Bloomberg HT","CNN","BBC News","DW TV English","Bloomberg","France 24 English","France 24 French","BFM TV","Canal 32","WDR Fernsehen","Baden TV","Alex Berlin","München TV","Top Sci-Fi","Das Erste HD","hr fernsehen","EchtJetzt TV","Baku TV","A TV","Red CCTV","BBC Earth","Wonder","Mythbusters","National Geographic","National Geographic Wild","Tele 1"] },
+  { label:"TRT",   channels:["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yildiz","TRT Belgesel","TRT Muzik","TRT Genç","TRT World"] },
+  { label:"Ulusal",channels:["NOW","Kanal D","Show TV","Star TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","KTV","Kanal D Romanya","Kanal D Drama","Beyaz TV","A2"] },
+  { label:"Spor",  channels:["HT Spor","A Spor","beIN SPORTS XTRA","Arena Sport","Fifa","Redbull TV","MTRSPT 1","Motorvision"] },
+  { label:"Eglence",channels:["FTV","Fashion One","Power TV","Powertürk","Powertürk Akustik","NR1","NR1 Turk","NR1 Dance","Deluxe Music","Deluxe Dance","Vevo 2K","Fun Vision","Latin Zone TV","Radio Kiss Kiss","Generations TV","DBM TV","Beach TV","Kepez TV","Avia Stream","Fire","Summer","Kamintv","Relaxon","Dozhditv","Terrasatv","Nature","Winter","SvetVokrugtv","GornayaDolina","Komnata","Beach TV CSULB","Beach TV Panama City"] }
 ];
 
-// Build numbered channel list
 var CH_BY_NUM = {}, CH_BY_NAME = {}, allChannels = [];
-var n = 1;
-var sel = document.getElementById('chSel');
-CHANNEL_GROUPS.forEach(function(g) {
-  var og = document.createElement('optgroup');
-  og.label = g.label;
-  g.channels.forEach(function(name) {
-    CH_BY_NUM[n] = name;
-    CH_BY_NAME[name] = n;
-    allChannels.push(name);
-    var o = document.createElement('option');
-    o.value = name;
-    o.textContent = String(n).padStart(2,'0') + '  ' + name;
-    og.appendChild(o);
-    n++;
+
+function buildChannelList(groups) {
+  CH_BY_NUM = {}; CH_BY_NAME = {}; allChannels = [];
+  var sel = document.getElementById('chSel');
+  var prevSelected = sel.value;
+  sel.innerHTML = '<option value="">Kanal sec…</option>';
+  var n = 1;
+  groups.forEach(function(g) {
+    var og = document.createElement('optgroup');
+    og.label = g.label;
+    g.channels.forEach(function(name) {
+      CH_BY_NUM[n] = name;
+      CH_BY_NAME[name] = n;
+      allChannels.push(name);
+      var o = document.createElement('option');
+      o.value = name;
+      o.textContent = String(n).padStart(2,'0') + '  ' + name;
+      og.appendChild(o);
+      n++;
+    });
+    sel.appendChild(og);
   });
-  sel.appendChild(og);
-});
+  if (prevSelected && CH_BY_NAME[prevSelected]) sel.value = prevSelected;
+}
+buildChannelList(CHANNEL_GROUPS);
+
+// Messages coming FROM the TV
+function onTvData(msg) {
+  if (!msg || typeof msg !== 'object') return;
+  if (msg.action === 'channels' && msg.groups) {
+    CHANNEL_GROUPS = msg.groups;
+    buildChannelList(CHANNEL_GROUPS);
+    toast('Kanal listesi esitlendi (' + allChannels.length + ' kanal)');
+  } else if (msg.action === 'state') {
+    var np = document.getElementById('nowPlaying');
+    if (np) {
+      if (msg.channel) {
+        var num = CH_BY_NAME[msg.channel];
+        np.textContent = (num ? String(num).padStart(2,'0') + ' ' : '') + msg.channel;
+        var opt = document.getElementById('chSel');
+        if (opt && CH_BY_NAME[msg.channel]) opt.value = msg.channel;
+      } else {
+        np.textContent = '–';
+      }
+    }
+  }
+}
 
 // PeerJS
 var peer = null, conn = null, ready = false;
@@ -215,6 +255,7 @@ function doConnect() {
   setStatus(false, 'Baglanıyor…');
   conn = peer.connect(code, { reliable: true, serialization: 'json' });
   conn.on('open', function() { ready = true; showRemote(); toast('Baglanti kuruldu!'); });
+  conn.on('data', function(d) { try { onTvData(typeof d === 'string' ? JSON.parse(d) : d); } catch(e) {} });
   conn.on('close', function() { ready = false; showConnect(); toast('Baglanti kesildi'); });
   conn.on('error', function() { toast('Baglanti hatası'); });
 }
