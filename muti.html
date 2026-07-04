@@ -261,11 +261,20 @@ var pfullIndex = -1;    // box shown in CSS pseudo-fullscreen (-1 = none)
 // BLOCKS any plain "http://" stream ("mixed content"), which is why some
 // channels work when you open the file locally but not on GitHub.
 // We route those through an HTTPS proxy so the browser only sees HTTPS.
-// (Same trick already used for "Bloomberg HT".)
 //
-// If a stream still won't play, the proxy below is the thing to change.
-// It must be a path-style proxy: PROXY + "http://original/stream.m3u8"
-var STREAM_PROXY = 'https://tatatam.trt1sultanfatihss.workers.dev/';
+// PROXY LIST: tried in order; if one fails the next is tried
+// automatically. The first entry is a THIRD-PARTY worker (not yours!):
+// it forwards the browser's identity to the stream source, and some
+// IPTV sources block Chrome/Opera identities while allowing Safari —
+// which is why the same channel can work in Safari but not Chrome.
+// FIX: deploy the included worker.js to your own free Cloudflare
+// account (sends a neutral identity + rewrites playlists) and put its
+// address FIRST in this list, e.g.:
+//   var STREAM_PROXIES = ['https://SIZIN-ADINIZ.workers.dev/',
+//                         'https://tatatam.trt1sultanfatihss.workers.dev/'];
+var STREAM_PROXIES = [
+  'https://tatatam.trt1sultanfatihss.workers.dev/'
+];
 // Channels to force through the proxy even if they are already https
 // (use this for streams blocked by CORS/region rather than mixed content):
 var FORCE_PROXY = ['Summer'];
@@ -280,14 +289,27 @@ function deIP(url) {
   return url.replace(/^(https?:\/\/)(\d{1,3}(?:\.\d{1,3}){3})(?=[:\/])/i, '$1$2.nip.io');
 }
 
-function resolveStreamUrl(url, name) {
+function isProxied(url) {
+  for (var i = 0; i < STREAM_PROXIES.length; i++) {
+    if (url.indexOf(STREAM_PROXIES[i]) === 0) return true;
+  }
+  return false;
+}
+
+function channelNeedsProxy(url, name) {
+  return location.protocol === 'https:' &&
+         (/^http:\/\//i.test(url) || (name && FORCE_PROXY.indexOf(name) !== -1)) &&
+         !isProxied(url);
+}
+
+function resolveStreamUrl(url, name, proxyIdx) {
   if (!url) return url;
   // Only rewrite when WE are on https; locally everything stays as-is
   // so the original (working) behaviour is preserved.
   if (location.protocol !== 'https:') return url;
-  var needsProxy = /^http:\/\//i.test(url) ||
-                   (name && FORCE_PROXY.indexOf(name) !== -1);
-  if (needsProxy && url.indexOf(STREAM_PROXY) !== 0) return STREAM_PROXY + deIP(url);
+  if (channelNeedsProxy(url, name)) {
+    return STREAM_PROXIES[proxyIdx || 0] + deIP(url);
+  }
   return url;
 }
 
@@ -304,14 +326,15 @@ var HAS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 // segments. hls.js then requests those directly and the browser blocks
 // them on GitHub Pages (https). This custom loader rewrites EVERY
 // request hls.js makes, so segments go through the proxy too.
-function makeProxyLoader() {
+function makeProxyLoader(proxyIdx) {
   if (location.protocol !== 'https:' || !window.Hls) return null;
+  var base = STREAM_PROXIES[proxyIdx || 0];
   var Base = Hls.DefaultConfig.loader;
   function ProxyLoader(config) {
     var inner = new Base(config);
     this.load = function(context, cfg, callbacks) {
-      if (/^http:\/\//i.test(context.url) && context.url.indexOf(STREAM_PROXY) !== 0) {
-        context.url = STREAM_PROXY + deIP(context.url);
+      if (/^http:\/\//i.test(context.url) && !isProxied(context.url)) {
+        context.url = base + deIP(context.url);
       }
       inner.load(context, cfg, callbacks);
     };
@@ -489,33 +512,60 @@ function changeChannel(boxIndex, channelName) {
       '<button onclick="changeChannel(' + boxIndex + ',\'' + channelName.replace(/'/g, "\\'") + '\')">&#128260; Tekrar dene</button></div>');
   };
 
-  var streamUrl = resolveStreamUrl(channel.url, channelName);
+  var needsProxy = channelNeedsProxy(channel.url, channelName);
+  var proxyIdx = 0;
 
-  if (window.Hls && Hls.isSupported()) {
-    var hlsCfg = { enableWorker: true, lowLatencyMode: false,
-      manifestLoadingTimeOut: 12000, manifestLoadingMaxRetry: 2,
-      fragLoadingTimeOut: 20000, fragLoadingMaxRetry: 3 };
-    var PL = makeProxyLoader();
-    if (PL) hlsCfg.loader = PL;
-    var hls = new Hls(hlsCfg);
-    hls.loadSource(streamUrl);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, onReady);
-    hls.on(Hls.Events.ERROR, function(e, data) {
-      if (!data.fatal) return;
-      if (data.type === Hls.ErrorTypes.NETWORK_ERROR) { try { hls.startLoad(); } catch(x){} }
-      else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) { try { hls.recoverMediaError(); } catch(x){} }
-      else { try { hls.destroy(); } catch(x){} onError('Yayin yuklenemedi'); }
-    });
-    box.hls = hls;
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = streamUrl;
-    video.addEventListener('loadedmetadata', onReady, { once: true });
-    video.addEventListener('error', function(){ onError('Video yuklenemedi'); }, { once: true });
-  } else {
-    onError('HLS desteklenmiyor');
-    return;
+  function tryNextProxy(oldHls) {
+    if (box._reqId !== reqId) return false;
+    if (oldHls) { try { oldHls.destroy(); } catch(x){} }
+    if (box.hls === oldHls) box.hls = null;
+    if (needsProxy && proxyIdx + 1 < STREAM_PROXIES.length) {
+      proxyIdx++;
+      showToast('\uD83D\uDD01 Yedek proxy deneniyor\u2026');
+      startStream();
+      return true;
+    }
+    return false;
   }
+
+  function startStream() {
+    var streamUrl = resolveStreamUrl(channel.url, channelName, proxyIdx);
+
+    if (window.Hls && Hls.isSupported()) {
+      var hlsCfg = { enableWorker: true, lowLatencyMode: false,
+        manifestLoadingTimeOut: 12000, manifestLoadingMaxRetry: 2,
+        fragLoadingTimeOut: 20000, fragLoadingMaxRetry: 3 };
+      var PL = makeProxyLoader(proxyIdx);
+      if (PL) hlsCfg.loader = PL;
+      var hls = new Hls(hlsCfg);
+      var netFatals = 0;
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, onReady);
+      hls.on(Hls.Events.ERROR, function(e, data) {
+        if (!data.fatal) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          netFatals++;
+          if (netFatals <= 2) { try { hls.startLoad(); } catch(x){} return; }
+          if (!tryNextProxy(hls)) onError('Yayin yuklenemedi');
+        }
+        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) { try { hls.recoverMediaError(); } catch(x){} }
+        else { if (!tryNextProxy(hls)) onError('Yayin yuklenemedi'); }
+      });
+      box.hls = hls;
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = streamUrl;
+      video.addEventListener('loadedmetadata', onReady, { once: true });
+      video.addEventListener('error', function(){
+        if (box._reqId !== reqId) return;
+        if (!tryNextProxy(null)) onError('Video yuklenemedi');
+      }, { once: true });
+    } else {
+      onError('HLS desteklenmiyor');
+    }
+  }
+
+  startStream();
 
   if (!IS_IOS) { try { video.volume = currentVolume / 100; } catch(e){} }
   box.currentChannel = channelName;
@@ -799,6 +849,10 @@ function navChannel(direction) {
 // ================================================================
 function volTargetIndex() {
   if (soloIndex >= 0 && tvBoxes[soloIndex]) return soloIndex;
+  return remoteTargetIdx();
+}
+
+function remoteTargetIdx() {
   return Math.max(0, Math.min(remoteTarget, tvBoxes.length - 1));
 }
 
@@ -945,15 +999,19 @@ function handleRemoteCommand(cmd) {
     case 'last':   navChannel('last'); showToast('\u23ED\u23ED Son kanal'); break;
     case 'mute':   muteAll(); showToast('\uD83D\uDD07 Ses kapatildi'); break;
     case 'unmute':
-      soloIndex = volTargetIndex(); userMutedAll = false; updateMuteButtons();
-      showToast('\uD83D\uDD0A Ses acildi'); break;
+      // BUG FIX: this used volTargetIndex(), which returns the box that
+      // ALREADY has sound — so sound could never move off TV1. Sound must
+      // follow the remote's selected target screen.
+      soloIndex = remoteTargetIdx(); userMutedAll = false; updateMuteButtons();
+      showToast('\uD83D\uDD0A TV' + (soloIndex + 1) + ' ses acildi'); break;
     case 'vol_up':
       if (IS_IOS) {
-        soloIndex = volTargetIndex(); userMutedAll = false; updateMuteButtons();
-        showToast('\uD83D\uDD0A Ses acik \u2014 seviye icin cihaz tuslari');
+        soloIndex = remoteTargetIdx(); userMutedAll = false; updateMuteButtons();
+        showToast('\uD83D\uDD0A TV' + (soloIndex + 1) + ' ses acik \u2014 seviye icin cihaz tuslari');
       } else {
+        soloIndex = remoteTargetIdx(); userMutedAll = false;
         setVolume(currentVolume + 10);
-        showToast('\uD83D\uDD0A ' + currentVolume + '%');
+        showToast('\uD83D\uDD0A TV' + (soloIndex + 1) + ': ' + currentVolume + '%');
       }
       break;
     case 'vol_down':
