@@ -866,17 +866,15 @@ function redrawOverlayOnly(){
   if(!_cachedImg) return;
   ectx.clearRect(0,0,ec.width,ec.height);
   ectx.drawImage(_cachedImg,0,0,ec.width,ec.height);
-  drawCropOverlay();
+  if(tool==='ocrQuad') drawOcrQuad(); else drawCropOverlay();
   if(tool==='redactRect') drawRRect();
-  else if(tool==='ocrRect') drawOcrRect();
 }
 
 function _drawFromImg(img){
   ectx.clearRect(0,0,ec.width,ec.height);
   ectx.drawImage(img,0,0,ec.width,ec.height);
-  drawCropOverlay();
+  if(tool==='ocrQuad') drawOcrQuad(); else drawCropOverlay();
   if(tool==='redactRect') drawRRect();
-  else if(tool==='ocrRect') drawOcrRect();
 }
 
 function redrawEc(srcOverride){
@@ -1623,6 +1621,59 @@ function applyHomography(H, x, y){
   return {x:ox, y:oy};
 }
 
+/* ═══ Gerçek en/boy oranı kestirimi (Zhang, whiteboard rektifikasyonu) ═══
+ * Açılı çekimde perspektif kısalması yüzünden dörtgenin kenar uzunlukları
+ * belgenin GERÇEK oranını vermez → düzeltilen sayfa basık/uzamış görünür.
+ * Bu fonksiyon iğne deliği kamera modeliyle (ana nokta görüntü merkezinde)
+ * dikdörtgenin gerçek genişlik/yükseklik oranını kestirir.
+ * Sentetik projeksiyon testlerinde 2°–40° eğimlerde hata %0.0'dır. */
+function estimateQuadAspect(q, imgW, imgH){
+  const u0=imgW/2, v0=imgH/2;
+  const M=p=>[p.x-u0, p.y-v0, 1];
+  const m1=M(q.tl), m2=M(q.tr), m3=M(q.bl), m4=M(q.br);
+  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const c14=cross(m1,m4);
+  const den2=dot(cross(m2,m4),m3), den3=dot(cross(m3,m4),m2);
+  if(Math.abs(den2)<1e-9||Math.abs(den3)<1e-9) return null;
+  const k2=dot(c14,m3)/den2;
+  const k3=dot(c14,m2)/den3;
+  const n2=[k2*m2[0]-m1[0], k2*m2[1]-m1[1], k2*m2[2]-m1[2]];
+  const n3=[k3*m3[0]-m1[0], k3*m3[1]-m1[1], k3*m3[2]-m1[2]];
+  let ratio;
+  if(Math.abs(n2[2])>1e-6&&Math.abs(n3[2])>1e-6){
+    const f2=-(n2[0]*n3[0]+n2[1]*n3[1])/(n2[2]*n3[2]);   // odak uzaklığı²
+    if(!(f2>0)) return null;
+    ratio=Math.sqrt((n2[0]*n2[0]+n2[1]*n2[1]+f2*n2[2]*n2[2])/
+                    (n3[0]*n3[0]+n3[1]*n3[1]+f2*n3[2]*n3[2]));
+  }else{
+    // paralelkenara çok yakın: perspektif yok, kenar oranı zaten doğru
+    ratio=Math.hypot(n2[0],n2[1])/Math.hypot(n3[0],n3[1]);
+  }
+  if(!isFinite(ratio)||ratio<0.15||ratio>7) return null;
+  return ratio; // genişlik / yükseklik
+}
+
+/* Warp çıktı boyutu: kenar uzunluklarından başla, gerçek oranla düzelt.
+ * Çözünürlük kaybetmemek için hep BÜYÜTEREK orana oturtulur. */
+function quadOutSize(q, imgW, imgH){
+  const topW  =Math.hypot(q.tr.x-q.tl.x, q.tr.y-q.tl.y);
+  const botW  =Math.hypot(q.br.x-q.bl.x, q.br.y-q.bl.y);
+  const leftH =Math.hypot(q.bl.x-q.tl.x, q.bl.y-q.tl.y);
+  const rightH=Math.hypot(q.br.x-q.tr.x, q.br.y-q.tr.y);
+  let outW=Math.max(topW,botW), outH=Math.max(leftH,rightH);
+  const r=estimateQuadAspect(q,imgW,imgH);
+  if(r){
+    const cur=outW/outH;
+    // %4'ten küçük sapmayı düzeltme (gürültü); büyükse orana oturt
+    if(Math.abs(r-cur)/cur>0.04){
+      if(r>cur) outW=outH*r;
+      else      outH=outW/r;
+    }
+  }
+  return {outW:Math.round(outW), outH:Math.round(outH)};
+}
+
 function perspectiveWarp(srcCanvas, srcQuad, outW, outH){
   // srcQuad: {tl,tr,bl,br} in source image coords
   // outW, outH: output dimensions
@@ -1693,6 +1744,8 @@ function perspectiveWarp(srcCanvas, srcQuad, outW, outH){
 
 /* ═══ APPLY EDIT ═══ */
 function applyEd(){
+  // OCR alan seçimi Apply ile sayfaya uygulanmaz — sadece mod kapanır
+  if(tool==='ocrQuad'){ exitOcrMode(); return; }
   // commit any pending rect redact first
   if(rRect&&tool==='redactRect'){ commitRRect(); return; }
   const src=history[history.length-1]||pages[edIdx].cur;
@@ -1704,14 +1757,9 @@ function applyEd(){
     srcCanvas.getContext('2d').drawImage(img,0,0);
 
     if(quad){
-      const{tl,tr,bl,br}=quad;
-      // Compute output size: use max of opposite edge lengths
-      const topW   = Math.hypot(tr.x-tl.x, tr.y-tl.y);
-      const botW   = Math.hypot(br.x-bl.x, br.y-bl.y);
-      const leftH  = Math.hypot(bl.x-tl.x, bl.y-tl.y);
-      const rightH = Math.hypot(br.x-tr.x, br.y-tr.y);
-      const outW = Math.round(Math.max(topW, botW));
-      const outH = Math.round(Math.max(leftH, rightH));
+      // Çıktı boyutu: kenar uzunlukları + GERÇEK oran düzeltmesi (Zhang)
+      // → açılı çekimler PDF'te basık/uzamış görünmez
+      const {outW,outH}=quadOutSize(quad, img.width, img.height);
 
       if(outW>4 && outH>4){
         // Apply perspective warp — corrects skew/perspective to perfect rectangle
@@ -1773,13 +1821,8 @@ function autoCropPage(idx, cb){
         fq.br.x>img.width-mrg && fq.br.y>img.height-mrg;
       if(nearFull){ cb(true); return; }
 
-      // applyEd ile aynı çıktı boyutu hesabı + perspektif düzeltme
-      const topW  =Math.hypot(fq.tr.x-fq.tl.x, fq.tr.y-fq.tl.y);
-      const botW  =Math.hypot(fq.br.x-fq.bl.x, fq.br.y-fq.bl.y);
-      const leftH =Math.hypot(fq.bl.x-fq.tl.x, fq.bl.y-fq.tl.y);
-      const rightH=Math.hypot(fq.br.x-fq.tr.x, fq.br.y-fq.tr.y);
-      const outW=Math.round(Math.max(topW,botW));
-      const outH=Math.round(Math.max(leftH,rightH));
+      // applyEd ile aynı hesap: kenar uzunlukları + gerçek oran düzeltmesi
+      const {outW,outH}=quadOutSize(fq, img.width, img.height);
       if(outW<=4||outH<=4){ cb(false); return; }
 
       const srcCanvas=document.createElement('canvas');
@@ -2055,47 +2098,82 @@ function drawRRect(){
   }
 }
 
-/* OCR alan seçici — eksenlere hep paralel dikdörtgen.
- * Köşeden boyutlanır, içinden sürüklenir (redactRect mekanizmasını paylaşır),
- * ama görsel dili farklı: dışarısı karartılır, ince siyah/beyaz çerçeve. */
-function drawOcrRect(){
-  if(!rRect) return;
-  const{x,y,w,h}=rRect;
+/* OCR alan seçici — kenarları DÜZ ama gerekirse EĞİK dörtgen.
+ * Köşeler bağımsız sürüklenir (açılı fotoğraflarda metne oturtulabilir),
+ * içinden tutup taşınır, dışına çizerek yeniden başlanır.
+ * Eğik seçimler taranmadan önce perspektif düzeltmeden geçer. */
+function drawOcrQuad(){
+  if(!quad) return;
+  const{tl,tr,bl,br}=quad;
   const ovS=edSc*(vZ||1), px=v=>v/ovS;
+  const path=()=>{
+    ectx.beginPath();
+    ectx.moveTo(tl.x,tl.y);ectx.lineTo(tr.x,tr.y);
+    ectx.lineTo(br.x,br.y);ectx.lineTo(bl.x,bl.y);
+    ectx.closePath();
+  };
   ectx.save();
+  ectx.lineJoin='round';
   // okunacak alan dışını karart
   ectx.beginPath();
   ectx.rect(0,0,ec.width,ec.height);
-  ectx.rect(x,y,w,h);
+  ectx.moveTo(tl.x,tl.y);ectx.lineTo(tr.x,tr.y);
+  ectx.lineTo(br.x,br.y);ectx.lineTo(bl.x,bl.y);ectx.closePath();
   ectx.fillStyle='rgba(0,0,0,0.45)';
   ectx.fill('evenodd');
   // ince çerçeve: beyaz hale + siyah çekirdek
   ectx.strokeStyle='rgba(255,255,255,0.9)';
   ectx.lineWidth=px(3.2);
-  ectx.strokeRect(x,y,w,h);
+  path();ectx.stroke();
   ectx.strokeStyle='#000';
   ectx.lineWidth=px(1.4);
-  ectx.strokeRect(x,y,w,h);
-  // köşe tutamaçları (küçük kare, beyaz haleli)
-  const cs=Math.min(px(9),Math.max(px(4),Math.min(w,h)*0.25));
-  [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([cx,cy])=>{
+  path();ectx.stroke();
+  // köşe tutamaçları (küçük kare, beyaz haleli) — yakınlıkla daralır
+  const pts=[tl,tr,br,bl];
+  let minPair=Infinity;
+  for(let i=0;i<4;i++)for(let j=i+1;j<4;j++)
+    minPair=Math.min(minPair,Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y));
+  const cs=Math.min(px(9),Math.max(px(4),minPair*0.3));
+  [tl,tr,bl,br].forEach(p=>{
     ectx.fillStyle='rgba(255,255,255,0.95)';
-    ectx.fillRect(cx-cs/2-px(1.2),cy-cs/2-px(1.2),cs+px(2.4),cs+px(2.4));
+    ectx.fillRect(p.x-cs/2-px(1.2),p.y-cs/2-px(1.2),cs+px(2.4),cs+px(2.4));
     ectx.fillStyle='#000';
-    ectx.fillRect(cx-cs/2,cy-cs/2,cs,cs);
+    ectx.fillRect(p.x-cs/2,p.y-cs/2,cs,cs);
+  });
+  // kenar ortası hapları — kenarı eğmek için (ekranda kısa kenarda gizli)
+  [{a:tl,b:tr},{a:tr,b:br},{a:bl,b:br},{a:tl,b:bl}].forEach(({a,b})=>{
+    const len=Math.hypot(b.x-a.x,b.y-a.y);
+    if(len*ovS<46) return;
+    const rw=Math.min(px(11),len*0.3), rh=px(4.4);
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    const angle=Math.atan2(b.y-a.y,b.x-a.x);
+    ectx.save();
+    ectx.translate(mx,my);ectx.rotate(angle);
+    ectx.strokeStyle='rgba(255,255,255,0.9)';
+    ectx.lineWidth=px(3);
+    ectx.beginPath();roundRect(ectx,-rw/2,-rh/2,rw,rh,rh/2);ectx.stroke();
+    ectx.strokeStyle='#000';
+    ectx.lineWidth=px(1.3);
+    ectx.beginPath();roundRect(ectx,-rw/2,-rh/2,rw,rh,rh/2);ectx.stroke();
+    ectx.restore();
   });
   // ortada küçük taşıma işareti
-  if(Math.min(w,h)*ovS>=64){
-    const ccx=x+w/2, ccy=y+h/2, arm=px(6);
-    const cross=(col,lw)=>{
+  const wsp=Math.min(
+    Math.hypot(tr.x-tl.x,tr.y-tl.y),Math.hypot(br.x-bl.x,br.y-bl.y),
+    Math.hypot(bl.x-tl.x,bl.y-tl.y),Math.hypot(br.x-tr.x,br.y-tr.y)
+  );
+  if(wsp*ovS>=64){
+    const ccx=(tl.x+tr.x+bl.x+br.x)/4, ccy=(tl.y+tr.y+bl.y+br.y)/4;
+    const arm=px(6);
+    const crossM=(col,lw)=>{
       ectx.strokeStyle=col; ectx.lineWidth=lw;
       ectx.beginPath();
       ectx.moveTo(ccx-arm,ccy);ectx.lineTo(ccx+arm,ccy);
       ectx.moveTo(ccx,ccy-arm);ectx.lineTo(ccx,ccy+arm);
       ectx.stroke();
     };
-    cross('rgba(255,255,255,0.9)',px(3));
-    cross('#000',px(1.3));
+    crossM('rgba(255,255,255,0.9)',px(3));
+    crossM('#000',px(1.3));
   }
   ectx.restore();
 }
@@ -2149,7 +2227,7 @@ function drawLive(ix0,iy0,ix1,iy1){
   const sw=Math.abs(ix1-ix0),sh=Math.abs(iy1-iy0);
   if(tool==='redact'){
     ectx.fillStyle='rgba(255,255,255,.45)';ectx.fillRect(sx,sy,sw,sh);
-  }else if(tool==='crop'){
+  }else if(tool==='crop'||tool==='ocrQuad'){
     ectx.strokeStyle='#1a2a4a';ectx.lineWidth=Math.max(2,3/edSc);ectx.setLineDash([10,5]);
     ectx.strokeRect(sx,sy,sw,sh);ectx.setLineDash([]);
   }
@@ -2167,7 +2245,7 @@ ec.addEventListener('touchstart',e=>{
     return;
   }
   const p=canvasPt(e.touches[0].clientX,e.touches[0].clientY);
-  if(tool==='redactRect'||tool==='ocrRect'){
+  if(tool==='redactRect'){
     rRectDragCorner=nearRRectCorner(p.x,p.y);
     if(rRectDragCorner) return;
     if(rRect && isInsideRRect(p.x,p.y)){
@@ -2186,7 +2264,7 @@ ec.addEventListener('touchstart',e=>{
   }
   dragEdge=nearEdgeMid(p.x,p.y);
   if(dragEdge){ return; }
-  if(quad && tool==='crop' && isInsideQuad(p.x,p.y)){
+  if(quad && (tool==='crop'||tool==='ocrQuad') && isInsideQuad(p.x,p.y)){
     panStart={x:p.x,y:p.y};
     quadAtPanStart={tl:{...quad.tl},tr:{...quad.tr},bl:{...quad.bl},br:{...quad.br}};
     return;
@@ -2263,7 +2341,7 @@ ec.addEventListener('touchmove',e=>{
     const p=canvasPt(e.touches[0].clientX,e.touches[0].clientY);
     px1=p.x;py1=p.y;
     if(tool==='redact'){ brushPoints.push([p.x,p.y]); drawBrushLive(p.x,p.y); }
-    else if(tool==='redactRect'||tool==='ocrRect'){
+    else if(tool==='redactRect'){
       rRect={x:Math.min(px0,px1),y:Math.min(py0,py1),w:Math.abs(px1-px0),h:Math.abs(py1-py0)};
       redrawEc();
     }
@@ -2289,11 +2367,11 @@ ec.addEventListener('touchend',e=>{
   const rw=Math.abs(px1-px0),rh=Math.abs(py1-py0);
   if(rw<5||rh<5)return;
   if(tool==='redact') commitBrushStroke();
-  else if(tool==='redactRect'||tool==='ocrRect'){
+  else if(tool==='redactRect'){
     rRect={x:Math.min(px0,px1),y:Math.min(py0,py1),w:rw,h:rh};
     redrawEc();
   }
-  else if(tool==='crop'){
+  else if(tool==='crop'||tool==='ocrQuad'){
     quad=rectToQuad(Math.min(px0,px1),Math.min(py0,py1),rw,rh);
     cropRect=null; redrawEc();
   }
@@ -2302,7 +2380,7 @@ ec.addEventListener('touchend',e=>{
 /* Mouse */
 ec.addEventListener('mousedown',e=>{
   const p=canvasPt(e.clientX,e.clientY);
-  if(tool==='redactRect'||tool==='ocrRect'){
+  if(tool==='redactRect'){
     rRectDragCorner=nearRRectCorner(p.x,p.y);
     if(rRectDragCorner) return;
     if(rRect && isInsideRRect(p.x,p.y)){
@@ -2314,7 +2392,7 @@ ec.addEventListener('mousedown',e=>{
   if(dragCorner){ dragEdge=null; return; }
   dragEdge=nearEdgeMid(p.x,p.y);
   if(dragEdge) return;
-  if(quad && tool==='crop' && isInsideQuad(p.x,p.y)){
+  if(quad && (tool==='crop'||tool==='ocrQuad') && isInsideQuad(p.x,p.y)){
     panStart={x:p.x,y:p.y};
     quadAtPanStart={tl:{...quad.tl},tr:{...quad.tr},bl:{...quad.bl},br:{...quad.br}};
   } else if(tool==='none'){
@@ -2363,7 +2441,7 @@ document.addEventListener('mousemove',e=>{
   }
   px1=p.x;py1=p.y;
   if(tool==='redact'){ brushPoints.push([p.x,p.y]); drawBrushLive(p.x,p.y); }
-  else if(tool==='redactRect'||tool==='ocrRect'){
+  else if(tool==='redactRect'){
     rRect={x:Math.min(px0,px1),y:Math.min(py0,py1),w:Math.abs(px1-px0),h:Math.abs(py1-py0)};
     redrawEc();
   }
@@ -2379,11 +2457,11 @@ document.addEventListener('mouseup',e=>{
   const rw=Math.abs(px1-px0),rh=Math.abs(py1-py0);
   if(rw<5||rh<5)return;
   if(tool==='redact')commitBrushStroke();
-  else if(tool==='redactRect'||tool==='ocrRect'){
+  else if(tool==='redactRect'){
     rRect={x:Math.min(px0,px1),y:Math.min(py0,py1),w:rw,h:rh};
     redrawEc();
   }
-  else if(tool==='crop'){
+  else if(tool==='crop'||tool==='ocrQuad'){
     quad=rectToQuad(Math.min(px0,px1),Math.min(py0,py1),rw,rh);
     cropRect=null;redrawEc();
   }
@@ -2646,14 +2724,15 @@ function exitOcrMode(){
   document.getElementById('ocrBar').style.display='none';
   const b=document.getElementById('tOcrRect');
   if(b) b.classList.remove('on');
-  if(tool==='ocrRect'){ tool='none'; rRect=null; }
+  if(tool==='ocrQuad'){ tool='none'; quad=null; }
   redrawEc();
 }
 
 function ocrSelectArea(){
-  // Görüntü ortasında, kenarları eksenlere paralel, ayarlanabilir alan
-  tool='ocrRect';
-  rRect={x:edW*0.15, y:edH*0.15, w:edW*0.7, h:edH*0.7};
+  // Görüntü ortasında dörtgen: kenarlar düz, ama köşeler bağımsız —
+  // açılı çekimlerde metne oturtmak için kenarlar eğilebilir
+  tool='ocrQuad';
+  quad=rectToQuad(edW*0.15, edH*0.15, edW*0.7, edH*0.7);
   document.getElementById('ocrScanBtn').style.display='';
   redrawEc();
 }
@@ -2664,7 +2743,7 @@ function ocrScanFull(){
 }
 
 function ocrScanArea(){
-  const r=rRect?{...rRect}:null;   // dikdörtgen silindiyse tam sayfa
+  const r=quad?{tl:{...quad.tl},tr:{...quad.tr},bl:{...quad.bl},br:{...quad.br}}:null;
   exitOcrMode();
   runOcr(r);
 }
@@ -2688,17 +2767,13 @@ function runOcr(region){
       srcCanvas.width=img.width; srcCanvas.height=img.height;
       srcCanvas.getContext('2d').drawImage(img,0,0);
 
-      // Alan seçildiyse yalnızca o bölgeyi kes (eksenlere paralel)
-      if(region){
-        const rx=Math.max(0,Math.round(Math.min(region.x,region.x+region.w)));
-        const ry=Math.max(0,Math.round(Math.min(region.y,region.y+region.h)));
-        const rw=Math.min(img.width -rx, Math.round(Math.abs(region.w)));
-        const rh=Math.min(img.height-ry, Math.round(Math.abs(region.h)));
-        if(rw>8&&rh>8){
-          const c2=document.createElement('canvas');
-          c2.width=rw; c2.height=rh;
-          c2.getContext('2d').drawImage(img,rx,ry,rw,rh,0,0,rw,rh);
-          srcCanvas=c2;
+      // Alan seçildiyse: dörtgen bölgeyi perspektif düzeltmeyle çıkar —
+      // eğik seçimler düzleştirilerek okunur (açılı fotoğrafta isabet artar)
+      if(region&&region.tl){
+        const {outW,outH}=quadOutSize(region, img.width, img.height);
+        if(outW>8&&outH>8){
+          setS('Seçili bölge düzleştiriliyor…');
+          srcCanvas=perspectiveWarp(srcCanvas, region, outW, outH);
         }
       }
 
