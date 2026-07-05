@@ -324,6 +324,22 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 
 <input type="file" id="fi" accept="image/*" multiple style="display:none" onchange="addPages(event)">
 
+<!-- OCR MODAL (uygulama içi, iOS uyumlu) -->
+<div id="ocrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10000;align-items:center;justify-content:center;padding:12px;">
+  <div style="background:#1a2a4a;border-radius:12px;width:100%;max-width:560px;max-height:92dvh;display:flex;flex-direction:column;gap:10px;padding:14px;box-sizing:border-box;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <b style="font-size:14px;">📖 OCR</b>
+      <button onclick="closeOcr()" style="background:none;border:none;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;">×</button>
+    </div>
+    <div id="ocrStatus" style="font-size:12px;opacity:.85;min-height:15px;">…</div>
+    <textarea id="ocrText" spellcheck="false" style="flex:1;min-height:180px;background:#0f1c33;color:#eee;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px;font-size:13px;line-height:1.45;resize:vertical;box-sizing:border-box;"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="etbtn" onclick="copyOcrText()" style="white-space:nowrap;">📋 Copy</button>
+      <button class="etbtn" onclick="closeOcr()" style="white-space:nowrap;">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- AUTO-CROP ALL PROGRESS -->
 <div id="autoAllProg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9997;align-items:center;justify-content:center;padding:20px;">
   <div style="background:#1a2a4a;padding:18px 22px;border-radius:12px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;">
@@ -2489,15 +2505,112 @@ function exportPDF(mode='download'){
   }catch(e){console.error(e);showPdfSt('Error: '+e.message,'err');}
 }
 
-/* ═══ OCR ═══ */
+/* ═══ OCR (uygulama içi — iOS Safari uyumlu) ═══
+ * Eski yöntem (sessionStorage + window.open ile ayrı ocr.html) iPhone'da
+ * çalışmaz: Safari yeni sekmeye sessionStorage kopyası AKTARMAZ ve ~5MB
+ * kota telefon fotoğrafının dataURL'i için yetersizdir.
+ * Yeni yöntem: Tesseract.js ilk kullanımda CDN'den yüklenir, OCR aynı
+ * sayfada modal içinde çalışır. Crop aracıyla bir bölge seçiliyse (quad)
+ * yalnızca o bölge okunur; seçim yoksa sayfanın tamamı okunur.
+ * Kelime kutuları (bbox) lastOcrData'da saklanır — ileride alan çıkarımı
+ * (tarih vb.) için temel oluşturur. */
+let ocrWorker=null, ocrBusy=false, lastOcrData=null;
+
+function ensureOcr(statusCb){
+  if(ocrWorker) return Promise.resolve(ocrWorker);
+  statusCb('OCR motoru indiriliyor… (ilk kullanımda bir kez)');
+  const loadScript=()=>window.Tesseract?Promise.resolve():new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload=res;
+    s.onerror=()=>rej(new Error('Tesseract yüklenemedi — internet bağlantısını kontrol et'));
+    document.head.appendChild(s);
+  });
+  return loadScript().then(()=>{
+    statusCb('Dil verisi hazırlanıyor… (tur+eng)');
+    return Tesseract.createWorker('tur+eng',1,{
+      logger:m=>{
+        if(m.status==='recognizing text')
+          statusCb('Metin okunuyor… %'+Math.round(m.progress*100));
+      }
+    });
+  }).then(w=>{ ocrWorker=w; return w; });
+}
+
 function openOcrPage(){
-  if(edIdx===null||!pages[edIdx])return;
-  try{
-    sessionStorage.setItem('ocr_image', pages[edIdx].cur);
-    window.open('ocr.html','_blank');
-  }catch(e){
-    alert('Görüntü çok büyük, önce Crop ile boyutunu küçült.');
-  }
+  if(edIdx===null||!pages[edIdx]||ocrBusy) return;
+  ocrBusy=true;
+  const modal=document.getElementById('ocrModal');
+  const statusEl=document.getElementById('ocrStatus');
+  const ta=document.getElementById('ocrText');
+  ta.value='';
+  modal.style.display='flex';
+  const setS=t=>{statusEl.textContent=t;};
+  setS('Hazırlanıyor…');
+
+  const src=history[history.length-1]||pages[edIdx].cur;
+  const img=new Image();
+  img.onload=async()=>{
+    try{
+      let srcCanvas=document.createElement('canvas');
+      srcCanvas.width=img.width; srcCanvas.height=img.height;
+      srcCanvas.getContext('2d').drawImage(img,0,0);
+
+      // Crop aracıyla bölge seçiliyse yalnızca o bölgeyi oku
+      if(quad){
+        const topW  =Math.hypot(quad.tr.x-quad.tl.x, quad.tr.y-quad.tl.y);
+        const botW  =Math.hypot(quad.br.x-quad.bl.x, quad.br.y-quad.bl.y);
+        const leftH =Math.hypot(quad.bl.x-quad.tl.x, quad.bl.y-quad.tl.y);
+        const rightH=Math.hypot(quad.br.x-quad.tr.x, quad.br.y-quad.tr.y);
+        const ow=Math.round(Math.max(topW,botW)), oh=Math.round(Math.max(leftH,rightH));
+        if(ow>4&&oh>4){
+          setS('Seçili bölge kesiliyor…');
+          srcCanvas=perspectiveWarp(srcCanvas,quad,ow,oh);
+        }
+      }
+
+      // Hız ve iOS bellek sınırı için en fazla 1600px
+      const M=1600, sc=Math.min(1,M/Math.max(srcCanvas.width,srcCanvas.height));
+      if(sc<1){
+        const c2=document.createElement('canvas');
+        c2.width=Math.round(srcCanvas.width*sc);
+        c2.height=Math.round(srcCanvas.height*sc);
+        c2.getContext('2d').drawImage(srcCanvas,0,0,c2.width,c2.height);
+        srcCanvas=c2;
+      }
+
+      const worker=await ensureOcr(setS);
+      setS('Metin okunuyor… %0');
+      const {data}=await worker.recognize(srcCanvas);
+      lastOcrData=data;
+      ta.value=(data.text||'').trim();
+      setS(ta.value?'✓ Bitti — metni düzenleyip kopyalayabilirsin':'Okunabilir metin bulunamadı');
+    }catch(err){
+      console.error('OCR error:',err);
+      setS('OCR hatası: '+(err&&err.message?err.message:err));
+    }finally{
+      ocrBusy=false;
+    }
+  };
+  img.onerror=()=>{ setS('Görüntü yüklenemedi'); ocrBusy=false; };
+  img.src=src;
+}
+
+function closeOcr(){
+  document.getElementById('ocrModal').style.display='none';
+}
+
+function copyOcrText(){
+  const ta=document.getElementById('ocrText');
+  if(!ta.value) return;
+  const okMsg=()=>{document.getElementById('ocrStatus').textContent='✓ Panoya kopyalandı';};
+  const fallback=()=>{
+    ta.focus(); ta.setSelectionRange(0,ta.value.length);
+    try{ document.execCommand('copy'); okMsg(); }catch(e){}
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ta.value).then(okMsg,fallback);
+  } else fallback();
 }
 
 /* ═══ ANA EKRAN SCROLL ZOOM ═══ */
