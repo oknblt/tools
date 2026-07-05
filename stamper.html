@@ -120,13 +120,13 @@ input[type=color] {
   padding: 1px 2px; cursor: pointer; background: #243f60;
 }
 
-/* Action row (download + clear) above the preview grid */
+/* Action row (compress + clear selected + clear all) above the preview grid */
 .action-row {
   display: flex; align-items: center; gap: 8px;
   margin-top: 12px; flex-wrap: wrap;
 }
 .btn-action {
-  flex: 1; min-width: 200px;
+  flex: 1; min-width: 140px;
   height: 48px; border-radius: 12px; border: none;
   background: #4a9edd; color: #fff;
   font-size: 14px; font-weight: 600; cursor: pointer;
@@ -146,6 +146,7 @@ input[type=color] {
 }
 .btn-clear:hover { background: #2e5080; }
 .btn-clear svg { width: 14px; height: 14px; }
+#btnClearSel { display: none; border-color: #4a80b0; color: #c8e4ff; }
 .count-tag { font-size: 12px; color: #5a8ab0; margin-left: auto; }
 
 /* Preview grid */
@@ -158,13 +159,32 @@ input[type=color] {
   border: 1px solid #2a4f78; border-radius: 10px;
   overflow: hidden; background: #162d4a;
   position: relative; cursor: pointer;
-  transition: border-color 0.2s, transform 0.15s;
+  transition: border-color 0.2s, transform 0.15s, box-shadow 0.15s;
 }
 .preview-card:hover { border-color: #4a9edd; transform: scale(1.02); }
 .preview-card.has-redact { border-color: #4a9edd; }
+.preview-card.selected {
+  border-color: #6ab8f0;
+  box-shadow: 0 0 0 2px rgba(74,158,221,0.55);
+}
 .preview-card canvas { width: 100%; display: block; }
 .preview-info { padding: 6px 8px; font-size: 11px; color: #a8c8e8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .preview-src { font-size: 10px; color: #5a8ab0; margin-top: 2px; }
+
+/* Per-photo select toggle */
+.select-toggle {
+  position: absolute; top: 5px; left: 5px;
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.8);
+  background: rgba(10,25,50,0.55);
+  cursor: pointer; z-index: 2; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.select-toggle:hover { transform: scale(1.12); }
+.select-toggle svg { width: 12px; height: 12px; color: #fff; opacity: 0; transition: opacity 0.15s; }
+.select-toggle.on { background: #4a9edd; border-color: #4a9edd; }
+.select-toggle.on svg { opacity: 1; }
 
 .redact-badge {
   position: absolute; top: 5px; right: 5px;
@@ -314,7 +334,7 @@ input[type=color] {
 }
 #redactCanvas {
   display: block;
-  cursor: crosshair;
+  cursor: default;
   border-radius: 8px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.6);
   touch-action: none;
@@ -396,7 +416,7 @@ input[type=color] {
   .top-bar h1 { font-size: 15px; }
   .redact-topbar { padding: 8px 10px; }
   .redact-bottombar { padding: 8px 10px; }
-  .btn-action { min-width: 160px; }
+  .btn-action { min-width: 120px; }
 }
 </style>
 </head>
@@ -494,7 +514,7 @@ input[type=color] {
       </div>
     </div>
 
-    <!-- Download / clear row moved ABOVE the preview grid -->
+    <!-- Compress / clear selected / clear all — above the preview grid -->
     <div class="action-row">
       <button class="btn-action" id="downloadBtn" disabled>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -502,7 +522,14 @@ input[type=color] {
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        <span id="downloadBtnLabel">Download</span>
+        <span id="downloadBtnLabel">Compress</span>
+      </button>
+      <button class="btn-clear" id="btnClearSel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        </svg>
+        <span id="clearSelLabel">Clear selected</span>
       </button>
       <button class="btn-clear" id="clearAll">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -552,7 +579,7 @@ input[type=color] {
         </svg>
         Rotate
       </button>
-      <button class="rtool-btn active" id="toolBrush">
+      <button class="rtool-btn" id="toolBrush">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
         </svg>
@@ -580,7 +607,7 @@ input[type=color] {
   </div>
 
   <div class="redact-bottombar">
-    <div class="redact-size-row" id="brushSizeRow">
+    <div class="redact-size-row" id="brushSizeRow" style="display:none">
       <label>Size</label>
       <input type="range" id="brushSize" min="5" max="120" value="30">
       <span class="redact-size-val" id="brushSizeVal">30</span>
@@ -808,14 +835,23 @@ function makePreviewCanvas(photo, opts) {
 }
 
 // ============================================================
-// PREVIEW GRID
+// PREVIEW GRID + SELECTION
 // ============================================================
 function updateDownloadButton() {
   const total = state.photos.length;
   document.getElementById('countTag').textContent = total + (total === 1 ? ' photo' : ' photos');
   document.getElementById('downloadBtn').disabled = total === 0;
-  const label = state.stampEnabled ? 'Compress & Stamp · Download' : 'Compress · Download';
-  document.getElementById('downloadBtnLabel').textContent = label;
+}
+
+function updateSelectedUI() {
+  const n = state.photos.filter(p => p.selected).length;
+  const btn = document.getElementById('btnClearSel');
+  btn.style.display = n > 0 ? 'inline-flex' : 'none';
+  document.getElementById('clearSelLabel').textContent = 'Clear selected (' + n + ')';
+}
+
+function releasePhoto(p) {
+  if (p.src && p.src.close) { try { p.src.close(); } catch {} }
 }
 
 function refreshPreviews() {
@@ -824,11 +860,27 @@ function refreshPreviews() {
   const frag = document.createDocumentFragment();
   state.photos.forEach((p, idx) => {
     const card = document.createElement('div');
-    card.className = 'preview-card' + (p.redactCanvas ? ' has-redact' : '');
+    card.className = 'preview-card'
+      + (p.redactCanvas ? ' has-redact' : '')
+      + (p.selected ? ' selected' : '');
     card.dataset.idx = idx;
 
     const canvas = makePreviewCanvas(p, state);
     card.appendChild(canvas);
+
+    // Selection toggle (top-left circle)
+    const sel = document.createElement('button');
+    sel.className = 'select-toggle' + (p.selected ? ' on' : '');
+    sel.title = 'Select photo';
+    sel.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    sel.addEventListener('click', e => {
+      e.stopPropagation();
+      p.selected = !p.selected;
+      sel.classList.toggle('on', p.selected);
+      card.classList.toggle('selected', p.selected);
+      updateSelectedUI();
+    });
+    card.appendChild(sel);
 
     if (p.redactCanvas) {
       const badge = document.createElement('div');
@@ -884,6 +936,7 @@ function refreshPreviews() {
   });
   grid.appendChild(frag);
   updateDownloadButton();
+  updateSelectedUI();
 }
 
 // Coalesce rapid slider changes into one repaint per frame
@@ -929,20 +982,38 @@ function hideThumbTooltip() {
 // ============================================================
 const redactModal   = document.getElementById('redactModal');
 const redactCanvas  = document.getElementById('redactCanvas');
-const redactCtx     = redactCanvas.getContext('2d');
+// desynchronized: lower input-to-paint latency while drawing (where supported)
+const redactCtx     = redactCanvas.getContext('2d', { desynchronized: true });
 const canvasWrap    = document.getElementById('redactCanvasWrap');
 
 let redactState = {
   photoIdx: -1,
-  tool: 'brush',
+  tool: null,          // no tool active by default — tap Brush/Rectangle to enable
   color: '#000000',
   brushSize: 30,
   drawing: false,
   rectStart: null,
-  snapshots: [],       // {data, w, h} — bounded to limit memory on large photos
+  snapshots: [],       // canvas copies (GPU-fast restore) — bounded for memory
 };
 let _prevX = 0, _prevY = 0, _rectPreviewSnap = null;
 const MAX_SNAPSHOTS = 10;
+
+// Fast snapshot: canvas copy via drawImage instead of getImageData.
+// getImageData forced a full GPU→CPU readback of the whole image on every
+// stroke, which is what made the brush lag behind the cursor.
+function cloneCanvas() {
+  const c = document.createElement('canvas');
+  c.width = redactCanvas.width; c.height = redactCanvas.height;
+  c.getContext('2d').drawImage(redactCanvas, 0, 0);
+  return c;
+}
+function restoreCanvas(snap) {
+  const resized = (redactCanvas.width !== snap.width || redactCanvas.height !== snap.height);
+  if (resized) { redactCanvas.width = snap.width; redactCanvas.height = snap.height; }
+  else redactCtx.clearRect(0, 0, redactCanvas.width, redactCanvas.height);
+  redactCtx.drawImage(snap, 0, 0);
+  return resized;
+}
 
 // ============================================================
 // ZOOM (multiplicative steps; minimum adapts to fit-to-screen,
@@ -996,6 +1067,7 @@ function openRedactEditor(idx) {
   redactState.drawing = false;
   redactState.rectStart = null;
   _pinch = null;
+  setTool(null); // tools start OFF every time the editor opens
 
   document.getElementById('redactModalTitle').textContent = '✏️ Edit · ' + photo.name;
 
@@ -1017,23 +1089,18 @@ function closeRedactModal() {
   redactModal.classList.remove('active');
   document.body.style.overflow = '';
   redactState.snapshots = []; // free undo memory
+  _rectPreviewSnap = null;
 }
 
 function saveSnap() {
-  redactState.snapshots.push({
-    data: redactCtx.getImageData(0, 0, redactCanvas.width, redactCanvas.height),
-    w: redactCanvas.width, h: redactCanvas.height
-  });
+  redactState.snapshots.push(cloneCanvas());
   if (redactState.snapshots.length > MAX_SNAPSHOTS) redactState.snapshots.shift();
 }
 
 function undoRedact() {
   if (redactState.snapshots.length <= 1) return;
   redactState.snapshots.pop();
-  const s = redactState.snapshots[redactState.snapshots.length - 1];
-  const resized = (redactCanvas.width !== s.w || redactCanvas.height !== s.h);
-  if (resized) { redactCanvas.width = s.w; redactCanvas.height = s.h; }
-  redactCtx.putImageData(s.data, 0, 0);
+  const resized = restoreCanvas(redactState.snapshots[redactState.snapshots.length - 1]);
   if (resized) fitToScreen();
 }
 
@@ -1053,16 +1120,13 @@ function rotateEditor() {
 }
 document.getElementById('toolRotate').addEventListener('click', rotateEditor);
 
-// Convert mouse/touch position to canvas pixel coordinates (accounting for zoom)
+// Convert pointer/touch position to canvas pixel coordinates (accounting for zoom)
 function toCanvasXY(clientX, clientY) {
   const rect = redactCanvas.getBoundingClientRect();
   return {
     x: (clientX - rect.left) * (redactCanvas.width  / rect.width),
     y: (clientY - rect.top)  * (redactCanvas.height / rect.height)
   };
-}
-function evXY(e) {
-  return e.touches ? [e.touches[0].clientX, e.touches[0].clientY] : [e.clientX, e.clientY];
 }
 
 // ---------- Pinch zoom / pan (two fingers = zoom the image, never draw) ----------
@@ -1073,10 +1137,10 @@ function cancelActiveStroke() {
   if (!redactState.drawing) return;
   // Remove the accidental dot/line made by the first finger before the pinch
   if (redactState.tool === 'rect' && _rectPreviewSnap) {
-    redactCtx.putImageData(_rectPreviewSnap, 0, 0);
+    restoreCanvas(_rectPreviewSnap);
   } else {
     const s = redactState.snapshots[redactState.snapshots.length - 1];
-    if (s) redactCtx.putImageData(s.data, 0, 0);
+    if (s) restoreCanvas(s);
   }
   redactState.drawing = false;
   redactState.rectStart = null;
@@ -1117,36 +1181,25 @@ function movePinch(e) {
   }, { passive: false });
 });
 
-// ---------- Drawing ----------
-function onDown(e) {
-  if (e.touches && e.touches.length >= 2) { e.preventDefault(); startPinch(e); return; }
-  e.preventDefault();
-  const [cx, cy] = evXY(e);
-  const {x, y} = toCanvasXY(cx, cy);
+// ---------- Drawing core ----------
+function strokeStart(clientX, clientY) {
+  const {x, y} = toCanvasXY(clientX, clientY);
   redactState.drawing = true;
   _prevX = x; _prevY = y;
   if (redactState.tool === 'brush') {
     paintDot(x, y);
   } else {
     redactState.rectStart = {x, y};
-    _rectPreviewSnap = redactCtx.getImageData(0, 0, redactCanvas.width, redactCanvas.height);
+    _rectPreviewSnap = cloneCanvas();
   }
 }
-function onMove(e) {
-  if (e.touches && e.touches.length >= 2) {
-    e.preventDefault();
-    if (!_pinch) startPinch(e); else movePinch(e);
-    return;
-  }
-  e.preventDefault();
-  if (_pinch || !redactState.drawing) return;
-  const [cx, cy] = evXY(e);
-  const {x, y} = toCanvasXY(cx, cy);
+function strokeMove(clientX, clientY) {
+  const {x, y} = toCanvasXY(clientX, clientY);
   if (redactState.tool === 'brush') {
     paintLine(_prevX, _prevY, x, y);
     _prevX = x; _prevY = y;
   } else if (redactState.rectStart) {
-    redactCtx.putImageData(_rectPreviewSnap, 0, 0);
+    restoreCanvas(_rectPreviewSnap);
     redactCtx.fillStyle = redactState.color;
     redactCtx.fillRect(
       Math.min(redactState.rectStart.x, x), Math.min(redactState.rectStart.y, y),
@@ -1154,11 +1207,7 @@ function onMove(e) {
     );
   }
 }
-function onUp(e) {
-  if (_pinch) {
-    if (!e || !e.touches || e.touches.length < 2) _pinch = null;
-    return;
-  }
+function strokeEnd() {
   if (!redactState.drawing) return;
   redactState.drawing = false;
   redactState.rectStart = null; _rectPreviewSnap = null;
@@ -1178,21 +1227,72 @@ function paintLine(x0, y0, x1, y1) {
   redactCtx.beginPath(); redactCtx.moveTo(x0, y0); redactCtx.lineTo(x1, y1); redactCtx.stroke();
 }
 
-redactCanvas.addEventListener('mousedown',  onDown);
-redactCanvas.addEventListener('mousemove',  onMove);
-redactCanvas.addEventListener('mouseup',    onUp);
-redactCanvas.addEventListener('mouseleave', onUp);
-redactCanvas.addEventListener('touchstart', onDown, {passive:false});
-redactCanvas.addEventListener('touchmove',  onMove, {passive:false});
-redactCanvas.addEventListener('touchend',   onUp,   {passive:false});
-redactCanvas.addEventListener('touchcancel',onUp,   {passive:false});
+// ---------- Mouse / pen via Pointer Events ----------
+// Pointer capture keeps the stroke alive outside the canvas, and
+// getCoalescedEvents() feeds in every intermediate point the browser
+// batched between frames — the line stays right under the cursor.
+redactCanvas.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch') return;   // fingers use the touch handlers below
+  if (!redactState.tool) return;           // no tool selected → nothing happens
+  e.preventDefault();
+  try { redactCanvas.setPointerCapture(e.pointerId); } catch {}
+  strokeStart(e.clientX, e.clientY);
+});
+redactCanvas.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch') return;
+  if (!redactState.drawing) return;
+  e.preventDefault();
+  if (redactState.tool === 'brush' && e.getCoalescedEvents) {
+    const evs = e.getCoalescedEvents();
+    if (evs.length) { for (const ev of evs) strokeMove(ev.clientX, ev.clientY); return; }
+  }
+  strokeMove(e.clientX, e.clientY);
+});
+redactCanvas.addEventListener('pointerup', e => {
+  if (e.pointerType === 'touch') return;
+  strokeEnd();
+});
+redactCanvas.addEventListener('pointercancel', e => {
+  if (e.pointerType === 'touch') return;
+  strokeEnd();
+});
 
-// Tools — the brush-size slider only applies to the brush, so hide it for Rectangle
+// ---------- Touch (draw with one finger, pinch with two) ----------
+redactCanvas.addEventListener('touchstart', e => {
+  if (e.touches.length >= 2) { e.preventDefault(); startPinch(e); return; }
+  if (!redactState.tool) return;           // no tool selected → touch never draws
+  e.preventDefault();
+  strokeStart(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive:false});
+redactCanvas.addEventListener('touchmove', e => {
+  if (e.touches.length >= 2) {
+    e.preventDefault();
+    if (!_pinch) startPinch(e); else movePinch(e);
+    return;
+  }
+  e.preventDefault();
+  if (_pinch || !redactState.drawing) return;
+  strokeMove(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive:false});
+function onTouchEnd(e) {
+  if (_pinch) {
+    if (!e.touches || e.touches.length < 2) _pinch = null;
+    return;
+  }
+  strokeEnd();
+}
+redactCanvas.addEventListener('touchend',    onTouchEnd, {passive:false});
+redactCanvas.addEventListener('touchcancel', onTouchEnd, {passive:false});
+
+// Tools — OFF by default; tap to enable, tap the active one again to disable.
+// The brush-size slider only applies to the brush, so it hides for Rectangle.
 function setTool(tool) {
+  if (redactState.tool === tool) tool = null; // toggle off
   redactState.tool = tool;
   document.getElementById('toolBrush').classList.toggle('active', tool === 'brush');
   document.getElementById('toolRect').classList.toggle('active',  tool === 'rect');
   document.getElementById('brushSizeRow').style.display = tool === 'brush' ? 'flex' : 'none';
+  redactCanvas.style.cursor = tool ? 'crosshair' : 'default';
 }
 document.getElementById('toolBrush').addEventListener('click', () => setTool('brush'));
 document.getElementById('toolRect').addEventListener('click',  () => setTool('rect'));
@@ -1217,10 +1317,7 @@ document.getElementById('btnUndo').addEventListener('click', undoRedact);
 document.getElementById('btnRedactCancel').addEventListener('click', closeRedactModal);
 document.getElementById('btnRedactSave').addEventListener('click', () => {
   const photo = state.photos[redactState.photoIdx];
-  const out = document.createElement('canvas');
-  out.width = redactCanvas.width; out.height = redactCanvas.height;
-  out.getContext('2d').drawImage(redactCanvas, 0, 0);
-  photo.redactCanvas = out;
+  photo.redactCanvas = cloneCanvas();
   buildPreviewSource(photo); // refresh the cached thumbnail
   closeRedactModal();
   refreshPreviews();
@@ -1250,7 +1347,7 @@ async function loadOnePhoto(file) {
   const photo = {
     src: decoded.src, w: decoded.w, h: decoded.h,
     name: file.name, date: ex.date, exif: ex.exif,
-    redactCanvas: null, previewSrc: null
+    redactCanvas: null, previewSrc: null, selected: false
   };
   buildPreviewSource(photo);
   return photo;
@@ -1328,7 +1425,7 @@ document.getElementById('fontSize').addEventListener('input',   e => { state.fon
 document.getElementById('padding').addEventListener('input',    e => { state.padding    = +e.target.value; document.getElementById('paddingVal').textContent  = e.target.value; requestRefresh(); });
 
 // ============================================================
-// DOWNLOAD — ZIP
+// COMPRESS (download) — ZIP
 // ============================================================
 document.getElementById('downloadBtn').addEventListener('click', async () => {
   if (!state.photos.length) return;
@@ -1384,14 +1481,34 @@ document.getElementById('downloadBtn').addEventListener('click', async () => {
   setTimeout(hideProgress, 500);
 });
 
+// Remove only the selected photos
+document.getElementById('btnClearSel').addEventListener('click', () => {
+  const keep = [];
+  state.photos.forEach(p => {
+    if (p.selected) releasePhoto(p);
+    else keep.push(p);
+  });
+  state.photos = keep;
+  if (!state.photos.length) {
+    document.getElementById('previewGrid').innerHTML = '';
+    document.getElementById('settingsArea').style.display = 'none';
+    document.getElementById('countTag').textContent = '0 photos';
+    fileInput.value = '';
+    updateSelectedUI();
+    return;
+  }
+  refreshPreviews();
+});
+
 document.getElementById('clearAll').addEventListener('click', () => {
   // Release decoded bitmaps so memory is reclaimed immediately
-  state.photos.forEach(p => { if (p.src && p.src.close) { try { p.src.close(); } catch {} } });
+  state.photos.forEach(releasePhoto);
   state.photos = [];
   document.getElementById('previewGrid').innerHTML = '';
   document.getElementById('settingsArea').style.display = 'none';
   document.getElementById('countTag').textContent = '0 photos';
   fileInput.value = '';
+  updateSelectedUI();
 });
 
 // roundRect polyfill for older Safari
