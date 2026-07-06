@@ -337,7 +337,7 @@ button,.tbtn,.etbtn,.q-btn,.pdf-go,.pdf-cancel,.thumb{
     <div id="ocrStatus" style="font-size:12px;opacity:.85;min-height:15px;">…</div>
     <textarea id="ocrText" spellcheck="false" style="flex:1;min-height:280px;background:#0f1c33;color:#eee;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px;font-size:13px;line-height:1.45;resize:vertical;box-sizing:border-box;"></textarea>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button class="etbtn" onclick="ocrRemoveSpaces()" style="white-space:nowrap;">⌫ Remove Spaces</button>
+      <button class="etbtn" onclick="ocrRemoveSpaces()" style="white-space:nowrap;">Remove Spaces</button>
       <button class="etbtn" onclick="copyOcrText()" style="white-space:nowrap;">📋 Copy</button>
       <button class="etbtn" onclick="closeOcr()" style="white-space:nowrap;">Close</button>
     </div>
@@ -2546,7 +2546,9 @@ function saveAsImages(){
   const maxD={0.6:1200,0.8:1800,0.92:2400,1:99999}[pdfQ]||1800;
   const jq=pdfQ>=1?0.95:pdfQ;
   const prep=src=>new Promise((res,rej)=>{
-    if(pdfQ>=1){ res(src); return; }   // Full: orijinali aynen bırak
+    // Full + Original: dosyaya hiç dokunma (format/boyut aynen korunur).
+    // B-W seçiliyse Full'de bile işlenmesi gerekir (yeniden kodlanır).
+    if(pdfQ>=1&&pdfColorMode!=='bw'){ res(src); return; }
     const im=new Image();
     im.onload=()=>{
       const sc=Math.min(1,maxD/Math.max(im.width,im.height));
@@ -2554,6 +2556,7 @@ function saveAsImages(){
       c.width=Math.max(1,Math.round(im.width*sc));
       c.height=Math.max(1,Math.round(im.height*sc));
       c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      if(pdfColorMode==='bw') applyDocBW(c);   // PDF ile aynı S-B dönüşümü
       res(c.toDataURL('image/jpeg',jq));
     };
     im.onerror=()=>rej(new Error('Görüntü yüklenemedi'));
@@ -2609,6 +2612,66 @@ function sharePDF(){
     showPdfSt('Share bu cihazda desteklenmiyor','err');
   }
 }
+/* ═══ Belge tipi siyah-beyaz dönüşümü (PDF ve Image ortak) ═══
+ * Karo bazlı yerel referans parlaklıkla normalize eder: gölgeli zeminde
+ * bile kâğıt beyaza, metin koyuya oturur. Canvas'ı yerinde değiştirir. */
+function applyDocBW(cnv){
+  const sw=cnv.width, sh=cnv.height;
+  const ctx=cnv.getContext('2d');
+          const id=ctx.getImageData(0,0,sw,sh);
+          const d=id.data;
+          const gray=new Float32Array(sw*sh);
+          for(let i=0;i<sw*sh;i++){
+            gray[i]=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2];
+          }
+          const tileW=Math.max(60,Math.round(sw/8));
+          const tileH=Math.max(60,Math.round(sh/8));
+          const cols=Math.ceil(sw/tileW);
+          const rows=Math.ceil(sh/tileH);
+          const tileRef=new Float32Array(cols*rows);
+          for(let r=0;r<rows;r++){
+            for(let c=0;c<cols;c++){
+              const x0=c*tileW, y0=r*tileH;
+              const x1=Math.min(x0+tileW,sw), y1=Math.min(y0+tileH,sh);
+              const vals=[];
+              for(let y=y0;y<y1;y++){
+                for(let x=x0;x<x1;x++){
+                  vals.push(gray[y*sw+x]);
+                }
+              }
+              vals.sort((a,b)=>a-b);
+              tileRef[r*cols+c]=vals[Math.floor(vals.length*0.90)]||200;
+            }
+          }
+          for(let y=0;y<sh;y++){
+            for(let x=0;x<sw;x++){
+              const tc=(x/tileW)-0.5;
+              const tr=(y/tileH)-0.5;
+              const c0=Math.max(0,Math.floor(tc)), c1=Math.min(cols-1,c0+1);
+              const r0=Math.max(0,Math.floor(tr)), r1=Math.min(rows-1,r0+1);
+              const fc=tc-c0, fr=tr-r0;
+              const ref=
+                tileRef[r0*cols+c0]*(1-fc)*(1-fr)+
+                tileRef[r0*cols+c1]*fc*(1-fr)+
+                tileRef[r1*cols+c0]*(1-fc)*fr+
+                tileRef[r1*cols+c1]*fc*fr;
+              const localRef=Math.max(ref,120);
+              const g=gray[y*sw+x];
+              let norm=(g/localRef)*255;
+              let final;
+              if(norm>230)      final=255;
+              else if(norm>185) final=Math.round(220+(norm-185)*(35/45));
+              else if(norm>130) final=Math.round(norm*0.80);
+              else if(norm>60)  final=Math.round(norm*0.60);
+              else              final=Math.round(norm*0.40);
+              final=Math.max(0,Math.min(255,final));
+              const idx=(y*sw+x)*4;
+              d[idx]=d[idx+1]=d[idx+2]=final;
+            }
+          }
+          ctx.putImageData(id,0,0);
+}
+
 function exportPDF(mode='download'){
   if(!pages.length)return;
   const name=(document.getElementById('pdfName').value.trim()||'scan_'+Date.now())+'.pdf';
@@ -2660,60 +2723,7 @@ function exportPDF(mode='download'){
         const tmpCtx=tmp.getContext('2d');
         tmpCtx.drawImage(img,0,0,sw,sh);
 
-        if(pdfColorMode==='bw'){
-          const id=tmpCtx.getImageData(0,0,sw,sh);
-          const d=id.data;
-          const gray=new Float32Array(sw*sh);
-          for(let i=0;i<sw*sh;i++){
-            gray[i]=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2];
-          }
-          const tileW=Math.max(60,Math.round(sw/8));
-          const tileH=Math.max(60,Math.round(sh/8));
-          const cols=Math.ceil(sw/tileW);
-          const rows=Math.ceil(sh/tileH);
-          const tileRef=new Float32Array(cols*rows);
-          for(let r=0;r<rows;r++){
-            for(let c=0;c<cols;c++){
-              const x0=c*tileW, y0=r*tileH;
-              const x1=Math.min(x0+tileW,sw), y1=Math.min(y0+tileH,sh);
-              const vals=[];
-              for(let y=y0;y<y1;y++){
-                for(let x=x0;x<x1;x++){
-                  vals.push(gray[y*sw+x]);
-                }
-              }
-              vals.sort((a,b)=>a-b);
-              tileRef[r*cols+c]=vals[Math.floor(vals.length*0.90)]||200;
-            }
-          }
-          for(let y=0;y<sh;y++){
-            for(let x=0;x<sw;x++){
-              const tc=(x/tileW)-0.5;
-              const tr=(y/tileH)-0.5;
-              const c0=Math.max(0,Math.floor(tc)), c1=Math.min(cols-1,c0+1);
-              const r0=Math.max(0,Math.floor(tr)), r1=Math.min(rows-1,r0+1);
-              const fc=tc-c0, fr=tr-r0;
-              const ref=
-                tileRef[r0*cols+c0]*(1-fc)*(1-fr)+
-                tileRef[r0*cols+c1]*fc*(1-fr)+
-                tileRef[r1*cols+c0]*(1-fc)*fr+
-                tileRef[r1*cols+c1]*fc*fr;
-              const localRef=Math.max(ref,120);
-              const g=gray[y*sw+x];
-              let norm=(g/localRef)*255;
-              let final;
-              if(norm>230)      final=255;
-              else if(norm>185) final=Math.round(220+(norm-185)*(35/45));
-              else if(norm>130) final=Math.round(norm*0.80);
-              else if(norm>60)  final=Math.round(norm*0.60);
-              else              final=Math.round(norm*0.40);
-              final=Math.max(0,Math.min(255,final));
-              const idx=(y*sw+x)*4;
-              d[idx]=d[idx+1]=d[idx+2]=final;
-            }
-          }
-          tmpCtx.putImageData(id,0,0);
-        }
+        if(pdfColorMode==='bw') applyDocBW(tmp);
 
         const reencoded=tmp.toDataURL('image/jpeg', pdfQ>=1 ? 0.95 : pdfQ);
         // Gerçek orana göre sayfa boyutu — A4'e zorlamaz
@@ -2895,13 +2905,20 @@ function closeOcr(){
 }
 
 function ocrRemoveSpaces(){
-  // Satır içi boşluk ve sekmeleri kaldırır (satır sonları korunur) —
-  // TC no, IBAN, telefon gibi OCR'ın araya boşluk serptiği değerler için.
-  // Sonuç aynı kutuya yazılır, düzenlenmeye devam edilebilir.
+  // Fazla boşlukları temizler, kelime aralarını KORUR:
+  // art arda boşluklar teke iner, satır başı/sonu boşlukları silinir,
+  // noktalama öncesi ve parantez içi kenar boşlukları kaldırılır,
+  // 3+ boş satır tek boş satıra iner. Sonuç düzenlenmeye açık kalır.
   const ta=document.getElementById('ocrText');
   if(!ta.value) return;
-  ta.value=ta.value.replace(/[ \t]+/g,'');
-  document.getElementById('ocrStatus').textContent='✓ Boşluklar kaldırıldı — metin düzenlenebilir';
+  let t=ta.value;
+  t=t.replace(/[ \t]+/g,' ');              // çoklu boşluk/sekme → tek boşluk
+  t=t.replace(/ ?\n ?/g,'\n');             // satır kenarlarındaki boşluklar
+  t=t.replace(/ +([.,;:!?%)\]}])/g,'$1');  // noktalamadan önceki boşluk
+  t=t.replace(/([({\[]) +/g,'$1');         // açma parantezinden sonraki boşluk
+  t=t.replace(/\n{3,}/g,'\n\n');           // 3+ boş satır → tek boş satır
+  ta.value=t.trim();
+  document.getElementById('ocrStatus').textContent='✓ Fazla boşluklar temizlendi — metin düzenlenebilir';
 }
 
 function copyOcrText(){
