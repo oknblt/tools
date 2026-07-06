@@ -2905,20 +2905,25 @@ function closeOcr(){
 }
 
 function ocrRemoveSpaces(){
-  // Fazla boşlukları temizler, kelime aralarını KORUR:
-  // art arda boşluklar teke iner, satır başı/sonu boşlukları silinir,
-  // noktalama öncesi ve parantez içi kenar boşlukları kaldırılır,
-  // 3+ boş satır tek boş satıra iner. Sonuç düzenlenmeye açık kalır.
+  // OCR çıktısını akışkan metne çevirir:
+  // • satır ORTASINDAKİ kaydırmalar (taranan sayfanın satır sonları) boşluğa döner
+  // • boş satırla ayrılan gerçek paragraflar korunur
+  // • satır sonu heceleme tiresi birleştirilir (keli-⏎mesi → kelimesi)
+  // • çoklu boşluklar teke iner, noktalama önü boşluklar temizlenir
   const ta=document.getElementById('ocrText');
   if(!ta.value) return;
   let t=ta.value;
-  t=t.replace(/[ \t]+/g,' ');              // çoklu boşluk/sekme → tek boşluk
-  t=t.replace(/ ?\n ?/g,'\n');             // satır kenarlarındaki boşluklar
-  t=t.replace(/ +([.,;:!?%)\]}])/g,'$1');  // noktalamadan önceki boşluk
-  t=t.replace(/([({\[]) +/g,'$1');         // açma parantezinden sonraki boşluk
-  t=t.replace(/\n{3,}/g,'\n\n');           // 3+ boş satır → tek boş satır
+  t=t.replace(/\r/g,'');
+  t=t.replace(/[ \t]+/g,' ');               // çoklu boşluk/sekme → tek
+  t=t.replace(/ ?\n ?/g,'\n');              // satır kenarı boşlukları
+  t=t.replace(/(\S)-\n(?=\S)/g,'$1');       // satır sonu heceleme tiresi
+  t=t.replace(/\n{2,}/g,'\u0000');          // paragraf sınırlarını işaretle
+  t=t.replace(/\n/g,' ');                   // satır kaydırmaları → boşluk
+  t=t.replace(/\u0000/g,'\n\n');            // paragrafları geri koy
+  t=t.replace(/ +([.,;:!?%)\]}])/g,'$1');   // noktalamadan önceki boşluk
+  t=t.replace(/([({\[]) +/g,'$1');          // açma parantezi sonrası boşluk
   ta.value=t.trim();
-  document.getElementById('ocrStatus').textContent='✓ Fazla boşluklar temizlendi — metin düzenlenebilir';
+  document.getElementById('ocrStatus').textContent='✓ Metin akışkan hale getirildi — düzenlenebilir';
 }
 
 function copyOcrText(){
