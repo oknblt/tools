@@ -130,6 +130,10 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
   flex-shrink:0;
   gap:6px;
 }
+button,.tbtn,.etbtn,.q-btn,.pdf-go,.pdf-cancel,.thumb{
+  touch-action:manipulation;   /* çift-dokunuş sayfa zoom'unu butonlarda engeller */
+  -webkit-tap-highlight-color:transparent;
+}
 .tbtn{
   flex:1;
   padding:9px 4px;
@@ -272,7 +276,6 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
 <div class="topbar">
   <h1>📄 Document Scanner<span style="font-weight:400;opacity:0.5;font-size:11px"></h1>
 <span class="brand-tag">Bulut Projects</span>
-  <a href="index.html">← Home</a>
 </div>
 
 <!-- MAIN PREVIEW -->
@@ -425,7 +428,10 @@ body{font-family:'Segoe UI',sans-serif;background:#111;color:#fff;display:flex;f
         <button class="pdf-cancel" onclick="closePDFModal()">Cancel</button>
         <button class="pdf-go" onclick="exportPDF('download')">Generate</button>
       </div>
-      <button id="btnShare" class="pdf-go" style="background:#075e54;display:block;width:100%;opacity:0.4;pointer-events:none;" onclick="sharePDF()">↗ Share</button>
+      <div style="display:flex;gap:8px;">
+        <button id="btnImgSave" class="pdf-go" style="background:#2c6fbb;flex:1;" onclick="saveAsImages()">🖼 Image</button>
+        <button id="btnShare" class="pdf-go" style="background:#075e54;flex:1;opacity:0.4;pointer-events:none;" onclick="sharePDF()">↗ Share</button>
+      </div>
     </div>
     <div class="st" id="pdfSt"></div>
   </div>
@@ -2516,6 +2522,54 @@ function showPdfSt(msg,type){
   setTimeout(()=>el.className='st',4000);
 }
 let _lastPdfBlob=null, _lastPdfName='';
+/* ═══ GÖRÜNTÜ OLARAK KAYDET ═══
+ * Tek sayfa → mevcut formatında (jpg/png…) doğrudan indirir.
+ * Birden fazla sayfa → JSZip (ilk kullanımda CDN'den) ile sayfa sırasına
+ * göre adlandırılmış görüntülerden oluşan ZIP indirir. */
+function saveAsImages(){
+  if(!pages.length) return;
+  const stamp=new Date().toISOString().slice(0,10);
+  const extOf=u=>{
+    const m=/^data:image\/(\w+)/.exec(u);
+    let e=m?m[1].toLowerCase():'jpeg';
+    return e==='jpeg'?'jpg':e;
+  };
+  const dl=(url,name)=>{
+    const a=document.createElement('a');
+    a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  if(pages.length===1){
+    dl(pages[0].cur,'scan_'+stamp+'.'+extOf(pages[0].cur));
+    showPdfSt('✓ Görüntü indirildi','ok');
+    return;
+  }
+  showPdfSt('ZIP hazırlanıyor…','');
+  const load=()=>window.JSZip?Promise.resolve():new Promise((res,rej)=>{
+    const sc=document.createElement('script');
+    sc.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    sc.onload=res;
+    sc.onerror=()=>rej(new Error('JSZip yüklenemedi — internet bağlantısını kontrol et'));
+    document.head.appendChild(sc);
+  });
+  load().then(()=>{
+    const zip=new JSZip();
+    pages.forEach((p,i)=>{
+      zip.file('scan_'+String(i+1).padStart(2,'0')+'.'+extOf(p.cur),
+               p.cur.split(',')[1], {base64:true});
+    });
+    return zip.generateAsync({type:'blob'});
+  }).then(blob=>{
+    const url=URL.createObjectURL(blob);
+    dl(url,'scans_'+stamp+'.zip');
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    showPdfSt('✓ '+pages.length+' görüntü ZIP olarak indirildi','ok');
+  }).catch(err=>{
+    console.error('saveAsImages:',err);
+    showPdfSt('Hata: '+(err&&err.message?err.message:err),'err');
+  });
+}
+
 function sharePDF(){
   if(!_lastPdfBlob) return;
   const file=new File([_lastPdfBlob],_lastPdfName,{type:'application/pdf'});
