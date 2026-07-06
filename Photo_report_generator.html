@@ -6,7 +6,7 @@
 <title>Audit Photo Report Generator - Bulut Projects</title>
 <script>if(sessionStorage.getItem('bulut_auth')!=='1'){location.replace('index.html');};</script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
+*{margin:0;padding:0;box-sizing:border-box;touch-action:manipulation;}
 body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#1a2a4a 0%,#0d1b35 100%);min-height:100vh;padding:0px 20px 20px 20px;}
 .container{max-width:980px;margin:0 auto;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;}
 .app-header{background:linear-gradient(135deg,#1a2a4a 0%,#0d1b35 100%);color:#fff;padding:20px 30px;text-align:center;}
@@ -45,8 +45,8 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#1a2a4a
 .photo-upload-wrapper.drag-over{background:#d0daf5!important;outline:2px dashed #1a2a4a;}
 .photo-upload-wrapper{position:relative;aspect-ratio:4/3;cursor:pointer;background:#f5f5f5;border-bottom:1px solid #888;display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .photo-upload-wrapper:hover{background:#e8eef8;}
-.photo-upload-wrapper.has-image{background:#000;}
-.photo-upload-wrapper img{width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;display:none;}
+.photo-upload-wrapper.has-image{background:#fff;}
+.photo-upload-wrapper img{width:100%;height:100%;object-fit:contain;position:absolute;top:0;left:0;display:none;}
 .photo-upload-wrapper.has-image img{display:block;}
 .upload-placeholder{text-align:center;pointer-events:none;}
 .upload-placeholder span{font-size:26px;display:block;color:#ccc;}
@@ -103,7 +103,15 @@ input[type="file"]{display:none;}
 
 
 @media(max-width:600px){
-  .form-grid{grid-template-columns:1fr 1fr;}
+  body{padding:0 8px 16px 8px;}
+  .content{padding:14px 10px;}
+  .form-section{padding:8px 10px 10px 10px;margin-left:auto;margin-right:auto;max-width:100%;}
+  .form-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .form-group{min-width:0;}
+  .form-group label{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .form-group input,.form-group select{width:100%;min-width:0;max-width:100%;padding:6px 8px;font-size:11px;}
+  .form-section .combo-wrap{min-width:0;}
+  .form-section .combo-input{width:100%!important;min-width:0!important;padding:6px 20px 6px 8px!important;font-size:11px!important;}
   .photo-row{grid-template-columns:1fr;}
   .photo-cell{border-right:none;border-bottom:1px solid #888;}
   .photo-cell:last-child{border-bottom:none;}
@@ -892,6 +900,50 @@ function _doDeleteRow(rowId, hasContent) {
 function deleteRow(rowId) { deleteEmptyRow(rowId); }
 
 /* ===================== PHOTO UPLOAD ===================== */
+/* Normalizes every photo before storing:
+   - Redraws via canvas so EXIF orientation is baked into pixels (fixes 90° rotated photos in PDF/Word from iPhone/Safari)
+   - Composes onto a fixed 4:3 canvas matching the report frame: whole photo always visible,
+     allowed to stretch max ~12% to better fill the frame (no heavy distortion), rest padded white */
+const PHOTO_CANVAS_W = 1200, PHOTO_CANVAS_H = 900, PHOTO_MAX_STRETCH = 1.12;
+
+function normalizePhotoDataUrl(dataUrl) {
+  return new Promise(resolve => {
+    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) { resolve(dataUrl); return; }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const cw = PHOTO_CANVAS_W, ch = PHOTO_CANVAS_H;
+        const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        if (!w || !h) { resolve(dataUrl); return; }
+        const c = document.createElement('canvas');
+        c.width = cw; c.height = ch;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cw, ch);
+        ctx.imageSmoothingEnabled = true;
+        try { ctx.imageSmoothingQuality = 'high'; } catch(e) {}
+        // Fit whole photo inside frame (contain), then gently stretch toward the frame (max 12%)
+        const s = Math.min(cw / w, ch / h);
+        let dw = w * s, dh = h * s;
+        dw = dw * Math.min(cw / dw, PHOTO_MAX_STRETCH);
+        dh = dh * Math.min(ch / dh, PHOTO_MAX_STRETCH);
+        ctx.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+        resolve(c.toDataURL('image/jpeg', 0.9));
+      } catch(e) { resolve(dataUrl); }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+function normalizePhotoFile(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => normalizePhotoDataUrl(e.target.result).then(resolve);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
 function triggerUpload(key) { document.getElementById('file_'+key).click(); }
 function setPhotoData(key, dataUrl) {
   photoStore[key] = dataUrl;
@@ -900,9 +952,7 @@ function setPhotoData(key, dataUrl) {
 }
 function handleUpload(event, key) {
   const file = event.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => setPhotoData(key, e.target.result);
-  reader.readAsDataURL(file);
+  normalizePhotoFile(file).then(d => { if (d) setPhotoData(key, d); });
 }
 function handleDragOver(event, key) {
   // Only for photo drag (files), not block reorder
@@ -921,9 +971,7 @@ function handleDrop(event, key) {
   document.getElementById('wrap_'+key).classList.remove('drag-over');
   const file = event.dataTransfer.files[0];
   if (!file || !file.type.startsWith('image/')) return;
-  const reader = new FileReader();
-  reader.onload = e => setPhotoData(key, e.target.result);
-  reader.readAsDataURL(file);
+  normalizePhotoFile(file).then(d => { if (d) setPhotoData(key, d); });
 }
 function removePhoto(event, key) {
   event.stopPropagation();
@@ -1179,6 +1227,19 @@ function generatePDF() {
 }
 
 /* ===================== CLEAR / INIT ===================== */
+/* Prevent double-tap zoom on photo frames (iOS Safari) */
+let _lastTouchEnd = 0;
+document.addEventListener('touchend', function(e) {
+  const now = Date.now();
+  if (now - _lastTouchEnd < 350 && e.target.closest('.photo-upload-wrapper')) {
+    e.preventDefault();
+  }
+  _lastTouchEnd = now;
+}, { passive: false });
+document.addEventListener('dblclick', function(e) {
+  if (e.target.closest('.photo-upload-wrapper')) e.preventDefault();
+});
+
 function clearForm() {
   showConfirm('Clear all data? This cannot be undone.', () => {
     _doClearForm();
@@ -1269,8 +1330,13 @@ function loadSession(event) {
       document.getElementById('auditType').value    = fd.auditType    || '';
       document.getElementById('auditDate').value    = fd.auditDate    || '';
       document.getElementById('reportNumber').value = fd.reportNumber || '';
-      rebuildFromBlocks(session.blocks || []);
-      showStatus('Session loaded!', 'success');
+      const blocks = session.blocks || [];
+      Promise.all(blocks.map(b =>
+        b && b.photo ? normalizePhotoDataUrl(b.photo).then(d => { b.photo = d; }) : Promise.resolve()
+      )).then(() => {
+        rebuildFromBlocks(blocks);
+        showStatus('Session loaded!', 'success');
+      });
     } catch(err) {
       showStatus('Error loading session: ' + err.message, 'error');
     }
@@ -1365,9 +1431,8 @@ function importPhotos(event) {
   const blockData = newBlocks.map(b => ({ comm: b.comm, desc: b.desc, photo: null }));
 
   newBlocks.forEach((b, idx) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      blockData[idx].photo = e.target.result;
+    normalizePhotoFile(b.file).then(d => {
+      blockData[idx].photo = d;
       loaded++;
       if (loaded === newBlocks.length) {
         rebuildFromBlocks(blockData);
@@ -1381,8 +1446,7 @@ function importPhotos(event) {
         setTimeout(() => summary.style.display = 'none', 12000);
         showStatus('Photos imported!', 'success');
       }
-    };
-    reader.readAsDataURL(b.file);
+    });
   });
 }
 
@@ -1478,9 +1542,7 @@ function uploadPhotos(event) {
   files.forEach((file, idx) => {
     if (idx >= allSlots.length) return;
     const key = allSlots[idx];
-    const reader = new FileReader();
-    reader.onload = e => setPhotoData(key, e.target.result);
-    reader.readAsDataURL(file);
+    normalizePhotoFile(file).then(d => { if (d) setPhotoData(key, d); });
   });
 
   showStatus(files.length + ' photo(s) uploaded!', 'success');
