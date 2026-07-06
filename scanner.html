@@ -337,6 +337,7 @@ button,.tbtn,.etbtn,.q-btn,.pdf-go,.pdf-cancel,.thumb{
     <div id="ocrStatus" style="font-size:12px;opacity:.85;min-height:15px;">…</div>
     <textarea id="ocrText" spellcheck="false" style="flex:1;min-height:280px;background:#0f1c33;color:#eee;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:10px;font-size:13px;line-height:1.45;resize:vertical;box-sizing:border-box;"></textarea>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="etbtn" onclick="ocrRemoveSpaces()" style="white-space:nowrap;">⌫ Remove Spaces</button>
       <button class="etbtn" onclick="copyOcrText()" style="white-space:nowrap;">📋 Copy</button>
       <button class="etbtn" onclick="closeOcr()" style="white-space:nowrap;">Close</button>
     </div>
@@ -401,7 +402,7 @@ button,.tbtn,.etbtn,.q-btn,.pdf-go,.pdf-cancel,.thumb{
     </div>
     <div style="display:flex;gap:6px">
       <button class="gbtn gbtn-light" onclick="closeEd()">Cancel</button>
-      <button class="gbtn" style="background:#27ae60;color:#fff" onclick="applyEd()">✓ Apply</button>
+      <button class="gbtn" id="edApplyBtn" style="background:#27ae60;color:#fff" onclick="applyEd()">✓ Apply</button>
     </div>
   </div>
 </div>
@@ -816,6 +817,7 @@ const ectx=ec.getContext('2d');
 function openEd(idx){
   if(idx===null||idx===undefined)return;
   edIdx=idx; history=[]; cropRect=null; quad=null; tool='none'; vZ=1; vX=0; vY=0;
+  document.getElementById('edApplyBtn').style.display='';
   invalidateBitmapCache();
   document.querySelectorAll('.etbtn').forEach(b=>b.classList.remove('on'));
   tool='none';
@@ -2523,9 +2525,10 @@ function showPdfSt(msg,type){
 }
 let _lastPdfBlob=null, _lastPdfName='';
 /* ═══ GÖRÜNTÜ OLARAK KAYDET ═══
- * Tek sayfa → mevcut formatında (jpg/png…) doğrudan indirir.
- * Birden fazla sayfa → JSZip (ilk kullanımda CDN'den) ile sayfa sırasına
- * göre adlandırılmış görüntülerden oluşan ZIP indirir. */
+ * PDF ile AYNI sıkıştırma adımlarını uygular (Small/Medium/High/Full):
+ * Full → orijinal dataURL'e hiç dokunulmaz (format ve boyut aynen korunur),
+ * diğer adımlarda PDF'teki maxD tablosuyla küçültülüp aynı JPEG kalitesiyle
+ * kodlanır. Tek sayfa → doğrudan indirir; birden fazla → JSZip ile ZIP. */
 function saveAsImages(){
   if(!pages.length) return;
   const stamp=new Date().toISOString().slice(0,10);
@@ -2539,31 +2542,50 @@ function saveAsImages(){
     a.href=url; a.download=name;
     document.body.appendChild(a); a.click(); a.remove();
   };
-  if(pages.length===1){
-    dl(pages[0].cur,'scan_'+stamp+'.'+extOf(pages[0].cur));
-    showPdfSt('✓ Görüntü indirildi','ok');
-    return;
-  }
-  showPdfSt('ZIP hazırlanıyor…','');
-  const load=()=>window.JSZip?Promise.resolve():new Promise((res,rej)=>{
-    const sc=document.createElement('script');
-    sc.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
-    sc.onload=res;
-    sc.onerror=()=>rej(new Error('JSZip yüklenemedi — internet bağlantısını kontrol et'));
-    document.head.appendChild(sc);
+  // exportPDF ile birebir aynı adımlar
+  const maxD={0.6:1200,0.8:1800,0.92:2400,1:99999}[pdfQ]||1800;
+  const jq=pdfQ>=1?0.95:pdfQ;
+  const prep=src=>new Promise((res,rej)=>{
+    if(pdfQ>=1){ res(src); return; }   // Full: orijinali aynen bırak
+    const im=new Image();
+    im.onload=()=>{
+      const sc=Math.min(1,maxD/Math.max(im.width,im.height));
+      const c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(im.width*sc));
+      c.height=Math.max(1,Math.round(im.height*sc));
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      res(c.toDataURL('image/jpeg',jq));
+    };
+    im.onerror=()=>rej(new Error('Görüntü yüklenemedi'));
+    im.src=src;
   });
-  load().then(()=>{
-    const zip=new JSZip();
-    pages.forEach((p,i)=>{
-      zip.file('scan_'+String(i+1).padStart(2,'0')+'.'+extOf(p.cur),
-               p.cur.split(',')[1], {base64:true});
+  showPdfSt(pages.length===1?'Görüntü hazırlanıyor…':'ZIP hazırlanıyor…','');
+  Promise.all(pages.map(p=>prep(p.cur))).then(list=>{
+    if(list.length===1){
+      dl(list[0],'scan_'+stamp+'.'+extOf(list[0]));
+      showPdfSt('✓ Görüntü indirildi','ok');
+      return;
+    }
+    const load=()=>window.JSZip?Promise.resolve():new Promise((res,rej)=>{
+      const sc=document.createElement('script');
+      sc.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+      sc.onload=res;
+      sc.onerror=()=>rej(new Error('JSZip yüklenemedi — internet bağlantısını kontrol et'));
+      document.head.appendChild(sc);
     });
-    return zip.generateAsync({type:'blob'});
-  }).then(blob=>{
-    const url=URL.createObjectURL(blob);
-    dl(url,'scans_'+stamp+'.zip');
-    setTimeout(()=>URL.revokeObjectURL(url),4000);
-    showPdfSt('✓ '+pages.length+' görüntü ZIP olarak indirildi','ok');
+    return load().then(()=>{
+      const zip=new JSZip();
+      list.forEach((u,i)=>{
+        zip.file('scan_'+String(i+1).padStart(2,'0')+'.'+extOf(u),
+                 u.split(',')[1], {base64:true});
+      });
+      return zip.generateAsync({type:'blob'});
+    }).then(blob=>{
+      const url=URL.createObjectURL(blob);
+      dl(url,'scans_'+stamp+'.zip');
+      setTimeout(()=>URL.revokeObjectURL(url),4000);
+      showPdfSt('✓ '+pages.length+' görüntü ZIP olarak indirildi','ok');
+    });
   }).catch(err=>{
     console.error('saveAsImages:',err);
     showPdfSt('Hata: '+(err&&err.message?err.message:err),'err');
@@ -2770,12 +2792,14 @@ function openOcrPage(){
   document.getElementById('redactColorBar').style.display='none';
   document.getElementById('tOcrRect').classList.add('on');
   document.getElementById('ocrScanBtn').style.display='none';
+  document.getElementById('edApplyBtn').style.display='none';  // OCR modunda Apply'ın işlevi yok
   bar.style.display='flex';
   redrawEc();
 }
 
 function exitOcrMode(){
   document.getElementById('ocrBar').style.display='none';
+  document.getElementById('edApplyBtn').style.display='';
   const b=document.getElementById('tOcrRect');
   if(b) b.classList.remove('on');
   if(tool==='ocrQuad'){ tool='none'; quad=null; }
@@ -2860,6 +2884,16 @@ function runOcr(region){
 
 function closeOcr(){
   document.getElementById('ocrModal').style.display='none';
+}
+
+function ocrRemoveSpaces(){
+  // Satır içi boşluk ve sekmeleri kaldırır (satır sonları korunur) —
+  // TC no, IBAN, telefon gibi OCR'ın araya boşluk serptiği değerler için.
+  // Sonuç aynı kutuya yazılır, düzenlenmeye devam edilebilir.
+  const ta=document.getElementById('ocrText');
+  if(!ta.value) return;
+  ta.value=ta.value.replace(/[ \t]+/g,'');
+  document.getElementById('ocrStatus').textContent='✓ Boşluklar kaldırıldı — metin düzenlenebilir';
 }
 
 function copyOcrText(){
