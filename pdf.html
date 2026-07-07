@@ -726,8 +726,25 @@ if(sessionStorage.getItem('bulut_auth')!=='1') window.location.href='index.html'
 // =============================================================
 //  GLOBAL HELPERS
 // =============================================================
-function downloadBlob(bytes, filename, mime){
+async function downloadBlob(bytes, filename, mime){
     const blob = new Blob([bytes], { type: mime });
+    // iOS Safari: anchor/blob downloads are unreliable for big files — the native
+    // share sheet ("Save to Files") is the dependable path. Desktop/Android keep
+    // the classic download below, untouched.
+    const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS && navigator.share && navigator.canShare) {
+        try {
+            const file = new File([blob], filename, { type: mime });
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file] });
+                return;                                   // user saved/shared it
+            }
+        } catch (err) {
+            if (err && err.name === 'AbortError') return; // user closed the sheet
+            // NotAllowedError (gesture expired) or anything else → fall through
+        }
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
