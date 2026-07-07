@@ -279,6 +279,7 @@ progress::-moz-progress-bar{background:linear-gradient(90deg,var(--navy-500),var
     border:3px solid transparent;border-radius:6px;
     overflow:hidden;position:relative;
     background:#fff;transition:border-color .15s, box-shadow .15s, transform .15s;
+    -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
 }
 .page-thumb:hover{border-color:var(--navy-400);}
 .page-thumb.selected{
@@ -729,8 +730,17 @@ function downloadBlob(bytes, filename, mime){
     const blob = new Blob([bytes], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = filename; a.click();
-    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    // iOS Safari: the anchor must be in the DOM, and revoking the URL too early
+    // (while the share/download sheet is still open) can navigate the page to the
+    // blob and blow the app away. Keep the URL alive for a minute.
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 0);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 function fmtBytes(n){
     if(n<1024)return n+' B';
@@ -1126,6 +1136,7 @@ function renderPageList() {
         thumbDiv.draggable = true;
         thumbDiv.dataset.index = i;
         thumbDiv.addEventListener('click', async () => {
+            if (suppressThumbClick) return;   // this tap just finished a touch-reorder
             if (i === currentPage) return;
             // Save any text being typed before leaving the page.
             if (getPendingText()) { await commitPendingText(); }
@@ -1140,6 +1151,7 @@ function renderPageList() {
         thumbDiv.addEventListener('dragover', handleDragOver);
         thumbDiv.addEventListener('drop', handleDrop);
         thumbDiv.addEventListener('dragend', handleDragEnd);
+        attachThumbTouchReorder(thumbDiv);
         const canvas = document.createElement('canvas');
         thumbDiv.appendChild(canvas);
         const info = document.createElement('div');
@@ -1190,8 +1202,15 @@ async function renderMainPage() {
     const scale = Math.max(0.05, baseScale * zoomLevel);
 
     // Render at the device pixel ratio so text stays crisp (no blur), while the
-    // CSS size stays at `scale`. This is the key fix for the fuzzy look.
-    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    // CSS size stays at `scale`. Cap the backing store's total pixels so iOS
+    // Safari doesn't hit its canvas/memory limit (which silently blanks the
+    // canvas or kills & reloads the page on big PDFs / deep zoom).
+    let dpr = Math.min(3, window.devicePixelRatio || 1);
+    const MAX_CANVAS_PIXELS = 12 * 1024 * 1024;   // ~12MP, safe on iOS
+    const cssPx = (pdfW * scale) * (pdfH * scale);
+    if (cssPx * dpr * dpr > MAX_CANVAS_PIXELS) {
+        dpr = Math.max(1, Math.sqrt(MAX_CANVAS_PIXELS / cssPx));
+    }
     if (currentRenderTask) { try { currentRenderTask.cancel(); } catch {} currentRenderTask = null; }
     const renderViewport = page.getViewport({ scale });
     mainCanvas.width  = Math.floor(renderViewport.width  * dpr);
@@ -2296,6 +2315,18 @@ cancelAnnotationBtn.addEventListener('click', async () => {
 
 // Reorder
 let dragSrcIndex = null;
+let suppressThumbClick = false;   // swallow the tap that ends a touch-reorder
+
+function movePage(from, to){
+    if (from === null || to === null || from === to || isNaN(from) || isNaN(to)) return;
+    const moved = pages.splice(from, 1)[0];
+    pages.splice(to, 0, moved);
+    if (currentPage === from) currentPage = to;
+    else if (currentPage > from && currentPage <= to) currentPage--;
+    else if (currentPage < from && currentPage >= to) currentPage++;
+    renderPageList();
+    renderMainPage();
+}
 function handleDragStart(e) {
     dragSrcIndex = parseInt(this.dataset.index);
     e.dataTransfer.effectAllowed = 'move';
@@ -2311,19 +2342,74 @@ function handleDrop(e) {
     this.classList.remove('drag-target');
     const destIndex = parseInt(this.dataset.index);
     if (dragSrcIndex !== null && dragSrcIndex !== destIndex) {
-        const moved = pages.splice(dragSrcIndex, 1)[0];
-        pages.splice(destIndex, 0, moved);
-        if (currentPage === dragSrcIndex) currentPage = destIndex;
-        else if (currentPage > dragSrcIndex && currentPage <= destIndex) currentPage--;
-        else if (currentPage < dragSrcIndex && currentPage >= destIndex) currentPage++;
-        renderPageList();
-        renderMainPage();
+        movePage(dragSrcIndex, destIndex);
     }
 }
 function handleDragEnd(){
     this.classList.remove('drag-src');
     document.querySelectorAll('.drag-target').forEach(n=>n.classList.remove('drag-target'));
     dragSrcIndex = null;
+}
+
+// HTML5 drag&drop never fires on iOS/Android touch — long-press a thumbnail
+// (~0.3s) to pick it up, drag over another thumb, release to reorder.
+// A quick swipe still scrolls the strip; a quick tap still selects the page.
+function attachThumbTouchReorder(thumb){
+    let holdTimer = null, reordering = false, srcIndex = null;
+    let startX = 0, startY = 0;
+
+    function clearTargets(){
+        document.querySelectorAll('.page-thumb.drag-target').forEach(n => n.classList.remove('drag-target'));
+    }
+    thumb.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        srcIndex = parseInt(thumb.dataset.index);
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        reordering = false;
+        holdTimer = setTimeout(() => {
+            reordering = true;
+            thumb.classList.add('drag-src');
+            try { if (navigator.vibrate) navigator.vibrate(10); } catch {}
+        }, 300);
+    }, { passive:true });
+    thumb.addEventListener('touchmove', (e) => {
+        const t = e.touches[0];
+        if (!reordering) {
+            // Finger moved before the hold completed → it's a scroll, not a pick-up.
+            if (Math.abs(t.clientX - startX) > 8 || Math.abs(t.clientY - startY) > 8) clearTimeout(holdTimer);
+            return;
+        }
+        e.preventDefault();   // keep the strip from scrolling while dragging
+        const el = document.elementFromPoint(t.clientX, t.clientY);
+        const target = el && el.closest ? el.closest('.page-thumb') : null;
+        clearTargets();
+        if (target && target !== thumb) target.classList.add('drag-target');
+    }, { passive:false });
+    function finish(e){
+        clearTimeout(holdTimer);
+        if (!reordering) return;
+        reordering = false;
+        thumb.classList.remove('drag-src');
+        let destIndex = null;
+        const t = e.changedTouches && e.changedTouches[0];
+        if (t) {
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            const target = el && el.closest ? el.closest('.page-thumb') : null;
+            if (target) destIndex = parseInt(target.dataset.index);
+        }
+        clearTargets();
+        suppressThumbClick = true;
+        setTimeout(() => { suppressThumbClick = false; }, 400);
+        movePage(srcIndex, destIndex);
+    }
+    thumb.addEventListener('touchend', finish);
+    thumb.addEventListener('touchcancel', () => {
+        clearTimeout(holdTimer);
+        reordering = false;
+        thumb.classList.remove('drag-src');
+        clearTargets();
+    });
 }
 
 // Download edited PDF
