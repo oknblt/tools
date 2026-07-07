@@ -1652,6 +1652,12 @@ function estimateQuadAspect(q, imgW, imgH){
   if(Math.abs(n2[2])>1e-6&&Math.abs(n3[2])>1e-6){
     const f2=-(n2[0]*n3[0]+n2[1]*n3[1])/(n2[2]*n3[2]);   // odak uzaklığı²
     if(!(f2>0)) return null;
+    // KARARLILIK KAPISI: dörtgen paralelkenara yakınsa payda gürültüden
+    // ibarettir ve f² saçma çıkar (ör. 2e10 px) — köşedeki 1 piksellik fark
+    // oranı uçurabilir. Kestirilen odak fiziksel olarak makul değilse
+    // (kamera odağı görüntü boyutunun ~0.25–6 katı aralığındadır) güvenme.
+    const f=Math.sqrt(f2), D=Math.max(imgW,imgH);
+    if(f<0.25*D||f>6*D) return null;
     ratio=Math.sqrt((n2[0]*n2[0]+n2[1]*n2[1]+f2*n2[2]*n2[2])/
                     (n3[0]*n3[0]+n3[1]*n3[1]+f2*n3[2]*n3[2]));
   }else{
@@ -1673,8 +1679,12 @@ function quadOutSize(q, imgW, imgH){
   const r=estimateQuadAspect(q,imgW,imgH);
   if(r){
     const cur=outW/outH;
-    // %4'ten küçük sapmayı düzeltme (gürültü); büyükse orana oturt
-    if(Math.abs(r-cur)/cur>0.04){
+    const dev=Math.abs(r-cur)/cur;
+    // %4'ten küçük sapma: gürültü, dokunma.
+    // %35'ten büyük sapma: kestirim kararsız demektir — el çekiminde
+    // perspektif kısalması 40° eğimde bile ancak ~%27 oran hatası yaratır
+    // (sentetik kalibrasyon). Bu durumda kenar oranına güvenmek daha doğru.
+    if(dev>0.04&&dev<=0.35){
       if(r>cur) outW=outH*r;
       else      outH=outW/r;
     }
