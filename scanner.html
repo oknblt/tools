@@ -452,6 +452,28 @@ let redactColor  = 'white'; // 'white' or 'black'
 let tReady  = false;
 const selectedPages = new Set();
 
+/* ═══ PANODAN YAPIŞTIRMA (Ctrl+V / Cmd+V) ═══
+ * Ekran görüntüsü panodayken (Win+Shift+S, PrtScn, macOS Cmd+Shift+Ctrl+4)
+ * sayfaya Ctrl+V ile doğrudan eklenir — dosyaya kaydetme adımı gerekmez.
+ * Birden fazla görüntü varsa hepsi eklenir. Metin kutularına (OCR metni vb.)
+ * yapılan normal metin yapıştırmalarına karışmaz. */
+document.addEventListener('paste',e=>{
+  const t=e.target;
+  if(t&&(t.tagName==='TEXTAREA'||(t.tagName==='INPUT'&&t.type==='text'))) return;
+  const items=e.clipboardData&&e.clipboardData.items;
+  if(!items) return;
+  const files=[];
+  for(const it of items){
+    if(it.kind==='file'&&it.type&&it.type.startsWith('image/')){
+      const f=it.getAsFile();
+      if(f) files.push(f);
+    }
+  }
+  if(!files.length) return;
+  e.preventDefault();
+  addPages({target:{files,value:''}});
+});
+
 /* ═══ DRAG & DROP (global) ═══
  * Pencerenin tamamı bırakma alanı: sayfa varken de, boşken de,
  * tek seferde birden fazla dosya da bırakılabilir.
