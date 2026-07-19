@@ -90,17 +90,8 @@ body.has-pfull #ccWrap{bottom:26px}
 #ccSettings label{display:flex;justify-content:space-between;align-items:center;margin:7px 0;gap:8px;color:#ccc}
 #ccSettings input[type=range]{width:110px}
 #ccBtn.cc-on{background:#4CAF50;color:#fff}
-#ccWrap{pointer-events:auto;touch-action:none;cursor:grab}
-#ccWrap:active{cursor:grabbing}
-#ccResize{position:absolute;right:0;bottom:-2px;width:22px;height:22px;cursor:nwse-resize;color:#aaa;font-size:15px;line-height:22px;text-align:center;user-select:none;display:none}
-#ccWrap.on #ccResize{display:block}
-/* user-positioned mode (dragged/resized with the mouse) */
-#ccWrap.custom{left:var(--cc-x);top:var(--cc-y);bottom:auto;transform:none;width:var(--cc-w);height:var(--cc-h)}
-#ccWrap.custom .cc-panel{max-height:none;flex:1 1 0;min-height:0}
-#ccWrap.custom .cc-panel>div{-webkit-line-clamp:unset;display:block;max-height:100%}
 /* multi-screen mode: captions live INSIDE the sounded box */
-#ccWrap.inbox{position:absolute;left:3%;right:3%;bottom:8px;top:auto;width:auto;height:auto;transform:none;cursor:default}
-#ccWrap.inbox #ccResize{display:none}
+#ccWrap.inbox{position:absolute;left:3%;right:3%;bottom:8px;top:auto;width:auto;height:auto;transform:none}
 /* Toast */
 #voiceToast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(20,20,30,.92);color:#fff;padding:10px 18px;border-radius:22px;font-size:13px;border:1px solid rgba(102,126,234,.4);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:999;max-width:80vw;text-align:center}
 #voiceToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -129,7 +120,6 @@ body.has-pfull #ccWrap{bottom:26px}
 <div id="ccWrap">
   <div class="cc-panel cc-en" id="ccEn"></div>
   <div class="cc-panel cc-tr" id="ccTr"></div>
-  <div id="ccResize" title="Boyutlandir">&#9698;</div>
 </div>
 <!-- Caption settings -->
 <div id="ccSettings">
@@ -140,7 +130,6 @@ body.has-pfull #ccWrap{bottom:26px}
   <label><span>Arka plan</span><input type="range" id="ccOp" min="10" max="100" value="70" oninput="ccApplySettings()"></label>
   <label><span>Satır sayısı</span><input type="range" id="ccLines" min="1" max="5" value="2" oninput="ccApplySettings()"></label>
   <label><span>Konuşma dili</span><select id="ccLang" onchange="ccApplySettings()" style="background:#1a1a28;color:#fff;border:1px solid #333;border-radius:6px;padding:3px 6px"><option value="en">İngilizce</option><option value="de">Almanca</option></select></label>
-  <div style="text-align:right;margin-top:4px"><span onclick="ccResetPos()" style="color:#667eea;cursor:pointer;font-size:12px">Konumu sıfırla</span></div>
 </div>
 <div class="channel-nav" id="channelNav">
   <button class="nav-btn nav-edge" onclick="navChannel('first')">&#8676;</button>
@@ -1148,27 +1137,33 @@ function handleRemoteCommand(cmd) {
 }
 
 // ================================================================
-// LIVE CAPTIONS (CC) — Whisper in the browser + free translation
+// LIVE CAPTIONS (CC) — Whisper in a WEB WORKER + free translation
 // ----------------------------------------------------------------
-// EN speech from the ACTIVE (sounded) screen is transcribed locally
-// with Whisper (transformers.js, ~40MB one-time download, no server,
-// no API key). Optional TR line uses Google's free translate endpoint
-// (best-effort; falls back to MyMemory). Requires MSE (hls.js path),
-// so it works on laptop + iPad but NOT iPhone's native player.
+// Inference now runs OFF the main thread (a dedicated worker), so the
+// page never freezes and Chrome's "page unresponsive" prompt is gone.
+// EN uses whisper-tiny.en (the good first version); choosing German
+// swaps to multilingual whisper-tiny in the background.
 // ================================================================
 var cc = {
-  on:false, en:true, tr:false, fs:21, op:70, lines:2,
-  ctx:null, mixer:null, proc:null, asr:null,
-  loading:false, pending:false, busy:false,
-  buf:[], bufLen:0, enSegs:[], trSegs:[], lastText:''
+  on:false, en:true, tr:false, fs:21, op:70, lines:2, lang:'en',
+  ctx:null, mixer:null, proc:null,
+  worker:null, ready:false, pending:false, busy:false,
+  buf:[], bufLen:0, enSegs:[], trSegs:[], lastText:'', lastRender:0
 };
-var CC_CHUNK_SEC = 5;
+var CC_CHUNK_SEC = 7;      // start recognizing after this much audio
+var CC_MAX_SEND_SEC = 10;  // never feed bigger pieces (big pieces cause
+                           // the "like like like..." repetition loops)
+var CC_BACKLOG_SEC = 12;
+
+function ccModelFor(lang) {
+  return lang === 'de' ? 'Xenova/whisper-tiny' : 'Xenova/whisper-tiny.en';
+}
 
 function ccSupported() {
   // WebKit (iPhone/iPad Safari) does not expose MSE-fed video audio to
   // Web Audio — the model loads but hears silence. No reliable workaround.
   if (IS_IOS) return false;
-  return !!(window.Hls && Hls.isSupported());
+  return !!(window.Hls && Hls.isSupported()) && !!window.Worker;
 }
 
 function ccToggle() {
@@ -1215,83 +1210,16 @@ function ccApplySettings() {
   cc.fs = +document.getElementById('ccFs').value;
   cc.op = +document.getElementById('ccOp').value;
   cc.lines = +document.getElementById('ccLines').value;
-  cc.lang = document.getElementById('ccLang').value;
+  var newLang = document.getElementById('ccLang').value;
+  var langChanged = (newLang !== cc.lang);
+  cc.lang = newLang;
   var w = document.getElementById('ccWrap');
   w.style.setProperty('--cc-fs', cc.fs + 'px');
   w.style.setProperty('--cc-op', (cc.op / 100));
   w.style.setProperty('--cc-lines', cc.lines);
-  try { localStorage.setItem('ccSettings', JSON.stringify({en:cc.en,tr:cc.tr,fs:cc.fs,op:cc.op,lines:cc.lines,lang:cc.lang,box:cc.box||null})); } catch(e){}
+  try { localStorage.setItem('ccSettings', JSON.stringify({en:cc.en,tr:cc.tr,fs:cc.fs,op:cc.op,lines:cc.lines,lang:cc.lang})); } catch(e){}
+  if (langChanged && cc.worker) { ccClearText(); ccLoadModel(); }
   ccUiSync();
-}
-
-function ccApplyBox() {
-  var w = document.getElementById('ccWrap');
-  if (cc.box) {
-    w.classList.add('custom');
-    w.style.setProperty('--cc-x', cc.box.x + 'px');
-    w.style.setProperty('--cc-y', cc.box.y + 'px');
-    w.style.setProperty('--cc-w', cc.box.w + 'px');
-    w.style.setProperty('--cc-h', cc.box.h + 'px');
-  } else {
-    w.classList.remove('custom');
-  }
-}
-
-function ccResetPos() {
-  cc.box = null;
-  ccApplyBox();
-  ccApplySettings();
-}
-
-// Drag anywhere on the caption area; resize from the corner handle.
-function ccDragInit() {
-  var wrap = document.getElementById('ccWrap');
-  var mode = null, sx, sy, ox, oy, ow, oh;
-  wrap.addEventListener('pointerdown', function(e) {
-    if (wrap.classList.contains('inbox')) return;
-    mode = (e.target.id === 'ccResize') ? 'resize' : 'drag';
-    var r = wrap.getBoundingClientRect();
-    if (!cc.box) cc.box = { x: r.left, y: r.top, w: r.width, h: r.height };
-    ccApplyBox();
-    sx = e.clientX; sy = e.clientY;
-    ox = cc.box.x; oy = cc.box.y; ow = cc.box.w; oh = cc.box.h;
-    try { wrap.setPointerCapture(e.pointerId); } catch(x){}
-    e.preventDefault();
-  });
-  wrap.addEventListener('pointermove', function(e) {
-    if (!mode || !cc.box) return;
-    var dx = e.clientX - sx, dy = e.clientY - sy;
-    if (mode === 'drag') {
-      // may be pushed mostly off-screen, but 70px stays reachable
-      cc.box.x = Math.max(-cc.box.w + 70, Math.min(window.innerWidth - 70, ox + dx));
-      cc.box.y = Math.max(-cc.box.h + 40, Math.min(window.innerHeight - 40, oy + dy));
-    } else {
-      cc.box.w = Math.max(220, ow + dx);
-      cc.box.h = Math.max(52, oh + dy);
-    }
-    ccApplyBox();
-  });
-  function endDrag() {
-    if (mode) { mode = null; ccApplySettings(); } // persists box
-  }
-  wrap.addEventListener('pointerup', endDrag);
-  wrap.addEventListener('pointercancel', endDrag);
-}
-
-// In multi-screen layouts the caption block moves INSIDE the sounded
-// box so it never covers the other screens; in 1x1 it floats freely.
-function ccPlace() {
-  var wrap = document.getElementById('ccWrap');
-  var target = (currentGrid !== '1x1' && soloIndex >= 0 && tvBoxes[soloIndex])
-    ? tvBoxes[soloIndex].screen : null;
-  if (target) {
-    if (wrap.parentNode !== target) target.appendChild(wrap);
-    wrap.classList.add('inbox');
-  } else {
-    if (wrap.parentNode !== document.body) document.body.appendChild(wrap);
-    wrap.classList.remove('inbox');
-    ccApplyBox();
-  }
 }
 
 function ccLoadSettings() {
@@ -1304,16 +1232,45 @@ function ccLoadSettings() {
       document.getElementById('ccOp').value = s.op || 70;
       document.getElementById('ccLines').value = s.lines || 2;
       if (s.lang) document.getElementById('ccLang').value = s.lang;
-      if (s.box && s.box.w) cc.box = s.box;
     }
   } catch(e){}
-  ccApplyBox();
   ccApplySettings();
-  ccDragInit();
 }
 
 function ccStatus(t) {
   document.getElementById('ccEn').innerHTML = '<div>' + t + '</div>';
+}
+
+// The worker: loads transformers.js from the CDN and answers
+// {type:'load'} / {type:'run'} messages. Runs fully off-thread.
+var CC_WORKER_SRC = [
+  "import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';",
+  "env.allowLocalModels = false;",
+  "let asr = null, model = '';",
+  "self.onmessage = async (e) => {",
+  "  const m = e.data;",
+  "  if (m.type === 'load') {",
+  "    if (model === m.model && asr) { self.postMessage({type:'ready'}); return; }",
+  "    asr = null; model = m.model;",
+  "    try {",
+  "      asr = await pipeline('automatic-speech-recognition', m.model, { quantized: true,",
+  "        progress_callback: p => { if (p && p.status === 'progress' && p.total)",
+  "          self.postMessage({type:'progress', pct: Math.round(100 * p.loaded / p.total)}); } });",
+  "      self.postMessage({type:'ready'});",
+  "    } catch (err) { self.postMessage({type:'error', msg: String(err && err.message || err)}); }",
+  "  } else if (m.type === 'run') {",
+  "    if (!asr) { self.postMessage({type:'result', text:''}); return; }",
+  "    try { const out = await asr(m.audio, m.opts || {});",
+  "      self.postMessage({type:'result', text: (out && out.text) || ''});",
+  "    } catch (err) { self.postMessage({type:'result', text:''}); }",
+  "  }",
+  "};"
+].join('\n');
+
+function ccLoadModel() {
+  cc.ready = false; cc.busy = false;
+  ccStatus('CC modeli y\u00FCkleniyor\u2026');
+  cc.worker.postMessage({ type: 'load', model: ccModelFor(cc.lang) });
 }
 
 async function ccStart() {
@@ -1339,28 +1296,24 @@ async function ccStart() {
   ccAttachBoxes();
   ccUpdateTaps();
 
-  if (!cc.asr && !cc.loading) {
-    cc.loading = true;
-    ccStatus('CC modeli indiriliyor\u2026 (ilk sefer ~40MB)');
+  if (!cc.worker) {
     try {
-      var T = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
-      T.env.allowLocalModels = false;
-      cc.asr = await T.pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', {
-        quantized: true,
-        progress_callback: function(p) {
-          if (p && p.status === 'progress' && p.total) {
-            ccStatus('CC modeli indiriliyor\u2026 %' + Math.round(100 * p.loaded / p.total));
-          }
-        }
-      });
-      ccStatus('\uD83C\uDFA7 Dinleniyor\u2026');
-    } catch (err) {
-      ccStatus('Model y\u00FCklenemedi \u2014 internet ba\u011Flant\u0131s\u0131n\u0131 kontrol edin');
-      cc.loading = false;
+      var blob = new Blob([CC_WORKER_SRC], { type: 'text/javascript' });
+      cc.worker = new Worker(URL.createObjectURL(blob), { type: 'module' });
+    } catch (e) {
+      ccStatus('Bu tarayici worker modunu desteklemiyor');
       return;
     }
-    cc.loading = false;
-  } else if (cc.asr) {
+    cc.worker.onmessage = function(e) {
+      var m = e.data;
+      if (m.type === 'progress') ccStatus('CC modeli indiriliyor\u2026 %' + m.pct + ' (ilk sefer)');
+      else if (m.type === 'ready') { cc.ready = true; if (cc.on) ccStatus('\uD83C\uDFA7 Dinleniyor\u2026'); }
+      else if (m.type === 'error') ccStatus('Model y\u00FCklenemedi \u2014 ba\u011Flant\u0131y\u0131 kontrol edin');
+      else if (m.type === 'result') ccResult(m.text);
+    };
+    cc.worker.onerror = function() { ccStatus('CC hatasi \u2014 sayfayi yenileyin'); };
+    ccLoadModel();
+  } else if (cc.ready) {
     ccStatus('\uD83C\uDFA7 Dinleniyor\u2026');
   }
 }
@@ -1389,26 +1342,54 @@ function ccUpdateTaps() {
   });
 }
 
+// In multi-screen layouts the caption block moves INSIDE the sounded
+// box so it never covers the other screens; in 1x1 it sits fixed at
+// the bottom (no dragging — kept intentionally simple and stable).
+function ccPlace() {
+  var wrap = document.getElementById('ccWrap');
+  var target = (currentGrid !== '1x1' && soloIndex >= 0 && tvBoxes[soloIndex])
+    ? tvBoxes[soloIndex].screen : null;
+  if (target) {
+    if (wrap.parentNode !== target) target.appendChild(wrap);
+    wrap.classList.add('inbox');
+  } else {
+    if (wrap.parentNode !== document.body) document.body.appendChild(wrap);
+    wrap.classList.remove('inbox');
+  }
+}
+
 function ccOnAudio(ev) {
-  if (!cc.on || !cc.asr) return;
+  if (!cc.on || !cc.ready) return;
   var d = ev.inputBuffer.getChannelData(0);
   cc.buf.push(new Float32Array(d));
   cc.bufLen += d.length;
-  // NEVER drop audio while the recognizer is busy — dropping was why
-  // whole sentences went missing. Keep buffering (15s backlog cap;
-  // Whisper happily takes chunks up to 30s in one go).
-  var maxLen = cc.ctx.sampleRate * 15;
+  // Never DROP audio while the recognizer is busy (dropping caused the
+  // missing sentences) — but cap the backlog and the piece size we send
+  // (oversized pieces caused repetition loops and memory spikes).
+  var sr = cc.ctx.sampleRate;
+  var maxLen = sr * CC_BACKLOG_SEC;
   while (cc.bufLen > maxLen && cc.buf.length) { cc.bufLen -= cc.buf[0].length; cc.buf.shift(); }
-  if (!cc.busy && cc.bufLen >= cc.ctx.sampleRate * CC_CHUNK_SEC) {
+  if (!cc.busy && cc.bufLen >= sr * CC_CHUNK_SEC) {
+    var need = Math.min(cc.bufLen, sr * CC_MAX_SEND_SEC);
     var all = new Float32Array(cc.bufLen), off = 0;
     for (var i = 0; i < cc.buf.length; i++) { all.set(cc.buf[i], off); off += cc.buf[i].length; }
-    cc.buf = []; cc.bufLen = 0;
-    ccRun(ccResample(all, cc.ctx.sampleRate, 16000));
+    var piece = all.subarray(0, need);
+    var rest = all.subarray(need);
+    cc.buf = rest.length ? [new Float32Array(rest)] : [];
+    cc.bufLen = rest.length;
+    // energy gate: skip near-silent pieces (prevents hallucinated text)
+    var e2 = 0;
+    for (var qi = 0; qi < piece.length; qi += 4) e2 += piece[qi] * piece[qi];
+    if (Math.sqrt(e2 / (piece.length / 4)) < 0.0015) return;
+    var mono16 = ccResample(piece, sr, 16000);
+    cc.busy = true;
+    var opts = (cc.lang === 'de') ? { language: 'german', task: 'transcribe' } : {};
+    cc.worker.postMessage({ type: 'run', audio: mono16, opts: opts }, [mono16.buffer]);
   }
 }
 
 function ccResample(f32, from, to) {
-  if (from === to) return f32;
+  if (from === to) return new Float32Array(f32);
   var ratio = from / to, n = Math.floor(f32.length / ratio), out = new Float32Array(n);
   for (var i = 0; i < n; i++) {
     var pos = i * ratio, lo = Math.floor(pos), hi = Math.min(lo + 1, f32.length - 1), f = pos - lo;
@@ -1417,28 +1398,38 @@ function ccResample(f32, from, to) {
   return out;
 }
 
-async function ccRun(f32) {
-  cc.busy = true;
-  try {
-    // energy gate: skip near-silent chunks (prevents hallucinated text)
-    var e = 0;
-    for (var qi = 0; qi < f32.length; qi += 4) e += f32[qi] * f32[qi];
-    if (Math.sqrt(e / (f32.length / 4)) < 0.0015) { cc.busy = false; return; }
-    var out = await cc.asr(f32, { language: (cc.lang === 'de' ? 'german' : 'english'), task: 'transcribe' });
-    var t = (out && out.text || '').trim();
-    // filter Whisper's silence hallucinations
-    if (t && t !== cc.lastText && !/^[\s.\-\u266A\[\](){}!,]*$/.test(t) &&
-        !(t.length < 15 && /^(thank you|thanks|you|bye)[.!]?$/i.test(t))) {
-      cc.lastText = t;
-      cc.enSegs.push(t); if (cc.enSegs.length > 2) cc.enSegs.shift();
-      ccRender(true);
-      if (cc.tr) {
-        var tr = await ccTranslate(t);
-        if (tr) { cc.trSegs.push(tr); if (cc.trSegs.length > 2) cc.trSegs.shift(); ccRender(true); }
-      }
-    }
-  } catch(e){}
+// Collapse "like like like like..." style loops; junk pure-loop output.
+function ccDedup(t) {
+  var words = t.split(/\s+/);
+  var out = [], run = 0;
+  for (var i = 0; i < words.length; i++) {
+    var w = words[i];
+    if (out.length && w.toLowerCase() === out[out.length - 1].toLowerCase()) {
+      run++;
+      if (run >= 1) continue; // keep at most 2 consecutive repeats total
+    } else run = 0;
+    out.push(w);
+  }
+  var uniq = {};
+  words.forEach(function(w){ uniq[w.toLowerCase().replace(/[^a-z\u00E4\u00F6\u00FC\u00DF']/g,'')] = 1; });
+  if (words.length >= 6 && Object.keys(uniq).length <= 2) return ''; // pure loop garbage
+  return out.join(' ');
+}
+
+async function ccResult(text) {
   cc.busy = false;
+  if (!cc.on) return;
+  var t = ccDedup((text || '').trim());
+  if (t && t !== cc.lastText && !/^[\s.\-\u266A\[\](){}!,]*$/.test(t) &&
+      !(t.length < 15 && /^(thank you|thanks|you|bye|okay|like)[.!]?$/i.test(t))) {
+    cc.lastText = t;
+    cc.enSegs.push(t); if (cc.enSegs.length > 2) cc.enSegs.shift();
+    ccRender(true);
+    if (cc.tr) {
+      var tr = await ccTranslate(t);
+      if (tr) { cc.trSegs.push(tr); if (cc.trSegs.length > 2) cc.trSegs.shift(); ccRender(true); }
+    }
+  }
 }
 
 function ccRender(isNew) {
@@ -1463,6 +1454,7 @@ setInterval(function() {
     ccRender(false);
   }
 }, 1000);
+
 function ccEsc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
 async function ccTranslate(text) {
