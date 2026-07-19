@@ -154,6 +154,19 @@ body{display:flex;flex-direction:column}
       <div class="rb grn" onclick="cmd('cc')"><span>CC</span><small>Altyazı</small></div>
     </div>
 
+    <!-- Caption controls -->
+    <div class="sec">Altyazı</div>
+    <div class="g4">
+      <div class="rb" onclick="ccc('cc_en')"><span>EN</span><small>İng. Aç/Kapat</small></div>
+      <div class="rb" onclick="ccc('cc_tr')"><span>TR</span><small>Çev. Aç/Kapat</small></div>
+      <div class="rb" onclick="send({action:'cc_fs',delta:-2});toast('Yazı küçült')"><span>A&#8722;</span><small>Küçült</small></div>
+      <div class="rb" onclick="send({action:'cc_fs',delta:2});toast('Yazı büyüt')"><span>A+</span><small>Büyüt</small></div>
+    </div>
+    <div class="g2" style="margin-top:6px">
+      <div class="rb" onclick="ccc('cc_lang')"><span>&#127760;</span><small>Dil: EN&#8644;DE</small></div>
+      <div class="rb" onclick="ccc('code')"><span>&#128273;</span><small>Kodu Gizle/Göster</small></div>
+    </div>
+
     <!-- Seek: one row -->
     <div class="sec">Sarmak</div>
     <div class="g4">
@@ -321,6 +334,7 @@ function cmd(action) {
   send({ action: action });
   if (action === 'fullscreen') toast('Tam ekran a\u00E7/kapat');
 }
+function ccc(action) { send({ action: action }); toast('Komut g\u00F6nderildi'); }
 function npClear() {
   clearTimeout(numTimer);
   numBuf = '';
