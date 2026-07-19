@@ -727,8 +727,11 @@ function fullscreen(boxIndex) {
   if (!box || !box.video) return;
   var v = box.video;
   if (v.webkitEnterFullscreen && IS_IOS) { try { v.webkitEnterFullscreen(); return; } catch(e){} }
-  if (v.requestFullscreen) v.requestFullscreen().catch(function(){});
-  else if (v.webkitRequestFullscreen) v.webkitRequestFullscreen();
+  // Fullscreen the screen CONTAINER, not the bare <video>: same look,
+  // PiP still available, but now captions can render inside it too.
+  var el = box.screen;
+  if (el.requestFullscreen) el.requestFullscreen().catch(function(){});
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
   else if (v.webkitEnterFullscreen) { try { v.webkitEnterFullscreen(); } catch(e){} }
 }
 
@@ -1347,7 +1350,16 @@ function ccUpdateTaps() {
 // the bottom (no dragging — kept intentionally simple and stable).
 function ccPlace() {
   var wrap = document.getElementById('ccWrap');
-  var target = (currentGrid !== '1x1' && soloIndex >= 0 && tvBoxes[soloIndex])
+  var target = null;
+  // Real fullscreen paints over the page, so captions must live INSIDE
+  // the fullscreened screen to stay visible.
+  var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fsEl) {
+    for (var fi = 0; fi < tvBoxes.length; fi++) {
+      if (tvBoxes[fi].screen === fsEl || fsEl.contains(tvBoxes[fi].screen)) { target = tvBoxes[fi].screen; break; }
+    }
+  }
+  if (!target) target = (currentGrid !== '1x1' && soloIndex >= 0 && tvBoxes[soloIndex])
     ? tvBoxes[soloIndex].screen : null;
   if (target) {
     if (wrap.parentNode !== target) target.appendChild(wrap);
@@ -1585,6 +1597,8 @@ function init() {
   document.addEventListener('click', gestureUnlock, true);
   document.addEventListener('touchend', gestureUnlock, true);
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && pfullIndex >= 0) setPseudoFull(-1); });
+  document.addEventListener('fullscreenchange', ccPlace);
+  document.addEventListener('webkitfullscreenchange', ccPlace);
   ccLoadSettings();
 }
 
