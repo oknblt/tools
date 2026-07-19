@@ -78,6 +78,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tv-box.pfull{position:fixed;inset:0;z-index:600;border:none;border-radius:0}
 .tv-box.pfull .tv-header{display:none}
 body.has-pfull .header,body.has-pfull .channel-nav{display:none}
+/* Live captions */
+#ccWrap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 68px);width:min(94vw,900px);z-index:700;display:none;flex-direction:column;gap:6px;pointer-events:none;--cc-fs:21px;--cc-op:.7;--cc-lines:2}
+#ccWrap.on{display:flex}
+body.has-pfull #ccWrap{bottom:26px}
+.cc-panel{background:rgba(0,0,0,var(--cc-op));border-radius:10px;padding:7px 14px;color:#fff;font-size:var(--cc-fs);line-height:1.35;text-align:center;overflow:hidden;display:none;align-items:flex-end;justify-content:center;max-height:calc(var(--cc-fs) * 1.35 * var(--cc-lines) + 14px);text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.cc-panel.vis{display:flex}
+.cc-panel>div{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--cc-lines);overflow:hidden}
+.cc-tr{color:#ffd54f}
+#ccSettings{position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 68px);background:rgba(15,15,25,.97);border:1px solid #333;border-radius:12px;padding:12px 14px;z-index:701;display:none;width:240px;font-size:13px;backdrop-filter:blur(8px)}
+#ccSettings label{display:flex;justify-content:space-between;align-items:center;margin:7px 0;gap:8px;color:#ccc}
+#ccSettings input[type=range]{width:110px}
+#ccBtn.cc-on{background:#4CAF50;color:#fff}
 /* Toast */
 #voiceToast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(20,20,30,.92);color:#fff;padding:10px 18px;border-radius:22px;font-size:13px;border:1px solid rgba(102,126,234,.4);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:999;max-width:80vw;text-align:center}
 #voiceToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -94,11 +106,28 @@ body.has-pfull .header,body.has-pfull .channel-nav{display:none}
       <button class="btn btn-layout" data-layout="2x2" onclick="setGrid('2x2',this)">2&#xD7;2</button>
       <button class="btn btn-action" onclick="muteAll()">&#128263; Mute All</button>
       <button class="btn btn-action" onclick="refreshAll()">&#128260;</button>
+      <button class="btn btn-action" id="ccBtn" onclick="ccToggle()" title="Canli altyazi (Whisper)">CC</button>
+      <button class="btn btn-action" id="ccGearBtn" onclick="ccSettingsToggle()" title="Altyazi ayarlari" style="display:none">&#9881;</button>
       <button class="btn-voice" id="voiceBtn" onclick="toggleVoice()" title="Sesli komut">&#127897;</button>
     </div>
   </div>
 </div>
 <div id="gridContainer" class="grid-container grid-1x1"></div>
+
+<!-- Live caption panels (EN + TR), shown when CC is on -->
+<div id="ccWrap">
+  <div class="cc-panel cc-en" id="ccEn"></div>
+  <div class="cc-panel cc-tr" id="ccTr"></div>
+</div>
+<!-- Caption settings -->
+<div id="ccSettings">
+  <div style="font-weight:700;color:#fff;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">Altyazı Ayarları <span onclick="ccSettingsToggle()" style="cursor:pointer;color:#888">&#10005;</span></div>
+  <label><span>&#127468;&#127463; İngilizce</span><input type="checkbox" id="ccChkEn" checked onchange="ccApplySettings()"></label>
+  <label><span>&#127481;&#127479; Türkçe çeviri</span><input type="checkbox" id="ccChkTr" onchange="ccApplySettings()"></label>
+  <label><span>Yazı boyutu</span><input type="range" id="ccFs" min="14" max="40" value="21" oninput="ccApplySettings()"></label>
+  <label><span>Arka plan</span><input type="range" id="ccOp" min="10" max="100" value="70" oninput="ccApplySettings()"></label>
+  <label><span>Satır sayısı</span><input type="range" id="ccLines" min="1" max="5" value="2" oninput="ccApplySettings()"></label>
+</div>
 <div class="channel-nav" id="channelNav">
   <button class="nav-btn nav-edge" onclick="navChannel('first')">&#8676;</button>
   <button class="nav-btn" onclick="navChannel('prev')">&#8592;</button>
@@ -125,10 +154,46 @@ var TV_CHANNELS = {
 
   "Halk TV":      { url: "https://halktv-live.daioncdn.net/halktv/halktv.m3u8", source: "IPTV" },
   "NTV":          { url: "https://dygvideo.dygdigital.com/live/hls/ntv4puhu", source: "IPTV" },
+  "Sözcü TV":     { url: "https://trn03.tulix.tv/gt-sozcu-tv/playlist.m3u8", source: "IPTV" },
   "Haber Global": { url: "https://tv.ensonhaber.com/haberglobal/haberglobal.m3u8", source: "IPTV" },
   "Habertürk":    { url: "https://tv.ensonhaber.com/haberturk/haberturk.m3u8", source: "IPTV" },
   "TV 100":       { url: "https://tv100-live.daioncdn.net/tv100/tv100_1080p.m3u8", source: "IPTV" },
   "Bloomberg HT":       { url: "https://tatatam.trt1sultanfatihss.workers.dev/https://ciner.daioncdn.net/bloomberght/bloomberght_720p.m3u8", source: "IPTV" },
+  "CNN": { url: "https://d3fzntptkfpmvg.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-6rc4k0y56fezj/CNNFAST_GB.m3u8", source: "IPTV" },
+  "BBC News":     { url: "https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn%3abbc%3apips%3aservice%3abbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8", source: "IPTV" },
+  "DW TV English":{ url: "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8", source: "IPTV" },
+  "Bloomberg":    { url: "https://www.bloomberg.com/media-manifest/streams/eu.m3u8", source: "IPTV" },
+  "France 24 English": { url: "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_5000.m3u8", source: "IPTV" },
+  "France 24 French":  { url: "https://live.france24.com/hls/live/2037179/F24_FR_HI_HLS/master_5000.m3u8", source: "IPTV" },
+  "BFM TV":          { url: "https://ncdn-live-bfm.pfd.sfr.net/shls/LIVE$BFM_TV/index.m3u8", source: "IPTV" },
+  "Canal 32":        { url: "https://event.vedge.infomaniak.com/livecast/ik%3acanal32_4/manifest.m3u8", source: "IPTV" },
+  "WDR Fernsehen":        { url: "https://www.euromediacenter.com/wdr-fernsehen-123-123.m3u8", source: "IPTV" },
+  "Baden TV":        { url: "https://cdn.icu.de/rtplive/btv.stream/playlist.m3u8", source: "IPTV" },
+  "Alex Berlin":        { url: "https://www.euromediacenter.com/alex-berlin-4-4.m3u8", source: "IPTV" },
+  "München TV":        { url: "https://muenchentv.iptv-playoutcenter.de/muenchentv/muenchentv.stream_1/playlist.m3u8", source: "IPTV" },
+  "Top Sci-Fi":        { url: "https://www.euromediacenter.com/top-sci-fi-112-112.m3u8", source: "IPTV" },
+ "Das Erste HD":     { url: "https://derste247livede.akamaized.net/hls/live/658317/daserste_de/master.m3u8", source: "IPTV" },
+  "hr fernsehen":      { url: "https://hrhls.akamaized.net/hls/live/2024525/hrhls/index.m3u8", source: "IPTV" },
+  "EchtJetzt TV":      { url: "https://bibeltv03.iptv-playoutcenter.de/bibeltv03/bibeltv03.stream_all/playlist.m3u8", source: "IPTV" },
+  "Baku TV":        { url: "https://rtmp.baku.tv/hls/bakutv_1080p.m3u8", source: "IPTV" },
+  "A TV":        { url: "https://live.zendzend.com/mpegts/29375_107244/media_mpegts_0.m3u8", source: "IPTV" },
+  "Red CCTV":      { url: "https://ares.disfrutaenlared.com:1936/redcctv/redcctv/playlist.m3u8", source: "IPTV" },
+  "BBC Earth":    { url: "https://amg00793-amg00793c6-xumo-us-2669.playouts.now.amagi.tv/BBCStudios-BBCEarthA-hls/playlist.m3u8", source: "IPTV" },
+  "Wonder":       { url: "https://wonder-samsung-uk.amagi.tv/playlist.m3u8", source: "IPTV" },
+  "National Geographic":       { url: "http://185.102.171.218/NatGeo/index.m3u8", source: "IPTV" },
+  "National Geographic Wild":       { url: "http://185.102.171.218/NatGeoWild/index.m3u8", source: "IPTV" },
+  "Mythbusters":       { url: "https://www.euromediacenter.com/mythbusters-4366-4366.m3u8", source: "IPTV" },
+  "Tele 1":       { url: "https://tele1-live.ercdn.net/tele1/tele1.m3u8", source: "IPTV" },
+  "CNN Türk":     { url: "https://dsmartgo-live.ercdn.net/dsmartgo/cnnturk/cnnturk.isml/cnnturk.m3u8", source: "IPTV" },
+  "TRT 1":        { url: "https://tv-trt1.medya.trt.com.tr/master.m3u8", source: "TRT" },
+  "TRT 2":        { url: "https://tv-trt2.medya.trt.com.tr/master.m3u8", source: "TRT" },
+  "TRT Haber":    { url: "https://tv-trthaber.medya.trt.com.tr/master.m3u8", source: "TRT" },
+  "TRT Spor":     { url: "https://tv-trtspor1.medya.trt.com.tr/master.m3u8", source: "TRT" },
+  "TRT Spor Yildiz": { url: "https://tv-trtspor2.medya.trt.com.tr/master.m3u8", source: "TRT" },
+  "TRT Belgesel": { url: "https://tv-trtbelgesel.medya.trt.com.tr/master.m3u8", source: "TRT" },
+  "TRT Muzik":    { url: "https://tv-trtmuzik.medya.trt.com.tr/master.m3u8", source: "TRT" },
+  "TRT Genç":     { url: "https://tv-trtgenc.medya.trt.com.tr/master.m3u8", source: "TRT" },
+  "TRT World":    { url: "https://tv-trtworld.medya.trt.com.tr/master.m3u8", source: "TRT" },
   "NOW":          { url: "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv.m3u8", source: "IPTV" },
   "Kanal D":      { url: "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/kanald/kanald.m3u8", source: "IPTV" },
   "Show TV":      { url: "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showtv/showtv.m3u8", source: "IPTV" },
@@ -144,55 +209,19 @@ var TV_CHANNELS = {
   "KTV":        { url: "http://cdn-konultvazerbaijan.yayin.com.tr/konultvazerbaijan/konultvazerbaijan/playlist.m3u8", source: "IPTV" },
   "Kanal D Romanya": { url: "https://stream1.kanald.ro/iphone/knd-live.m3u8", source: "IPTV" },
   "Kanal D Drama":     { url: "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01602-themahqfrance-vivekanald-samsungspain/playlist.m3u8", source: "IPTV" },
-  "Alanya Posta TV":     { url: "https://api-tv3.yayin.com.tr/postatv/postatv/playlist.m3u8", source: "IPTV" },
   "Beyaz TV":     { url: "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_1080p.m3u8", source: "IPTV" },
   "A2":           { url: "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/a2tv/a2tv.m3u8", source: "IPTV" },
-  "Tele 1":       { url: "https://tele1-live.ercdn.net/tele1/tele1.m3u8", source: "IPTV" },
-  "CNN": { url: "https://d3fzntptkfpmvg.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-6rc4k0y56fezj/CNNFAST_GB.m3u8", source: "IPTV" },
-  "BBC News":     { url: "https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn%3abbc%3apips%3aservice%3abbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8", source: "IPTV" },
-  "DW TV English":{ url: "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8", source: "IPTV" },
-  "Bloomberg":    { url: "https://www.bloomberg.com/media-manifest/streams/eu.m3u8", source: "IPTV" },
-  "France 24 English": { url: "https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_5000.m3u8", source: "IPTV" },
-  "France 24 French":  { url: "https://live.france24.com/hls/live/2037179/F24_FR_HI_HLS/master_5000.m3u8", source: "IPTV" },
-  "BFM TV":          { url: "https://ncdn-live-bfm.pfd.sfr.net/shls/LIVE$BFM_TV/index.m3u8", source: "IPTV" },
-  "WDR Fernsehen":        { url: "https://www.euromediacenter.com/wdr-fernsehen-123-123.m3u8", source: "IPTV" },
-  "Baden TV":        { url: "https://cdn.icu.de/rtplive/btv.stream/playlist.m3u8", source: "IPTV" },
-  "Alex Berlin":        { url: "https://www.euromediacenter.com/alex-berlin-4-4.m3u8", source: "IPTV" },
-  "München TV":        { url: "https://muenchentv.iptv-playoutcenter.de/muenchentv/muenchentv.stream_1/playlist.m3u8", source: "IPTV" },
-  "Top Sci-Fi":        { url: "https://www.euromediacenter.com/top-sci-fi-112-112.m3u8", source: "IPTV" },
- "Das Erste HD":     { url: "https://derste247livede.akamaized.net/hls/live/658317/daserste_de/master.m3u8", source: "IPTV" },
-  "hr fernsehen":      { url: "https://hrhls.akamaized.net/hls/live/2024525/hrhls/index.m3u8", source: "IPTV" },
-  "EchtJetzt TV":      { url: "https://bibeltv03.iptv-playoutcenter.de/bibeltv03/bibeltv03.stream_all/playlist.m3u8", source: "IPTV" },
-  "Baku TV":        { url: "https://rtmp.baku.tv/hls/bakutv_1080p.m3u8", source: "IPTV" },
-  "A TV":        { url: "https://live.zendzend.com/mpegts/29375_107244/media_mpegts_0.m3u8", source: "IPTV" },
-  "Rakuten TV":        { url: "https://fee09fd665814f51b939b6d106cf5f66.mediatailor.eu-west-1.amazonaws.com/v1/master/0547f18649bd788bec7b67b746e47670f558b6b2/production-LiveChannel-6093/master.m3u8", source: "IPTV" },
-  "Red CCTV":      { url: "https://ares.disfrutaenlared.com:1936/redcctv/redcctv/playlist.m3u8", source: "IPTV" },
-  "BBC Earth":    { url: "https://amg00793-amg00793c6-xumo-us-2669.playouts.now.amagi.tv/BBCStudios-BBCEarthA-hls/playlist.m3u8", source: "IPTV" },
-  "Wonder":       { url: "https://wonder-samsung-uk.amagi.tv/playlist.m3u8", source: "IPTV" },
-  "National Geographic":       { url: "http://185.102.171.218/NatGeo/index.m3u8", source: "IPTV" },
-  "National Geographic Wild":       { url: "http://185.102.171.218/NatGeoWild/index.m3u8", source: "IPTV" },
-  "InWild":       { url: "https://amg00861-terninternation-inwild-samsungau-3qrga.amagi.tv/playlist/amg00861-terninternation-inwild-samsungau/playlist.m3u8", source: "IPTV" },
-  "Love The Planet":       { url: "https://amg01821-lovetvchannels-lovetheplanetuksamsung-samsunguk-apopw.amagi.tv/playlist/amg01821-lovetvchannels-lovetheplanetuksamsung-samsunguk/playlist.m3u8", source: "IPTV" },
-  "Mythbusters":       { url: "https://www.euromediacenter.com/mythbusters-4366-4366.m3u8", source: "IPTV" },
-  "TRT 1":        { url: "https://tv-trt1.medya.trt.com.tr/master.m3u8", source: "TRT" },
-  "TRT 2":        { url: "https://tv-trt2.medya.trt.com.tr/master.m3u8", source: "TRT" },
-  "TRT Haber":    { url: "https://tv-trthaber.medya.trt.com.tr/master.m3u8", source: "TRT" },
-  "TRT Spor":     { url: "https://tv-trtspor1.medya.trt.com.tr/master.m3u8", source: "TRT" },
-  "TRT Spor Yildiz": { url: "https://tv-trtspor2.medya.trt.com.tr/master.m3u8", source: "TRT" },
-  "TRT Belgesel": { url: "https://tv-trtbelgesel.medya.trt.com.tr/master.m3u8", source: "TRT" },
-  "TRT Muzik":    { url: "https://tv-trtmuzik.medya.trt.com.tr/master.m3u8", source: "TRT" },
-  "TRT Genç":     { url: "https://tv-trtgenc.medya.trt.com.tr/master.m3u8", source: "TRT" },
-  "TRT World":    { url: "https://tv-trtworld.medya.trt.com.tr/master.m3u8", source: "TRT" },
   "HT Spor":      { url: "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/ht-spor/ht-spor.m3u8", source: "IPTV" },
   "A Spor":       { url: "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor_720p.m3u8", source: "IPTV" },
   "beIN SPORTS XTRA": { url: "https://bein-esp-xumo.amagi.tv/playlistR1080p.m3u8", source: "IPTV" },
-  "4Sport": { url: "https://pepsi.abntv.live/hls/4spstream.m3u8", source: "IPTV" },
+  "Arena Sport": { url: "https://nl1.nghk.ai/ArenaSport1BH/index.m3u8", source: "IPTV" },
   "Fifa":    { url: "https://a62dad94.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/UmFrdXRlblRWLWV1X0ZJRkFQbHVzRW5nbGlzaF9ITFM/playlist.m3u8", source: "IPTV" },
   "Redbull TV":   { url: "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8", source: "IPTV" },
   "MTRSPT 1":     { url: "https://amg02873-kravemedia-mtrspt1-distrotv-mnsrl.amagi.tv/playlist/amg02873-kravemedia-mtrspt1-distrotv/playlist.m3u8", source: "IPTV" },
 "Motorvision":  { url: "https://api-ott.motorvision.tv/loggingmediaurlpassthrough/a.m3u8?version=12&id=1199&partner=sportstribal&channel_name=Motorvision&content_genre=Drag%20Racing%2CMotor%20Racing%2CMotorsport%2CRacing%2CSport&ic=IAB17%2CIAB17-1&provider=FreeLiveSports&us_privacy=&gdpr=0&gdpr_consent=&coppa=0&content_livestream=1&content_url=https%3A%2F%2Fwatch.freelivesports.tv%2Fpages%2Fdiscover%2Fe%2Flive-tv%3Fchannel%3D6675bed4a2823e9a829eda97&lmt=0&did=r7mgUP", source: "IPTV" },
-  "FTV":          { url: "https://edge-fast3.evrideo.tv/bfdbb576-83f7-11f0-9f89-0200170e3e04_1000028043_HLS/manifest.m3u8", source: "IPTV" },
-  "Fashion One":  { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2ee6997cb_1/playlist.m3u8", source: "IPTV" },
+"Sports TV":    { url: "https://live.sportstv.com.tr/hls/low/sportstv_hd/index.m3u8", source: "IPTV" },
+ "FTV":          { url: "https://edge-fast3.evrideo.tv/bfdbb576-83f7-11f0-9f89-0200170e3e04_1000028043_HLS/manifest.m3u8", source: "IPTV" },
+"Fashion One":  { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2ee6997cb_1/playlist.m3u8", source: "IPTV" },
   "Power TV":     { url: "https://live.artidijitalmedya.com/artidijital_powertv/powertv/playlist.m3u8", source: "IPTV" },
   "Powertürk":    { url: "https://livetv.powerapp.com.tr/powerturkTV/powerturkhd.smil/playlist.m3u8", source: "IPTV" },
   "Powertürk Akustik":    { url: "https://listen.powerapp.com.tr/pturkakustik/akustik.smil/playlist.m3u8", source: "IPTV" },
@@ -201,18 +230,15 @@ var TV_CHANNELS = {
   "NR1 Dance":    { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8", source: "IPTV" },
   "Deluxe Music":    { url: "https://sdn-global-live-streaming-packager-cache.3qsdn.com/13456/13456_264_live.m3u8", source: "IPTV" },
   "Deluxe Dance":    { url: "http://c3921155.edmonst.net/iptv/42L7TCH8YYKLBRHNPV52HBRN/31344/index.m3u8", source: "IPTV" },
-  "Vevo Pop":    { url: "https://d128y56w6v2kax.cloudfront.net/playlist/amg00056-vevotv-vevopopau-samsungau/playlist.m3u8", source: "IPTV" },
   "Vevo 2K":    { url: "https://d1s6jz7jeei17.cloudfront.net/playlist/amg00056-vevotv-vevo2kau-samsungau/playlist.m3u8", source: "IPTV" },
-  "Atomic":    { url: "https://atomic.streamnet.ro/atomictv.m3u8", source: "IPTV" },
-  "City TV":    { url: "https://tv.city.bg/play/tshls/citytv/index.m3u8", source: "IPTV" },
   "Fun Vision":      { url: "https://funradiovisionhd.vedge.infomaniak.com/livecast/ik:funradiovisionhd/manifest.m3u8", source: "IPTV" },
   "Latin Zone TV":          { url: "https://cdn.streamingcpanel.com:3784/live/latinzonetvlive.m3u8", source: "IPTV" },
   "Radio Kiss Kiss":        { url: "https://59253971be783.streamlock.net/KKTV01/livestream/playlist.m3u8", source: "IPTV" },
   "Generations TV":        { url: "https://edge18.vedge.infomaniak.com/livecast/ik%3ageneration-tv/chunklist_.m3u8", source: "IPTV" },
   "DBM TV":        { url: "https://dbmtv.vedge.infomaniak.com/livecast/dbmtv/playlist.m3u8", source: "IPTV" },
-  "Kepez TV":        { url: "http://85.132.78.122:8050/hls/stream/index.m3u8", source: "IPTV" },
-  "5-Minute Craft":  { url: "https://soul-5mincrafteng-rakuten.amagi.tv/playlist.m3u8", source: "IPTV" },
   "Beach TV":        { url: "http://media4.tripsmarter.com:1935/LiveTV/DTVHD/playlist.m3u8", source: "IPTV" },
+  "Kepez TV":        { url: "http://85.132.78.122:8050/hls/stream/index.m3u8", source: "IPTV" },
+  "Avia Stream":        { url: "http://iptv.prosto.tv:7000/ch306/video.m3u8", source: "IPTV" },
   "Fire":        { url: "http://iptv.prosto.tv:7000/ch331/video.m3u8", source: "IPTV" },
   "Kamintv":       { url: "http://iptv.prosto.tv:7000/ch318/video.m3u8", source: "IPTV" },
   "Summer":        { url: "https://playlist.fasttvcdn.com/pl/lr7kbpqgx18b3rh2kpbeog/Fire/playlist.m3u8", source: "IPTV" },
@@ -224,20 +250,18 @@ var TV_CHANNELS = {
   "SvetVokrugtv":      { url: "http://iptv.prosto.tv:7000/ch351/video.m3u8", source: "IPTV" },
   "GornayaDolina":      { url: "http://iptv.prosto.tv:7000/ch302/video.m3u8", source: "IPTV" },
   "Komnata":       { url: "http://iptv.prosto.tv:7000/ch328/video.m3u8", source: "IPTV" },
-  "Avia Stream":        { url: "http://iptv.prosto.tv:7000/ch306/video.m3u8", source: "IPTV" },
   "Beach TV CSULB":           { url: "http://media4.tripsmarter.com:1935/LiveTV/MTVHD/playlist.m3u8", source: "IPTV" },
   "Beach TV Panama City":           { url: "http://media4.tripsmarter.com:1935/LiveTV/BTVHD/playlist.m3u8", source: "IPTV" },
-  "3Cat Càmeres del temps":           { url: "https://directes-tv-int.3catdirectes.cat/live-content/beauties-hls/master.m3u8", source: "IPTV" },
   "TLC":           { url: "https://dygvideo.dygdigital.com/live/hls/tlctvdai", source: "IPTV" },
   "DMAX":          { url: "https://dygvideo.dygdigital.com/live/hls/dmaxdai", source: "IPTV" }
 };
 
 var CHANNEL_GROUPS = [
-  { label: "Ulusal", channels: ["Halk TV","NTV","Haber Global", "Habertürk","TV 100", "Bloomberg HT", "NOW","Kanal D","Show TV","Star TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV", "Beyaz TV", "Kanal D Romanya", "Kanal D Drama", "Alanya Posta TV", "A2", "Tele 1"] },
+  { label: "Haber", channels: ["Halk TV","NTV","Haber Global", "Habertürk","TV 100", "Bloomberg HT", "CNN","BBC News","DW TV English","Bloomberg", "France 24 English","France 24 French","BFM TV", "Canal 32", "WDR Fernsehen", "Baden TV", "Alex Berlin", "München TV", "Top Sci-Fi", "Das Erste HD","hr fernsehen", "EchtJetzt TV", "Baku TV", "A TV", "Red CCTV", "BBC Earth", "Wonder", "Mythbusters", "National Geographic", "National Geographic Wild", "Tele 1"] },
   { label: "TRT", channels: ["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yildiz","TRT Belgesel","TRT Muzik", "TRT Genç", "TRT World"] },
-  { label: "Yabancı", channels: ["CNN","BBC News","DW TV English","Bloomberg", "France 24 English","France 24 French","BFM TV", "WDR Fernsehen", "Baden TV", "Alex Berlin", "München TV", "Top Sci-Fi", "Das Erste HD","hr fernsehen", "EchtJetzt TV", "Baku TV", "A TV", "Rakuten TV", "Red CCTV", "KTV", "BBC Earth", "Wonder", "National Geographic", "National Geographic Wild", "InWild", "Love The Planet", "Mythbusters"] },
-  { label: "Spor", channels: ["HT Spor","A Spor", "beIN SPORTS XTRA", "4Sport", "Fifa", "Redbull TV","MTRSPT 1", "Motorvision"] },
-  { label: "Eglence", channels: ["FTV","Fashion One", "Power TV","Powertürk","Powertürk Akustik", "NR1","NR1 Turk","NR1 Dance", "Kepez TV", "Deluxe Music", "Deluxe Dance", "Vevo Pop", "Vevo 2K", "Atomic", "City TV", "Fun Vision", "Latin Zone TV", "Radio Kiss Kiss", "Generations TV","DBM TV", "5-Minute Craft", "Fire", "Kamintv", "Relaxon","Dozhditv","Terrasatv", "Nature", "Winter", "GornayaDolina", "Komnata", "Summer", "SvetVokrugtv", "Avia Stream", "Beach TV", "Beach TV CSULB","Beach TV Panama City", "3Cat Càmeres del temps" ] }
+  { label: "Ulusal", channels: ["NOW","Kanal D","Show TV","Star TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","KTV", "Kanal D Romanya", "Kanal D Drama", "Beyaz TV", "A2"] },
+  { label: "Spor", channels: ["HT Spor","A Spor", "beIN SPORTS XTRA", "Arena Sport", "Fifa", "Redbull TV","MTRSPT 1", "Motorvision"] },
+  { label: "Eglence", channels: ["FTV","Fashion One", "Power TV","Powertürk","Powertürk Akustik", "NR1","NR1 Turk","NR1 Dance", "Deluxe Music", "Deluxe Dance", "Vevo 2K", "Fun Vision", "Latin Zone TV", "Radio Kiss Kiss", "Generations TV","DBM TV", "Beach TV", "Kepez TV","Avia Stream","Fire","Summer", "Kamintv", "Relaxon","Dozhditv","Terrasatv", "Nature", "Winter", "SvetVokrugtv", "GornayaDolina", "Komnata", "Beach TV CSULB","Beach TV Panama City" ] }
 ];
 
 // ================================================================
@@ -275,7 +299,7 @@ var pfullIndex = -1;    // box shown in CSS pseudo-fullscreen (-1 = none)
 // FIX: deploy the included worker.js to your own free Cloudflare
 // account (sends a neutral identity + rewrites playlists) and put its
 // address FIRST in this list, e.g.:
-//   var STREAM_PROXIES = ['https://muti-proxy.rma4rg.workers.dev/',
+//   var STREAM_PROXIES = ['https://SIZIN-ADINIZ.workers.dev/',
 //                         'https://tatatam.trt1sultanfatihss.workers.dev/'];
 var STREAM_PROXIES = [
   'https://tatatam.trt1sultanfatihss.workers.dev/'
@@ -663,6 +687,7 @@ function tapUnmute(boxIndex) {
 // Any real user gesture anywhere on the page: use it to unlock audio
 // on the box that is supposed to have sound.
 function gestureUnlock() {
+  if (cc.pending && cc.on) ccStart();
   tvBoxes.forEach(function(box, i) {
     if (!box.video || box._userPaused) return;
     if (soloIndex === i && (box.video.muted || box.video.paused)) {
@@ -682,6 +707,7 @@ function updateMuteButtons() {
       box.muteBtn.style.background = isSolo ? 'rgba(191,196,197,.85)' : 'rgba(0,0,0,.6)';
     }
   });
+  if (cc.ctx) { ccAttachBoxes(); ccUpdateTaps(); }
 }
 
 function muteAll() { soloIndex = -1; userMutedAll = true; updateMuteButtons(); }
@@ -1057,6 +1083,9 @@ function handleRemoteCommand(cmd) {
     case 'fullscreen':
       togglePseudoFull();
       break;
+    case 'cc':
+      ccToggle();
+      break;
     case 'layout':
       if (cmd.layout) {
         var btn = document.querySelector('[data-layout="' + cmd.layout + '"]');
@@ -1064,6 +1093,228 @@ function handleRemoteCommand(cmd) {
         showToast('\uD83D\uDCCF ' + cmd.layout);
       } break;
   }
+}
+
+// ================================================================
+// LIVE CAPTIONS (CC) — Whisper in the browser + free translation
+// ----------------------------------------------------------------
+// EN speech from the ACTIVE (sounded) screen is transcribed locally
+// with Whisper (transformers.js, ~40MB one-time download, no server,
+// no API key). Optional TR line uses Google's free translate endpoint
+// (best-effort; falls back to MyMemory). Requires MSE (hls.js path),
+// so it works on laptop + iPad but NOT iPhone's native player.
+// ================================================================
+var cc = {
+  on:false, en:true, tr:false, fs:21, op:70, lines:2,
+  ctx:null, mixer:null, proc:null, asr:null,
+  loading:false, pending:false, busy:false,
+  buf:[], bufLen:0, enSegs:[], trSegs:[], lastText:''
+};
+var CC_CHUNK_SEC = 7;
+
+function ccSupported() { return !!(window.Hls && Hls.isSupported()); }
+
+function ccToggle() {
+  if (!ccSupported()) {
+    showToast('\u274C Altyazi bu cihazin oynaticisinda desteklenmiyor (laptop/iPad kullanin)');
+    return;
+  }
+  if (cc.on) { ccStop(); return; }
+  cc.on = true;
+  ccUiSync();
+  ccStart();
+}
+
+function ccStop() {
+  cc.on = false;
+  cc.buf = []; cc.bufLen = 0;
+  document.getElementById('ccSettings').style.display = 'none';
+  ccUiSync();
+  showToast('CC kapatildi');
+}
+
+function ccUiSync() {
+  var wrap = document.getElementById('ccWrap');
+  var btn = document.getElementById('ccBtn');
+  var gear = document.getElementById('ccGearBtn');
+  wrap.classList.toggle('on', cc.on);
+  btn.classList.toggle('cc-on', cc.on);
+  gear.style.display = cc.on ? '' : 'none';
+  document.getElementById('ccEn').classList.toggle('vis', cc.on && cc.en);
+  document.getElementById('ccTr').classList.toggle('vis', cc.on && cc.tr);
+}
+
+function ccSettingsToggle() {
+  var s = document.getElementById('ccSettings');
+  s.style.display = (s.style.display === 'block') ? 'none' : 'block';
+}
+
+function ccApplySettings() {
+  cc.en = document.getElementById('ccChkEn').checked;
+  cc.tr = document.getElementById('ccChkTr').checked;
+  if (!cc.en && !cc.tr) { cc.en = true; document.getElementById('ccChkEn').checked = true; }
+  cc.fs = +document.getElementById('ccFs').value;
+  cc.op = +document.getElementById('ccOp').value;
+  cc.lines = +document.getElementById('ccLines').value;
+  var w = document.getElementById('ccWrap');
+  w.style.setProperty('--cc-fs', cc.fs + 'px');
+  w.style.setProperty('--cc-op', (cc.op / 100));
+  w.style.setProperty('--cc-lines', cc.lines);
+  try { localStorage.setItem('ccSettings', JSON.stringify({en:cc.en,tr:cc.tr,fs:cc.fs,op:cc.op,lines:cc.lines})); } catch(e){}
+  ccUiSync();
+}
+
+function ccLoadSettings() {
+  try {
+    var s = JSON.parse(localStorage.getItem('ccSettings') || 'null');
+    if (s) {
+      document.getElementById('ccChkEn').checked = s.en !== false;
+      document.getElementById('ccChkTr').checked = !!s.tr;
+      document.getElementById('ccFs').value = s.fs || 21;
+      document.getElementById('ccOp').value = s.op || 70;
+      document.getElementById('ccLines').value = s.lines || 2;
+    }
+  } catch(e){}
+  ccApplySettings();
+}
+
+function ccStatus(t) {
+  document.getElementById('ccEn').innerHTML = '<div>' + t + '</div>';
+}
+
+async function ccStart() {
+  // Audio graph needs a running AudioContext; browsers require a user
+  // gesture to start one. The header CC button IS a gesture; a remote
+  // toggle is not — then we wait for one tap on the screen.
+  if (!cc.ctx) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    cc.ctx = new AC();
+    cc.mixer = cc.ctx.createGain();
+    cc.proc = cc.ctx.createScriptProcessor(4096, 1, 1);
+    var sink = cc.ctx.createGain(); sink.gain.value = 0; // pulls the chain silently
+    cc.mixer.connect(cc.proc); cc.proc.connect(sink); sink.connect(cc.ctx.destination);
+    cc.proc.onaudioprocess = ccOnAudio;
+  }
+  try { await cc.ctx.resume(); } catch(e){}
+  if (cc.ctx.state !== 'running') {
+    cc.pending = true;
+    ccStatus('\uD83D\uDC46 Ba\u015Flatmak i\u00E7in ekrana bir kez dokunun');
+    return;
+  }
+  cc.pending = false;
+  ccAttachBoxes();
+  ccUpdateTaps();
+
+  if (!cc.asr && !cc.loading) {
+    cc.loading = true;
+    ccStatus('CC modeli indiriliyor\u2026 (ilk sefer ~40MB)');
+    try {
+      var T = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+      T.env.allowLocalModels = false;
+      cc.asr = await T.pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', {
+        quantized: true,
+        progress_callback: function(p) {
+          if (p && p.status === 'progress' && p.total) {
+            ccStatus('CC modeli indiriliyor\u2026 %' + Math.round(100 * p.loaded / p.total));
+          }
+        }
+      });
+      ccStatus('\uD83C\uDFA7 Dinleniyor\u2026');
+    } catch (err) {
+      ccStatus('Model y\u00FCklenemedi \u2014 internet ba\u011Flant\u0131s\u0131n\u0131 kontrol edin');
+      cc.loading = false;
+      return;
+    }
+    cc.loading = false;
+  } else if (cc.asr) {
+    ccStatus('\uD83C\uDFA7 Dinleniyor\u2026');
+  }
+}
+
+// Route every box's persistent <video> into WebAudio ONCE, keep it
+// connected to the speakers, and tap it through a per-box gain whose
+// level we flip so only the SOUNDED screen feeds the recognizer.
+function ccAttachBoxes() {
+  if (!cc.ctx || cc.ctx.state !== 'running') return;
+  tvBoxes.forEach(function(box) {
+    if (!box.video || box._ccSrc) return;
+    try {
+      var src = cc.ctx.createMediaElementSource(box.video);
+      src.connect(cc.ctx.destination);          // keep normal sound
+      var tap = cc.ctx.createGain();
+      tap.gain.value = 0;
+      src.connect(tap); tap.connect(cc.mixer);  // feed to recognizer
+      box._ccSrc = src; box._ccTap = tap;
+    } catch(e){}
+  });
+}
+
+function ccUpdateTaps() {
+  tvBoxes.forEach(function(box, i) {
+    if (box._ccTap) box._ccTap.gain.value = (soloIndex === i) ? 1 : 0;
+  });
+}
+
+function ccOnAudio(ev) {
+  if (!cc.on || !cc.asr || cc.busy) return;
+  var d = ev.inputBuffer.getChannelData(0);
+  cc.buf.push(new Float32Array(d));
+  cc.bufLen += d.length;
+  if (cc.bufLen >= cc.ctx.sampleRate * CC_CHUNK_SEC) {
+    var all = new Float32Array(cc.bufLen), off = 0;
+    for (var i = 0; i < cc.buf.length; i++) { all.set(cc.buf[i], off); off += cc.buf[i].length; }
+    cc.buf = []; cc.bufLen = 0;
+    ccRun(ccResample(all, cc.ctx.sampleRate, 16000));
+  }
+}
+
+function ccResample(f32, from, to) {
+  if (from === to) return f32;
+  var ratio = from / to, n = Math.floor(f32.length / ratio), out = new Float32Array(n);
+  for (var i = 0; i < n; i++) {
+    var pos = i * ratio, lo = Math.floor(pos), hi = Math.min(lo + 1, f32.length - 1), f = pos - lo;
+    out[i] = f32[lo] * (1 - f) + f32[hi] * f;
+  }
+  return out;
+}
+
+async function ccRun(f32) {
+  cc.busy = true;
+  try {
+    var out = await cc.asr(f32);
+    var t = (out && out.text || '').trim();
+    // filter Whisper's silence hallucinations
+    if (t && t !== cc.lastText && !/^[\s.\-\u266A\[\](){}!,]*$/.test(t) &&
+        !(t.length < 15 && /^(thank you|thanks|you|bye)[.!]?$/i.test(t))) {
+      cc.lastText = t;
+      cc.enSegs.push(t); if (cc.enSegs.length > 4) cc.enSegs.shift();
+      ccRender();
+      if (cc.tr) {
+        var tr = await ccTranslate(t);
+        if (tr) { cc.trSegs.push(tr); if (cc.trSegs.length > 4) cc.trSegs.shift(); ccRender(); }
+      }
+    }
+  } catch(e){}
+  cc.busy = false;
+}
+
+function ccRender() {
+  var en = cc.enSegs.join(' '), tr = cc.trSegs.join(' ');
+  document.getElementById('ccEn').innerHTML = '<div>' + ccEsc(en.slice(-500)) + '</div>';
+  document.getElementById('ccTr').innerHTML = '<div>' + ccEsc(tr.slice(-500)) + '</div>';
+}
+function ccEsc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+async function ccTranslate(text) {
+  try { // free, no-key Google endpoint (best-effort)
+    var r = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=tr&dt=t&q=' + encodeURIComponent(text));
+    if (r.ok) { var j = await r.json(); return j[0].map(function(x){ return x[0]; }).join(''); }
+  } catch(e){}
+  try { // fallback: MyMemory (daily free quota)
+    var r2 = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=en|tr');
+    if (r2.ok) { var j2 = await r2.json(); if (j2.responseData) return j2.responseData.translatedText; }
+  } catch(e){}
+  return null;
 }
 
 // ================================================================
@@ -1181,6 +1432,7 @@ function init() {
   // Any tap/click anywhere unlocks audio for the active box
   document.addEventListener('click', gestureUnlock, true);
   document.addEventListener('touchend', gestureUnlock, true);
+  ccLoadSettings();
 }
 
 document.addEventListener('DOMContentLoaded', init);
