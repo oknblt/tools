@@ -77,6 +77,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* CSS pseudo-fullscreen (triggered from the remote) */
 .tv-box.pfull{position:fixed;inset:0;z-index:600;border:none;border-radius:0}
 .tv-box.pfull .tv-header{display:none}
+.tv-screen:fullscreen .overlay-controls{display:none!important}
+.tv-screen:-webkit-full-screen .overlay-controls{display:none!important}
 body.has-pfull .header,body.has-pfull .channel-nav{display:none}
 /* Live captions */
 #ccWrap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 68px);width:min(94vw,900px);z-index:700;display:none;flex-direction:column;gap:6px;pointer-events:none;--cc-fs:21px;--cc-op:.7;--cc-lines:2}
@@ -734,6 +736,22 @@ function fullscreen(boxIndex) {
   if (el.requestFullscreen) el.requestFullscreen().catch(function(){});
   else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
   else if (v.webkitEnterFullscreen) { try { v.webkitEnterFullscreen(); } catch(e){} }
+}
+
+// Exit EVERY fullscreen level (exitFullscreen pops only one; with the
+// container + nested video that left the screen stuck fullscreen).
+function exitAllFullscreen() {
+  var d = document;
+  var cur = d.fullscreenElement || d.webkitFullscreenElement;
+  if (!cur) return;
+  var fn = d.exitFullscreen || d.webkitExitFullscreen;
+  if (!fn) return;
+  try {
+    var p = fn.call(d);
+    var again = function(){ if (d.fullscreenElement || d.webkitFullscreenElement) exitAllFullscreen(); };
+    if (p && p.then) p.then(again).catch(function(){});
+    else setTimeout(again, 60);
+  } catch(e){}
 }
 
 function refreshAll() {
@@ -1624,6 +1642,7 @@ function init() {
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && pfullIndex >= 0) setPseudoFull(-1); });
   function onFsChange() {
     var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    if (fsEl && fsEl.tagName === 'VIDEO') { exitAllFullscreen(); return; }
     tvBoxes.forEach(function(box) {
       if (!box.video) return;
       // Native controls only while that box's screen is fullscreen
@@ -1648,6 +1667,17 @@ function init() {
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       handleRemoteCommand({ action: 'seek', delta: -10 });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      navChannel('next');
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      navChannel('prev');
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      var fsNow = document.fullscreenElement || document.webkitFullscreenElement;
+      if (fsNow) exitAllFullscreen();
+      else fullscreen((currentGrid === '1x1') ? 0 : remoteTargetIdx());
     } else if (/^[0-9]$/.test(e.key)) {
       keyNumPress(e.key);
     }
