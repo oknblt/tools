@@ -728,18 +728,19 @@ function setPseudoFull(i) { // -1 closes
   }
 }
 
-// The screen button used to call the browser's native fullscreen, which
-// paints OVER the page — captions and toasts vanished. CSS pseudo-full
-// keeps them visible and channel zapping keeps working. iOS still gets
-// the native player (its own UI is better there).
+// Screen button = the browser's REAL fullscreen (Picture-in-Picture,
+// pause/seek and other native niceties work there). The remote's
+// fullscreen stays CSS pseudo-full: a WebRTC message is not a user
+// gesture, so real fullscreen would be rejected — and pseudo-full is
+// also the mode where captions remain visible.
 function fullscreen(boxIndex) {
   var box = tvBoxes[boxIndex];
   if (!box || !box.video) return;
-  if (IS_IOS && box.video.webkitEnterFullscreen) {
-    try { box.video.webkitEnterFullscreen(); return; } catch(e){}
-  }
-  if (pfullIndex === boxIndex) setPseudoFull(-1);
-  else setPseudoFull(boxIndex);
+  var v = box.video;
+  if (v.webkitEnterFullscreen && IS_IOS) { try { v.webkitEnterFullscreen(); return; } catch(e){} }
+  if (v.requestFullscreen) v.requestFullscreen().catch(function(){});
+  else if (v.webkitRequestFullscreen) v.webkitRequestFullscreen();
+  else if (v.webkitEnterFullscreen) { try { v.webkitEnterFullscreen(); } catch(e){} }
 }
 
 function refreshAll() {
@@ -1340,11 +1341,11 @@ async function ccStart() {
 
   if (!cc.asr && !cc.loading) {
     cc.loading = true;
-    ccStatus('CC modeli indiriliyor\u2026 (ilk sefer ~75MB)');
+    ccStatus('CC modeli indiriliyor\u2026 (ilk sefer ~40MB)');
     try {
       var T = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
       T.env.allowLocalModels = false;
-      cc.asr = await T.pipeline('automatic-speech-recognition', 'Xenova/whisper-base', {
+      cc.asr = await T.pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', {
         quantized: true,
         progress_callback: function(p) {
           if (p && p.status === 'progress' && p.total) {
@@ -1389,11 +1390,16 @@ function ccUpdateTaps() {
 }
 
 function ccOnAudio(ev) {
-  if (!cc.on || !cc.asr || cc.busy) return;
+  if (!cc.on || !cc.asr) return;
   var d = ev.inputBuffer.getChannelData(0);
   cc.buf.push(new Float32Array(d));
   cc.bufLen += d.length;
-  if (cc.bufLen >= cc.ctx.sampleRate * CC_CHUNK_SEC) {
+  // NEVER drop audio while the recognizer is busy — dropping was why
+  // whole sentences went missing. Keep buffering (15s backlog cap;
+  // Whisper happily takes chunks up to 30s in one go).
+  var maxLen = cc.ctx.sampleRate * 15;
+  while (cc.bufLen > maxLen && cc.buf.length) { cc.bufLen -= cc.buf[0].length; cc.buf.shift(); }
+  if (!cc.busy && cc.bufLen >= cc.ctx.sampleRate * CC_CHUNK_SEC) {
     var all = new Float32Array(cc.bufLen), off = 0;
     for (var i = 0; i < cc.buf.length; i++) { all.set(cc.buf[i], off); off += cc.buf[i].length; }
     cc.buf = []; cc.bufLen = 0;
