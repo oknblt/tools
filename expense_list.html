@@ -489,12 +489,17 @@
     gap: 4px;
   }
   .icon-btn {
-    padding: 4px 7px;
-    font-size: 11px;
-    border-radius: 3px;
-    background: transparent;
-    border: 1px solid transparent;
+    padding: 6px 9px;
+    font-size: 14px;
+    line-height: 1;
+    border-radius: 4px;
+    background: #f6f8fb;
+    border: 1px solid var(--border);
+    min-width: 32px;
+    min-height: 30px;
+    justify-content: center;
   }
+  .icon-btn.del { color: var(--danger); }
   .icon-btn:hover { background: #eef2f7; border-color: var(--border); }
   .icon-btn.del:hover { background: #fce8e8; color: var(--danger); border-color: #f0c5c5; }
   .empty-row {
@@ -699,8 +704,10 @@
     <div class="card-head">
       <h2>Kayıtlı Masraflar (<span id="entryCount">0</span>)</h2>
       <div style="display:flex; gap:8px;">
+        <button onclick="document.getElementById('xlsxFileInput').click()" title="Excel dosyasından listeyi yükle">⬆ Excel Yükle</button>
         <button onclick="exportExcel()" class="accent">⬇ Excel İndir</button>
       </div>
+      <input type="file" id="xlsxFileInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;" onchange="importExcelFromFile(event)">
     </div>
     <div class="table-wrap">
       <table class="expenses" id="tblExpenses">
@@ -1116,9 +1123,12 @@ function getFilteredEntries() {
 
   let out = [];
   state.entries.forEach((e, i) => {
-    // Date range
+    // Date filter — Excel-style selected values list (ay/gün seçimi).
+    // Eski dateFrom/dateTo aralık mantığı geriye dönük uyumluluk için korunur.
     const dateF = filters.date || {};
-    if (!matchDateRange(e.date, dateF.dateFrom, dateF.dateTo)) return;
+    if (Array.isArray(dateF.values)) {
+      if (!dateF.values.includes(e.date || '')) return;
+    } else if (!matchDateRange(e.date, dateF.dateFrom, dateF.dateTo)) return;
     // Text columns — match by allowed values list (Excel-style)
     const textCols = ['invoiceNo','vendor','customer','factory','city','description','expenseType','unit','subUnit','currency'];
     let textPass = true;
@@ -1196,9 +1206,11 @@ function openFilter(event, col, type) {
 
   if (type === 'date') {
     bodyHTML += `
-      <div class="row">
-        <div><label>Başlangıç</label><input type="date" id="fpDateFrom" value="${cur.dateFrom || ''}"></div>
-        <div><label>Bitiş</label><input type="date" id="fpDateTo" value="${cur.dateTo || ''}"></div>
+      <input type="text" class="filter-search" id="fpDateSearch" placeholder="Ara... (örn: Haziran 2026)">
+      <div class="filter-list" id="fpDateList"></div>
+      <div class="filter-quick-actions">
+        <button onclick="dateFilterSelectAll(true)">Tümü</button>
+        <button onclick="dateFilterSelectAll(false)">Hiçbiri</button>
       </div>`;
   } else if (type === 'number') {
     bodyHTML += `
@@ -1224,6 +1236,12 @@ function openFilter(event, col, type) {
     document.getElementById('fpSearch').addEventListener('input', () => {
       renderFilterChecklist(col);
     });
+  }
+
+  // Populate the month/day tree for the date filter
+  if (type === 'date') {
+    initDateFilterTree();
+    document.getElementById('fpDateSearch').addEventListener('input', renderDateFilterTree);
   }
 
   // Position pop near trigger
@@ -1305,14 +1323,121 @@ function filterSelectNone() {
   document.querySelectorAll('#fpList .fp-chk').forEach(c => c.checked = false);
 }
 
+/* ===== Date filter: Excel-style month/day tree ===== */
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+let _dateSel = new Set();       // currently selected ISO dates in the popover session
+let _dateExpanded = new Set();  // expanded month keys 'YYYY-MM'
+
+function initDateFilterTree() {
+  const all = getUniqueColumnValues('date'); // ISO strings, sorted
+  const cur = tableView.filters.date || {};
+  if (Array.isArray(cur.values)) {
+    _dateSel = new Set(cur.values.filter(v => all.includes(v)));
+  } else {
+    _dateSel = new Set(all); // no filter = all selected
+  }
+  _dateExpanded = new Set();
+
+  const list = document.getElementById('fpDateList');
+  // Delegated events (list is freshly created each time the popover body is rebuilt)
+  list.addEventListener('change', e => {
+    const t = e.target;
+    if (t.classList.contains('fp-month-chk')) {
+      const days = _dateGroups()[t.dataset.mkey] || [];
+      days.forEach(iso => t.checked ? _dateSel.add(iso) : _dateSel.delete(iso));
+      renderDateFilterTree();
+    } else if (t.classList.contains('fp-day-chk')) {
+      t.checked ? _dateSel.add(t.value) : _dateSel.delete(t.value);
+      renderDateFilterTree();
+    }
+  });
+  list.addEventListener('click', e => {
+    const tog = e.target.closest('[data-toggle]');
+    if (tog) {
+      const k = tog.dataset.toggle;
+      _dateExpanded.has(k) ? _dateExpanded.delete(k) : _dateExpanded.add(k);
+      renderDateFilterTree();
+    }
+  });
+  renderDateFilterTree();
+}
+
+// Group all unique ISO dates by 'YYYY-MM' → sorted day list
+function _dateGroups() {
+  const groups = {};
+  getUniqueColumnValues('date').forEach(iso => {
+    const key = iso.slice(0, 7);
+    (groups[key] = groups[key] || []).push(iso);
+  });
+  Object.values(groups).forEach(a => a.sort());
+  return groups;
+}
+
+function _monthLabel(key) {
+  const [y, m] = key.split('-').map(Number);
+  return `${TR_MONTHS[m-1] || m} ${y}`;
+}
+
+function renderDateFilterTree() {
+  const list = document.getElementById('fpDateList');
+  if (!list) return;
+  const groups = _dateGroups();
+  const keys = Object.keys(groups).sort();
+  if (keys.length === 0) {
+    list.innerHTML = '<div class="filter-list-empty">Bu sütunda gösterilecek tarih yok.</div>';
+    return;
+  }
+  const search = (document.getElementById('fpDateSearch')?.value || '').trim().toLocaleLowerCase('tr');
+  let html = '';
+  let any = false;
+  keys.forEach(key => {
+    const label = _monthLabel(key);
+    if (search && !label.toLocaleLowerCase('tr').includes(search)) return;
+    any = true;
+    const days = groups[key];
+    const selCount = days.filter(d => _dateSel.has(d)).length;
+    const allSel = selCount === days.length;
+    const expanded = search ? true : _dateExpanded.has(key); // aramada ayları açık göster
+    html += `<div class="filter-list-item section-header" style="cursor:default;">
+      <span data-toggle="${key}" style="cursor:pointer; width:14px; display:inline-block; text-align:center; user-select:none;">${expanded ? '▾' : '▸'}</span>
+      <input type="checkbox" class="fp-month-chk" data-mkey="${key}" ${allSel ? 'checked' : ''} data-ind="${!allSel && selCount > 0 ? '1' : ''}">
+      <span data-toggle="${key}" style="cursor:pointer; flex:1;">${esc(label)} (${days.length})</span>
+    </div>`;
+    if (expanded) {
+      days.forEach(iso => {
+        const dd = iso.slice(8, 10);
+        html += `<label class="filter-list-item" style="padding-left:34px;">
+          <input type="checkbox" class="fp-day-chk" value="${iso}" ${_dateSel.has(iso) ? 'checked' : ''}>
+          <span>${dd} ${esc(label)}</span>
+        </label>`;
+      });
+    }
+  });
+  list.innerHTML = any ? html : '<div class="filter-list-empty">Eşleşen ay yok.</div>';
+  // Apply indeterminate state (cannot be set via HTML attribute)
+  list.querySelectorAll('.fp-month-chk[data-ind="1"]').forEach(c => c.indeterminate = true);
+}
+
+function dateFilterSelectAll(on) {
+  if (on) _dateSel = new Set(getUniqueColumnValues('date'));
+  else _dateSel.clear();
+  renderDateFilterTree();
+}
+
 function filterApplyApply() {
   const { col, type } = _activeFilter;
   if (!col) return;
   if (!tableView.filters[col]) tableView.filters[col] = {};
   const f = tableView.filters[col];
   if (type === 'date') {
-    f.dateFrom = document.getElementById('fpDateFrom').value;
-    f.dateTo = document.getElementById('fpDateTo').value;
+    const all = getUniqueColumnValues('date');
+    const isAll = all.length === 0 || (all.every(v => _dateSel.has(v)) && _dateSel.size === all.length);
+    if (isAll) {
+      delete f.values;
+    } else {
+      f.values = Array.from(_dateSel);
+    }
+    delete f.dateFrom; delete f.dateTo; // eski aralık filtresi kalıntısını temizle
   } else if (type === 'number') {
     f.numFrom = document.getElementById('fpNumFrom').value;
     f.numTo = document.getElementById('fpNumTo').value;
@@ -1757,10 +1882,149 @@ async function exportExcel() {
   toast('Excel dosyası indirildi','success');
 }
 
+/* ========== Excel Import (ExcelJS) ========== */
+// Hücre değerini güvenle metin/sayı/tarih olarak çıkar (formül, richText, hyperlink destekli)
+function xlCellVal(cell) {
+  if (!cell) return '';
+  let v = cell.value;
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object' && !(v instanceof Date)) {
+    if (Array.isArray(v.richText)) return v.richText.map(t => t.text).join('');
+    if (v.formula !== undefined || v.sharedFormula !== undefined) v = (v.result === undefined || v.result === null) ? '' : v.result;
+    else if (v.text !== undefined) v = v.text;      // hyperlink
+    else if (v.error !== undefined) return '';       // #N/A vb.
+  }
+  return (v === null || v === undefined) ? '' : v;
+}
+
+// Tarih değerini ISO (yyyy-mm-dd) formatına çevir: Date nesnesi, Excel seri no, "dd.mm.yyyy", "yyyy-mm-dd"
+function xlToISODate(v) {
+  const p2 = n => String(n).padStart(2, '0');
+  if (v instanceof Date) return `${v.getUTCFullYear()}-${p2(v.getUTCMonth()+1)}-${p2(v.getUTCDate())}`;
+  if (typeof v === 'number' && v > 59) { // Excel seri tarih (1900 sistemi)
+    const d = new Date(Math.round((v - 25569) * 86400000));
+    return `${d.getUTCFullYear()}-${p2(d.getUTCMonth()+1)}-${p2(d.getUTCDate())}`;
+  }
+  const s = String(v || '').trim();
+  if (!s) return '';
+  let m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/);
+  if (m) return `${m[3]}-${p2(m[2])}-${p2(m[1])}`;
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${m[1]}-${p2(m[2])}-${p2(m[3])}`;
+  return '';
+}
+
+function xlToNumber(v) {
+  if (typeof v === 'number') return v;
+  const s = String(v || '').trim();
+  if (!s) return NaN;
+  // "1.234,56" (TR) ve "1234.56" biçimlerini destekle
+  if (/^\d{1,3}(\.\d{3})*(,\d+)?$/.test(s) || /^\d+(,\d+)$/.test(s)) {
+    return parseFloat(s.replace(/\./g, '').replace(',', '.'));
+  }
+  return parseFloat(s.replace(',', '.'));
+}
+
+async function importExcelFromFile(event) {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = ''; // aynı dosya tekrar seçilebilsin
+  if (!file) return;
+  if (state.entries.length > 0 && !confirm('Mevcut kayıtların üzerine Excel içeriği yüklenecek. Devam edilsin mi?')) return;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    const sh = wb.getWorksheet('Data Input') || wb.worksheets[0];
+    if (!sh) return toast('Excel içinde sayfa bulunamadı','error');
+
+    // --- Meta bilgileri (B1, B2, B3, T2, Y2) ---
+    const employee = String(xlCellVal(sh.getCell('B1')) || '').trim();
+    const monthISO = xlToISODate(xlCellVal(sh.getCell('B2')));
+    let fileName = String(xlCellVal(sh.getCell('B3')) || '').trim();
+    if (!fileName) fileName = file.name.replace(/\.xlsx$/i, '');
+    const eurUsd = xlToNumber(xlCellVal(sh.getCell('T2')));
+    const eurTry = xlToNumber(xlCellVal(sh.getCell('Y2')));
+
+    // --- Veri satırları (6. satırdan itibaren) ---
+    // Kolonlar: A tarih, B fiş no, C satıcı, D müşteri, E fabrika, F şehir,
+    //           G açıklama, H masraf türü, J birim, K alt birim, L tutar, M para birimi
+    // I (Account), N (TRY), O (EUR) formül kolonları — yeniden hesaplanır.
+    const entries = [];
+    const lastRow = Math.max(sh.rowCount || 0, 316);
+    for (let r = 6; r <= lastRow; r++) {
+      const row = sh.getRow(r);
+      const dateISO = xlToISODate(xlCellVal(row.getCell(1)));
+      const expenseType = String(xlCellVal(row.getCell(8)) || '').trim();
+      const rawAmount = xlCellVal(row.getCell(12));
+      const amount = xlToNumber(rawAmount);
+      // Boş satır: tarih, tür ve tutar yoksa atla
+      if (!dateISO && !expenseType && (rawAmount === '' || isNaN(amount))) continue;
+
+      entries.push({
+        date: dateISO,
+        invoiceNo: String(xlCellVal(row.getCell(2)) || '').trim(),
+        vendor: String(xlCellVal(row.getCell(3)) || '').trim(),
+        customer: String(xlCellVal(row.getCell(4)) || '').trim(),
+        factory: String(xlCellVal(row.getCell(5)) || '').trim(),
+        city: String(xlCellVal(row.getCell(6)) || '').trim(),
+        description: String(xlCellVal(row.getCell(7)) || '').trim(),
+        expenseType: expenseType,
+        unit: String(xlCellVal(row.getCell(10)) || '').trim(),
+        subUnit: String(xlCellVal(row.getCell(11)) || '').trim(),
+        amount: isNaN(amount) ? '' : amount,
+        currency: String(xlCellVal(row.getCell(13)) || '').trim().toUpperCase(),
+        totalTry: null,
+        totalEur: null,
+        account: ''
+      });
+    }
+
+    if (entries.length === 0) return toast('Excel dosyasında masraf kaydı bulunamadı','error');
+
+    state.meta = {
+      employee: employee || state.meta.employee || 'OKAN BULUT',
+      month: monthISO || '',
+      fileName: fileName,
+      eurTry: (!isNaN(eurTry) && eurTry > 0) ? eurTry : (state.meta.eurTry ?? 33),
+      eurUsd: (!isNaN(eurUsd) && eurUsd > 0) ? eurUsd : (state.meta.eurUsd ?? 1.1)
+    };
+    state.entries = entries;
+    state.editingIndex = -1;
+    state.currentSessionKey = fileName;
+    document.getElementById('sessionInfo').textContent = `Yüklendi: ${file.name}`;
+    refreshMetaInputs();
+    clearEntryForm();
+    cancelEdit();
+    clearFilters();
+    recalcAll();
+    toast(`"${file.name}" yüklendi (${entries.length} kayıt)`,'success');
+  } catch (err) {
+    toast('Excel dosyası okunamadı: ' + err.message,'error');
+  }
+}
+
+/* ========== Select-all on tap/click (mobile + desktop) ========== */
+function enableSelectAllOnFocus() {
+  document.querySelectorAll('.meta-grid input, .entry-grid input').forEach(inp => {
+    if (inp.type === 'date' || inp.type === 'file') return; // tarih alanında metin seçimi yok
+    const selectAll = () => {
+      if (!inp.value) return;
+      try { inp.select(); } catch (err) { /* bazı tarayıcılar number için kısıtlı olabilir */ }
+    };
+    // Odağa girerken seç (klavyeyle gezinme + mobil dokunuş)
+    inp.addEventListener('focus', () => setTimeout(selectAll, 0));
+    // Tıklamada da seç: masaüstünde mouseup seçimi bozmasın diye click sonrası uygula
+    inp.addEventListener('click', () => selectAll());
+    // iOS Safari için dokunma sonrası garanti
+    inp.addEventListener('touchend', () => setTimeout(selectAll, 0));
+  });
+}
+
 /* ========== Init ========== */
 window.addEventListener('DOMContentLoaded', ()=>{
   initCombos();
   bindMeta();
+  enableSelectAllOnFocus();
   refreshMetaInputs();
   renderTable();
   renderTotals();
