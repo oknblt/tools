@@ -128,6 +128,7 @@
     flex-direction: column;
     gap: 5px;
     position: relative;
+    min-width: 0; /* grid hücresinde içerik taşmasını önler (özellikle iOS tarih alanı) */
   }
   .field label {
     font-size: 11px;
@@ -146,6 +147,8 @@
     background: #fff;
     color: var(--text);
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
     transition: border-color .12s, box-shadow .12s;
   }
   input:focus, select:focus {
@@ -552,7 +555,7 @@
        row2 = month + filename, row3 = eur/try + eur/usd, row4 = buttons */
     .meta-grid {
       grid-template-columns: 1fr 1fr;
-      gap: 10px 10px;
+      gap: 12px 12px;
     }
     .meta-grid > .field:nth-child(1) { grid-column: span 2; }     /* employee */
     .meta-grid > .field:nth-child(2) { grid-column: span 1; }     /* month */
@@ -561,6 +564,34 @@
     .meta-grid > .field:nth-child(5) { grid-column: span 1; }     /* eur/usd */
     .meta-grid > .session-actions   { grid-column: span 2; justify-self: stretch; }
     .session-actions .btn-row { justify-content: flex-start; }
+
+    /* Üst menü: toplam kartları kenara yapışmasın, eşit genişlikte dursun */
+    .app { padding: 14px 12px 50px; }
+    header.top { padding: 18px 16px; }
+    header.top .totals { width: 100%; gap: 10px; }
+    .total-card { flex: 1; min-width: 0; padding: 10px 12px; }
+
+    /* iOS otomatik yakınlaşmayı engelle: odaklanabilir alanlar en az 16px olmalı */
+    input[type="text"], input[type="number"], input[type="date"], select,
+    .filter-search, .pg-select, .filter-pop-body input {
+      font-size: 16px;
+    }
+    /* iOS tarih alanını normalize et; içerik genişliği komşu alana taşmasın */
+    input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
+      min-height: 42px;
+      text-align: left;
+    }
+    .entry-grid { gap: 12px 12px; }
+  }
+  @media (max-width: 560px) {
+    /* Dar ekranda yapışıklığı önle: Masraf Ayı ve Dosya İsmi tam satır (kurlar kısa, yan yana kalır) */
+    .meta-grid > .field:nth-child(2) { grid-column: span 2; }
+    .meta-grid > .field:nth-child(3) { grid-column: span 2; }
+    /* Masraf formu alt alta tek sütun */
+    .entry-grid { grid-template-columns: 1fr; }
+    .entry-grid .span-2, .entry-grid .span-3, .entry-grid .span-6 { grid-column: span 1; }
   }
 </style>
 </head>
@@ -2045,6 +2076,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   document.addEventListener('click', e => {
     const pop = document.getElementById('filterPop');
     if (!pop.classList.contains('show')) return;
+    // Tarih ağacı genişletilirken liste yeniden çizilir ve tıklanan öğe DOM'dan kalkar;
+    // bu durumda "dışarı tıklandı" sanılıp pencere kapanmasın.
+    if (!document.body.contains(e.target)) return;
     if (e.target.closest('#filterPop') || e.target.closest('.filter-trigger')) return;
     pop.classList.remove('show');
   });
