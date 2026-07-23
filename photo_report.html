@@ -488,6 +488,7 @@ input[type="file"]{display:none;}
 
     <div class="status-message" id="statusMessage"></div>
     <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;margin-bottom:4px;">
+      <button class="btn btn-secondary" onclick="showSorterStart()" style="padding:5px 14px;font-size:11px;">&#8249; Back Page</button>
       <button class="btn btn-secondary" onclick="clearForm()" style="padding:5px 14px;font-size:11px;">&#128260; Clear All</button>
     </div>
     <div class="action-buttons">
@@ -1965,6 +1966,15 @@ function showConfirm(msg, onOk, okLabel) {
 
 /* ===================== FOLDERS ===================== */
 const FOLDERS = COMM_OPTIONS.filter(function(c){ return c !== 'Combined'; });
+/* Shortcut search: type the CAPITAL letters and the mapped label jumps to the top.
+   Add your own here as  SHORTCUT: 'Exact label name',  */
+const LABEL_SHORTCUTS = {
+  FE:'Fire extinguisher', EED:'Emergency exit door', EL:'Emergency lighting',
+  EES:'Emergency exit sign', FHC:'Fire hose cabinet', EP:'Electricity panel',
+  AP:'Assembly point', FA:'Fire alarm button', FAB:'First aid box',
+  FAM:'First aid materials', EWS:'Eye wash solutions', EWST:'Eye wash station',
+  NHWS:'Non-hazardous waste storage area', HWS:'Hazardous waste storage area'
+};
 let customFolders = [];   // user-added custom folders
 const MAX_SIDE = 1400, JPEG_Q = 0.82;
 
@@ -2124,14 +2134,27 @@ function renderFolderList(){
   let list;
   if(q){
     const ql = q.toLowerCase();
+    // ALL-CAPS query -> shortcut table first, then labels whose word initials match
+    const acr = [];
+    if(/^[A-Z]{2,}$/.test(q)){
+      const all = allFolders();
+      const sc = LABEL_SHORTCUTS[q];
+      if(sc){
+        const hit = all.find(f=>f.toLowerCase()===sc.toLowerCase());
+        if(hit) acr.push(hit);
+      }
+      const initials = f => f.split(/[\s\-\/]+/).filter(Boolean).map(w=>w.charAt(0).toUpperCase()).join('');
+      all.forEach(f=>{ if(acr.indexOf(f)===-1 && initials(f).startsWith(q)) acr.push(f); });
+    }
     const starts = [], wordStarts = [], contains = [];
     allFolders().forEach(f=>{
+      if(acr.indexOf(f)!==-1) return;
       const fl = f.toLowerCase();
       if(fl.startsWith(ql)) starts.push(f);
       else if(fl.split(/[\s-]+/).some(w=>w.startsWith(ql))) wordStarts.push(f);
       else if(fl.includes(ql)) contains.push(f);
     });
-    list = starts.concat(wordStarts, contains);
+    list = acr.concat(starts, wordStarts, contains);
     if(!list.length){
       html += '<button class="add-folder-btn" data-add="'+escapeHtml(q)+'">&#10133; Add new label "'+escapeHtml(q)+'"</button>';
     }
@@ -2677,6 +2700,17 @@ document.addEventListener('dblclick', e=>{ if(e.target.closest('#sorterApp')) e.
   }
   renderProgress();
 })();
+
+window.showSorterStart = function(){
+  document.getElementById('sorterApp').style.display = '';
+  if(photos.length){
+    const done = photos.length - unassignedCount();
+    const rb = $('resumeBtn');
+    rb.style.display = '';
+    rb.textContent = 'Resume ('+photos.length+' photos, '+done+' assigned)';
+  }
+  showScreen('startScreen'); renderProgress();
+};
 
 })();
 </script>
