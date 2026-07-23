@@ -406,9 +406,9 @@ input[type="file"]{display:none;}
         Rectangle
       </button>
       <div class="redact-colors" id="redactColors">
-        <button class="rcolor-btn active" data-color="#000000" style="background:#000" title="Black"></button>
+        <button class="rcolor-btn" data-color="#000000" style="background:#000" title="Black"></button>
         <button class="rcolor-btn" data-color="#ffffff" style="background:#fff" title="White"></button>
-        <button class="rcolor-btn" data-color="#888888" style="background:#888" title="Gray"></button>
+        <button class="rcolor-btn active" data-color="#888888" style="background:#888" title="Gray"></button>
         <button class="rcolor-btn custom" title="Custom color">
           <input type="color" id="customRedactColor" value="#ff0000">
         </button>
@@ -2317,8 +2317,8 @@ const canvasWrap    = document.getElementById('redactCanvasWrap');
 
 let redactState = {
   photoIdx: -1,
-  tool: null,          // no tool active by default — tap Brush/Rectangle to enable
-  color: '#000000',
+  tool: 'brush',       // brush + gray preselected for speed; session remembers changes
+  color: '#888888',
   brushSize: 30,
   drawing: false,
   rectStart: null,
@@ -2397,7 +2397,7 @@ function openPhotoEditor(p) {
   redactState.drawing = false;
   redactState.rectStart = null;
   _pinch = null;
-  setTool(null);
+  applyTool(redactState.tool);   // remembered tool (brush by default)
   document.getElementById('redactModalTitle').textContent = '\u270F Edit \u00B7 ' + (p.folder || ('Photo ' + (curIdx + 1)));
   const img = new Image();
   img.onload = () => {
@@ -2614,13 +2614,16 @@ redactCanvas.addEventListener('touchcancel', onTouchEnd, {passive:false});
 
 // Tools — OFF by default; tap to enable, tap the active one again to disable.
 // The brush-size slider only applies to the brush, so it hides for Rectangle.
-function setTool(tool) {
-  if (redactState.tool === tool) tool = null; // toggle off
+function applyTool(tool) {
   redactState.tool = tool;
   document.getElementById('toolBrush').classList.toggle('active', tool === 'brush');
   document.getElementById('toolRect').classList.toggle('active',  tool === 'rect');
   document.getElementById('brushSizeRow').style.display = tool === 'brush' ? 'flex' : 'none';
   redactCanvas.style.cursor = tool ? 'crosshair' : 'default';
+}
+function setTool(tool) {
+  if (redactState.tool === tool) tool = null; // toggle off
+  applyTool(tool);
 }
 document.getElementById('toolBrush').addEventListener('click', () => setTool('brush'));
 document.getElementById('toolRect').addEventListener('click',  () => setTool('rect'));
