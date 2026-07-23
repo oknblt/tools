@@ -70,6 +70,19 @@ button{font-family:inherit;border:none;cursor:pointer;}
 /* ---------- done ---------- */
 #doneScreen{justify-content:center;align-items:center;padding:24px;gap:12px;text-align:center;}
 #doneScreen h2{color:#1a3a5c;font-size:19px;}
+
+/* ---------- desktop ---------- */
+@media(min-width:700px){
+  #photoBox{height:48vh;}
+  .quick-row,.search-wrap{width:100%;max-width:780px;margin-left:auto;margin-right:auto;}
+  #folderList{width:100%;max-width:780px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:6px;align-content:start;}
+  .folder-btn{padding:6px 10px;font-size:13px;border-radius:8px;}
+  .add-folder-btn{padding:8px 10px;font-size:13px;grid-column:1 / -1;}
+  .list-label{grid-column:1 / -1;}
+  #reviewList{width:100%;max-width:1000px;margin:0 auto;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+  .rev-item .lbl{font-size:11px;}
+  .rev-bar{width:100%;max-width:1000px;margin:0 auto;}
+}
 #doneSummary{font-size:14px;color:#5a6b7d;line-height:1.5;max-height:30vh;overflow-y:auto;background:#fff;border-radius:10px;padding:10px 14px;width:100%;max-width:340px;text-align:left;}
 #zipStatus{font-size:13px;color:#5a6b7d;min-height:18px;}
 </style>
@@ -135,7 +148,6 @@ button{font-family:inherit;border:none;cursor:pointer;}
 </div>
 
 <script>
-if(sessionStorage.getItem('bulut_auth')!=='1') window.location.href='index.html';
 /* ===================== FOLDERS ===================== */
 const FOLDERS = [
 "Air conditioning","An employee with his PPE","Anti-slippery bands","Assembly point",
