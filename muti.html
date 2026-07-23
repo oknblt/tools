@@ -132,6 +132,7 @@ body.has-pfull #ccWrap{bottom:26px}
   <label><span>Yazı boyutu</span><input type="range" id="ccFs" min="14" max="40" value="21" oninput="ccApplySettings()"></label>
   <label><span>Arka plan</span><input type="range" id="ccOp" min="10" max="100" value="70" oninput="ccApplySettings()"></label>
   <label><span>Satır sayısı</span><input type="range" id="ccLines" min="1" max="5" value="2" oninput="ccApplySettings()"></label>
+  <label><span>Motor</span><select id="ccEngine" onchange="ccApplySettings()" style="background:#1a1a28;color:#fff;border:1px solid #333;border-radius:6px;padding:3px 6px"><option value="whisper">Whisper (isabetli)</option><option value="vosk">Vosk (anlık)</option></select></label>
   <label><span>Konuşma dili</span><select id="ccLang" onchange="ccApplySettings()" style="background:#1a1a28;color:#fff;border:1px solid #333;border-radius:6px;padding:3px 6px"><option value="en">İngilizce</option><option value="de">Almanca</option></select></label>
 </div>
 <div class="channel-nav" id="channelNav">
@@ -158,13 +159,12 @@ if(sessionStorage.getItem('bulut_auth')!=='1') window.location.href='index.html'
 var TV_CHANNELS = {
   "": { url: "", source: "" },
 
-
   "Halk TV":      { url: "https://halktv-live.daioncdn.net/halktv/halktv.m3u8", source: "IPTV" },
   "NTV":          { url: "https://dygvideo.dygdigital.com/live/hls/ntv4puhu", source: "IPTV" },
   "Sözcü TV":     { url: "https://trn03.tulix.tv/gt-sozcu-tv/playlist.m3u8", source: "IPTV" },
   "Haber Global": { url: "https://tv.ensonhaber.com/haberglobal/haberglobal.m3u8", source: "IPTV" },
   "Habertürk":    { url: "https://tv.ensonhaber.com/haberturk/haberturk.m3u8", source: "IPTV" },
-  "TV 100":       { url: "https://ensonhaber-live.ercdn.net/tv100/tv100.m3u8", source: "IPTV" },
+  "TV 100":       { url: "https://tv100-live.daioncdn.net/tv100/tv100_1080p.m3u8", source: "IPTV" },
   "Bloomberg HT":       { url: "https://tatatam.trt1sultanfatihss.workers.dev/https://ciner.daioncdn.net/bloomberght/bloomberght_720p.m3u8", source: "IPTV" },
   "CNN": { url: "https://d3fzntptkfpmvg.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-6rc4k0y56fezj/CNNFAST_GB.m3u8", source: "IPTV" },
   "BBC News":     { url: "https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn%3abbc%3apips%3aservice%3abbc_news_channel_hd/t=3840/v=pv14/b=5070016/main.m3u8", source: "IPTV" },
@@ -214,7 +214,6 @@ var TV_CHANNELS = {
   "BRTV":         { url: "https://live.artidijitalmedya.com/artidijital_brtv/brtv/playlist.m3u8", source: "IPTV" },
   "Euro D":       { url: "https://live.duhnet.tv/S2/HLS_LIVE/eurodnp/track_4_1000/playlist.m3u8", source: "IPTV" },
   "KTV":        { url: "http://cdn-konultvazerbaijan.yayin.com.tr/konultvazerbaijan/konultvazerbaijan/playlist.m3u8", source: "IPTV" },
-  "HBO":        { url: "http://38.52.208.106:8000/play/a00k/index.m3u8", source: "IPTV" },
   "Kanal D Romanya": { url: "https://stream1.kanald.ro/iphone/knd-live.m3u8", source: "IPTV" },
   "Kanal D Drama":     { url: "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01602-themahqfrance-vivekanald-samsungspain/playlist.m3u8", source: "IPTV" },
   "Beyaz TV":     { url: "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_1080p.m3u8", source: "IPTV" },
@@ -237,7 +236,7 @@ var TV_CHANNELS = {
   "NR1 Turk":     { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/playlist.m3u8", source: "IPTV" },
   "NR1 Dance":    { url: "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8", source: "IPTV" },
   "Deluxe Music":    { url: "https://sdn-global-live-streaming-packager-cache.3qsdn.com/13456/13456_264_live.m3u8", source: "IPTV" },
-  "MTV":    { url: "http://c3921155.edmonst.net/iptv/42L7TCH8YYKLBRHNPV52HBRN/31344/index.m3u8", source: "IPTV" },
+  "Deluxe Dance":    { url: "http://c3921155.edmonst.net/iptv/42L7TCH8YYKLBRHNPV52HBRN/31344/index.m3u8", source: "IPTV" },
   "Vevo 2K":    { url: "https://d1s6jz7jeei17.cloudfront.net/playlist/amg00056-vevotv-vevo2kau-samsungau/playlist.m3u8", source: "IPTV" },
   "Fun Vision":      { url: "https://funradiovisionhd.vedge.infomaniak.com/livecast/ik:funradiovisionhd/manifest.m3u8", source: "IPTV" },
   "Latin Zone TV":          { url: "https://cdn.streamingcpanel.com:3784/live/latinzonetvlive.m3u8", source: "IPTV" },
@@ -267,9 +266,9 @@ var TV_CHANNELS = {
 var CHANNEL_GROUPS = [
   { label: "Haber", channels: ["Halk TV","NTV","Haber Global", "Habertürk","TV 100", "Bloomberg HT", "CNN","BBC News","DW TV English","Bloomberg", "France 24 English","France 24 French","BFM TV", "Canal 32", "WDR Fernsehen", "Baden TV", "Alex Berlin", "München TV", "Top Sci-Fi", "Das Erste HD","hr fernsehen", "EchtJetzt TV", "Baku TV", "A TV", "Red CCTV", "BBC Earth", "Wonder", "Mythbusters", "National Geographic", "National Geographic Wild", "Tele 1"] },
   { label: "TRT", channels: ["TRT 1","TRT 2","TRT Haber","TRT Spor","TRT Spor Yildiz","TRT Belgesel","TRT Muzik", "TRT Genç", "TRT World"] },
-  { label: "Ulusal", channels: ["NOW","Kanal D","Show TV","Star TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","KTV", "HBO", "Kanal D Romanya", "Kanal D Drama", "Beyaz TV", "A2"] },
+  { label: "Ulusal", channels: ["NOW","Kanal D","Show TV","Star TV","ATV","CNBC-e","TV8","TV8,5","Teve2","360","BRTV","KTV", "Kanal D Romanya", "Kanal D Drama", "Beyaz TV", "A2"] },
   { label: "Spor", channels: ["HT Spor","A Spor", "beIN SPORTS XTRA", "Arena Sport", "Fifa", "Redbull TV","MTRSPT 1", "Motorvision"] },
-  { label: "Eglence", channels: ["FTV","Fashion One", "Power TV","Powertürk","Powertürk Akustik", "NR1","NR1 Turk","NR1 Dance", "Deluxe Music", "MTV", "Vevo 2K", "Fun Vision", "Latin Zone TV", "Radio Kiss Kiss", "Generations TV","DBM TV", "Beach TV", "Kepez TV","Avia Stream","Fire","Summer", "Kamintv", "Relaxon","Dozhditv","Terrasatv", "Nature", "Winter", "SvetVokrugtv", "GornayaDolina", "Komnata", "Beach TV CSULB","Beach TV Panama City" ] }
+  { label: "Eglence", channels: ["FTV","Fashion One", "Power TV","Powertürk","Powertürk Akustik", "NR1","NR1 Turk","NR1 Dance", "Deluxe Music", "Deluxe Dance", "Vevo 2K", "Fun Vision", "Latin Zone TV", "Radio Kiss Kiss", "Generations TV","DBM TV", "Beach TV", "Kepez TV","Avia Stream","Fire","Summer", "Kamintv", "Relaxon","Dozhditv","Terrasatv", "Nature", "Winter", "SvetVokrugtv", "GornayaDolina", "Komnata", "Beach TV CSULB","Beach TV Panama City" ] }
 ];
 
 // ================================================================
@@ -1193,9 +1192,18 @@ function handleRemoteCommand(cmd) {
 // ================================================================
 var cc = {
   on:false, en:true, tr:false, fs:21, op:70, lines:2, lang:'en',
+  engine:'whisper',           // 'whisper' (accurate) | 'vosk' (streaming)
   ctx:null, mixer:null, proc:null,
   worker:null, ready:false, pending:false, busy:false,
+  voskModel:null, voskModelUrl:'', voskRec:null, voskReady:false, voskLoading:false,
+  partial:'',                 // Vosk's live in-progress words
   buf:[], bufLen:0, enSegs:[], trSegs:[], lastText:'', lastRender:0
+};
+// Vosk streaming models (free, CORS-enabled hosting from the
+// vosk-browser project). ~45MB each, cached after first download.
+var VOSK_MODELS = {
+  en: 'https://ccoreilly.github.io/vosk-browser/models/vosk-model-small-en-us-0.15.tar.gz',
+  de: 'https://ccoreilly.github.io/vosk-browser/models/vosk-model-small-de-0.15.tar.gz'
 };
 var CC_CHUNK_SEC = 7;      // start recognizing after this much audio
 var CC_MAX_SEND_SEC = 10;  // never feed bigger pieces (big pieces cause
@@ -1260,12 +1268,22 @@ function ccApplySettings() {
   var newLang = document.getElementById('ccLang').value;
   var langChanged = (newLang !== cc.lang);
   cc.lang = newLang;
+  var newEngine = document.getElementById('ccEngine').value;
+  var engineChanged = (newEngine !== cc.engine);
+  cc.engine = newEngine;
   var w = document.getElementById('ccWrap');
   w.style.setProperty('--cc-fs', cc.fs + 'px');
   w.style.setProperty('--cc-op', (cc.op / 100));
   w.style.setProperty('--cc-lines', cc.lines);
-  try { localStorage.setItem('ccSettings', JSON.stringify({en:cc.en,tr:cc.tr,fs:cc.fs,op:cc.op,lines:cc.lines,lang:cc.lang})); } catch(e){}
-  if (langChanged && cc.worker) { ccClearText(); ccLoadModel(); }
+  try { localStorage.setItem('ccSettings', JSON.stringify({en:cc.en,tr:cc.tr,fs:cc.fs,op:cc.op,lines:cc.lines,lang:cc.lang,engine:cc.engine})); } catch(e){}
+  if ((langChanged || engineChanged) && cc.on && cc.ctx && cc.ctx.state === 'running') {
+    ccClearText(); cc.partial = '';
+    if (cc.engine === 'vosk') ccVoskLoad();
+    else if (cc.worker) ccLoadModel();
+    else ccStart();
+  } else if (langChanged && cc.worker && cc.engine === 'whisper') {
+    ccClearText(); ccLoadModel();
+  }
   ccUiSync();
 }
 
@@ -1279,6 +1297,7 @@ function ccLoadSettings() {
       document.getElementById('ccOp').value = s.op || 70;
       document.getElementById('ccLines').value = s.lines || 2;
       if (s.lang) document.getElementById('ccLang').value = s.lang;
+      if (s.engine) document.getElementById('ccEngine').value = s.engine;
     }
   } catch(e){}
   ccApplySettings();
@@ -1320,6 +1339,66 @@ function ccLoadModel() {
   cc.worker.postMessage({ type: 'load', model: ccModelFor(cc.lang) });
 }
 
+function ccLoadScript(src) {
+  return new Promise(function(res, rej) {
+    var s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+// ---- Vosk: true STREAMING recognition (~1s latency) ----
+async function ccVoskLoad() {
+  if (cc.voskLoading) return;
+  cc.voskLoading = true;
+  cc.voskReady = false;
+  ccStatus('Vosk modeli y\u00FCkleniyor\u2026 (ilk sefer ~45MB)');
+  try {
+    if (!window.Vosk) {
+      await ccLoadScript('https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js');
+    }
+    var url = VOSK_MODELS[cc.lang] || VOSK_MODELS.en;
+    if (cc.voskModelUrl !== url || !cc.voskModel) {
+      if (cc.voskModel) { try { cc.voskModel.terminate(); } catch(e){} }
+      cc.voskModel = await Vosk.createModel(url);
+      cc.voskModelUrl = url;
+    }
+    var rec = new cc.voskModel.KaldiRecognizer(cc.ctx.sampleRate);
+    rec.on('partialresult', function(m) {
+      var p = (m && m.result && m.result.partial) || '';
+      if (!cc.on || cc.engine !== 'vosk') return;
+      cc.partial = p;
+      if (p) ccRender(true); // live words; also keeps auto-clear at bay
+    });
+    rec.on('result', async function(m) {
+      var t = ((m && m.result && m.result.text) || '').trim();
+      if (!cc.on || cc.engine !== 'vosk') return;
+      cc.partial = '';
+      if (t && t !== cc.lastText) {
+        cc.lastText = t;
+        cc.enSegs.push(t); if (cc.enSegs.length > 2) cc.enSegs.shift();
+        ccRender(true);
+        if (cc.tr) { // translate only finished utterances
+          var tr = await ccTranslate(t);
+          if (tr) { cc.trSegs.push(tr); if (cc.trSegs.length > 2) cc.trSegs.shift(); ccRender(true); }
+        }
+      } else {
+        ccRender(false);
+      }
+    });
+    cc.voskRec = rec;
+    cc.voskReady = true;
+    if (cc.on && cc.engine === 'vosk') ccStatus('\uD83C\uDFA7 Dinleniyor (anl\u0131k)\u2026');
+  } catch (err) {
+    ccStatus('Vosk y\u00FCklenemedi \u2014 Whisper\u2019a d\u00F6n\u00FCld\u00FC');
+    cc.engine = 'whisper';
+    var sel = document.getElementById('ccEngine');
+    if (sel) sel.value = 'whisper';
+    setTimeout(function(){ if (cc.on) ccStart(); }, 1200);
+  }
+  cc.voskLoading = false;
+}
+
 async function ccStart() {
   // Audio graph needs a running AudioContext; browsers require a user
   // gesture to start one. The header CC button IS a gesture; a remote
@@ -1342,6 +1421,8 @@ async function ccStart() {
   cc.pending = false;
   ccAttachBoxes();
   ccUpdateTaps();
+
+  if (cc.engine === 'vosk') { ccVoskLoad(); return; }
 
   if (!cc.worker) {
     try {
@@ -1416,7 +1497,13 @@ function ccPlace() {
 }
 
 function ccOnAudio(ev) {
-  if (!cc.on || !cc.ready) return;
+  if (!cc.on) return;
+  if (cc.engine === 'vosk') {
+    if (!cc.voskReady || !cc.voskRec) return;
+    try { cc.voskRec.acceptWaveform(ev.inputBuffer); } catch(e){}
+    return;
+  }
+  if (!cc.ready) return;
   var d = ev.inputBuffer.getChannelData(0);
   cc.buf.push(new Float32Array(d));
   cc.bufLen += d.length;
@@ -1491,7 +1578,8 @@ async function ccResult(text) {
 
 function ccRender(isNew) {
   if (isNew) cc.lastRender = Date.now();
-  var en = cc.enSegs.join(' '), tr = cc.trSegs.join(' ');
+  var en = cc.enSegs.join(' ') + (cc.partial ? ' ' + cc.partial : '');
+  var tr = cc.trSegs.join(' ');
   document.getElementById('ccEn').innerHTML = '<div>' + ccEsc(en.slice(-400)) + '</div>';
   document.getElementById('ccTr').innerHTML = '<div>' + ccEsc(tr.slice(-400)) + '</div>';
 }
