@@ -1559,6 +1559,115 @@ function detectDocQuad(imgData, sw, sh){
   return null;
 }
 
+/* ═══ Full-resolution edge refinement ═══
+ * The quad found at 520px can drift 5-15px when scaled back to the
+ * original image. For each side of the quad we scan perpendicular to the
+ * line in the full-resolution image, locate the strongest gradient
+ * (sub-pixel, parabola fit), re-fit the line robustly through those
+ * points, and take the new corners from the intersections of the four
+ * refined lines. Corners that would move implausibly far are kept as-is. */
+function fitLineTLS(xs, ys){
+  const n = xs.length;
+  let mx=0, my=0;
+  for(let i=0;i<n;i++){ mx+=xs[i]; my+=ys[i]; }
+  mx/=n; my/=n;
+  let sxx=0, sxy=0, syy=0;
+  for(let i=0;i<n;i++){
+    const dx=xs[i]-mx, dy=ys[i]-my;
+    sxx+=dx*dx; sxy+=dx*dy; syy+=dy*dy;
+  }
+  const tr2=(sxx+syy)/2, det=sxx*syy-sxy*sxy;
+  const lam = tr2 - Math.sqrt(Math.max(0, tr2*tr2-det)); // smaller eigenvalue
+  let a = sxy, b = lam - sxx;
+  if(Math.abs(a)<1e-9 && Math.abs(b)<1e-9){ a = lam - syy; b = sxy; }
+  if(Math.abs(a)<1e-9 && Math.abs(b)<1e-9){ a = 0; b = 1; }
+  const nl = Math.hypot(a,b);
+  a/=nl; b/=nl;
+  return { a, b, c: -(a*mx + b*my) };
+}
+
+function refineQuadOnData(q, data, w, h){
+  const lum = (x,y)=>{
+    x = x<0?0:(x>=w?w-1:x|0);
+    y = y<0?0:(y>=h?h-1:y|0);
+    const i = (y*w+x)*4;
+    return 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+  };
+  const R = Math.max(6, Math.min(28, Math.round(Math.max(w,h)*0.018)));
+  const sides = [['tl','tr'],['tr','br'],['br','bl'],['bl','tl']];
+  const lines = [];
+  for(const [ka,kb] of sides){
+    const A=q[ka], B=q[kb];
+    const dx=B.x-A.x, dy=B.y-A.y;
+    const len=Math.hypot(dx,dy)||1;
+    const nx=-dy/len, ny=dx/len;   // unit normal
+    const grad = (cx,cy,s)=>Math.abs(
+      lum(cx+(s+1.5)*nx, cy+(s+1.5)*ny) - lum(cx+(s-1.5)*nx, cy+(s-1.5)*ny));
+    const M=26, px=[], py=[];
+    for(let m=0;m<M;m++){
+      const t=0.08+0.84*m/(M-1);
+      const cx=A.x+dx*t, cy=A.y+dy*t;
+      let bestS=0, bestG=-1;
+      for(let s=-R;s<=R;s++){
+        const g=grad(cx,cy,s);
+        if(g>bestG){ bestG=g; bestS=s; }
+      }
+      if(bestG<12) continue;
+      const g0=grad(cx,cy,bestS-1), g2=grad(cx,cy,bestS+1);
+      let sub=bestS;
+      const den=g0-2*bestG+g2;
+      if(Math.abs(den)>1e-6) sub=bestS+0.5*(g0-g2)/den;
+      px.push(cx+sub*nx); py.push(cy+sub*ny);
+    }
+    if(px.length>=9){
+      let L=fitLineTLS(px,py);
+      const d=px.map((_,i)=>Math.abs(L.a*px[i]+L.b*py[i]+L.c));
+      const med=d.slice().sort((x,y)=>x-y)[d.length>>1]||0;
+      const kx=[],ky=[];
+      for(let i=0;i<px.length;i++)
+        if(d[i]<=Math.max(1.5, med*2.5)){ kx.push(px[i]); ky.push(py[i]); }
+      if(kx.length>=8) L=fitLineTLS(kx,ky);
+      lines.push(L);
+    } else {
+      lines.push({ a:nx, b:ny, c:-(nx*A.x+ny*A.y) });
+    }
+  }
+  const inter=(L1,L2)=>{
+    const d=L1.a*L2.b-L2.a*L1.b;
+    if(Math.abs(d)<1e-9) return null;
+    return { x:(L1.b*L2.c-L2.b*L1.c)/d, y:(L2.a*L1.c-L1.a*L2.c)/d };
+  };
+  const cTL=inter(lines[3],lines[0]), cTR=inter(lines[0],lines[1]);
+  const cBR=inter(lines[1],lines[2]), cBL=inter(lines[2],lines[3]);
+  if(!cTL||!cTR||!cBR||!cBL) return null;
+  const lim=2*R;
+  const keep=(nw,old)=>(nw && Math.hypot(nw.x-old.x,nw.y-old.y)<=lim) ? nw : old;
+  return { tl:keep(cTL,q.tl), tr:keep(cTR,q.tr), br:keep(cBR,q.br), bl:keep(cBL,q.bl) };
+}
+
+const REFINE_MAX = 2600;
+function refineQuadOnImage(fq, img){
+  try{
+    const scale=Math.min(1, REFINE_MAX/Math.max(img.width,img.height));
+    const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+    const c=document.createElement('canvas');
+    c.width=w; c.height=h;
+    const ctx=c.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    const data=ctx.getImageData(0,0,w,h).data;
+    const sq={};
+    for(const k of ['tl','tr','bl','br']) sq[k]={x:fq[k].x*scale, y:fq[k].y*scale};
+    const rq=refineQuadOnData(sq, data, w, h);
+    if(!rq) return fq;
+    const inv=1/scale, out={};
+    for(const k of ['tl','tr','bl','br']){
+      out[k]={ x:Math.max(0,Math.min(img.width,  Math.round(rq[k].x*inv))),
+               y:Math.max(0,Math.min(img.height, Math.round(rq[k].y*inv))) };
+    }
+    return out;
+  }catch(err){ return fq; }
+}
+
 function autoCrop(){
   tool='crop'; rRect=null; brushPoints=[];
   document.querySelectorAll('.etbtn').forEach(b=>b.classList.remove('on'));
@@ -1592,6 +1701,7 @@ function autoCrop(){
           bl:{x:cl(result.bl.x,img.width), y:cl(result.bl.y,img.height)},
           br:{x:cl(result.br.x,img.width), y:cl(result.br.y,img.height)},
         };
+        quad=refineQuadOnImage(quad,img);   // tam çözünürlükte kenara oturt
       } else {
         // Fallback: full image with small margin
         const m=Math.round(Math.min(img.width,img.height)*0.02);
@@ -1855,12 +1965,13 @@ function autoCropPage(idx, cb){
 
       const S=1/scale;
       const cl=(v,m)=>Math.max(0,Math.min(m,Math.round(v*S)));
-      const fq={
+      let fq={
         tl:{x:cl(q.tl.x,img.width), y:cl(q.tl.y,img.height)},
         tr:{x:cl(q.tr.x,img.width), y:cl(q.tr.y,img.height)},
         bl:{x:cl(q.bl.x,img.width), y:cl(q.bl.y,img.height)},
         br:{x:cl(q.br.x,img.width), y:cl(q.br.y,img.height)},
       };
+      fq=refineQuadOnImage(fq,img);   // tam çözünürlükte kenara oturt
 
       // Neredeyse tam kadraj bulunduysa (muhtemelen zaten kırpılmış) dokunma
       const mrg=Math.min(img.width,img.height)*0.015;
