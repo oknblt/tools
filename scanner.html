@@ -564,13 +564,11 @@ function loadAndFix(file, cb){
         const sc=Math.min(1, SCAN_MAX_SIDE/Math.max(w,h));
         const dw=Math.round(w*sc), dh=Math.round(h*sc);
         const c=document.createElement('canvas');
-        c.width=dh; c.height=dw;   // rotated 90 degrees left, as before
+        c.width=dw; c.height=dh;   // browser already delivers the photo upright (EXIF applied natively)
         const ctx=c.getContext('2d');
         ctx.imageSmoothingEnabled=true;
         try{ ctx.imageSmoothingQuality='high'; }catch(err){}
-        ctx.translate(c.width/2, c.height/2);
-        ctx.rotate(-Math.PI/2);
-        ctx.drawImage(img, -dw/2, -dh/2, dw, dh);
+        ctx.drawImage(img, 0, 0, dw, dh);
         cb(c.toDataURL('image/jpeg',0.92));
       }catch(err){
         autoRotLeft(e.target.result,cb);
