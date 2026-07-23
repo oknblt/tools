@@ -36,9 +36,16 @@ button{font-family:inherit;border:none;cursor:pointer;}
 #photoBox .badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:3px 9px;border-radius:10px;}
 #photoBox .assigned-tag{position:absolute;bottom:8px;left:8px;right:8px;background:rgba(26,58,92,.9);color:#fff;font-size:13px;font-weight:600;padding:5px 10px;border-radius:8px;text-align:center;display:none;}
 .quick-row{display:flex;gap:6px;padding:8px 10px 0 10px;flex-shrink:0;}
-.quick-row button{flex:1;padding:10px 6px;border-radius:10px;font-size:13px;font-weight:700;}
-#sameBtn{background:#0d7a4f;color:#fff;flex:2.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-#sameBtn:disabled{background:#b9c4cf;}
+.quick-row button{flex:1;padding:10px 4px;border-radius:10px;font-size:12px;font-weight:700;}
+#sameBtn{background:#fff;color:#1a3a5c;border:1.5px solid #b9c4cf;flex:1.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#sameBtn:disabled{opacity:.5;}
+#sameBtn.tapped{background:#0d7a4f;color:#fff;border-color:#0d7a4f;}
+#removeBtn{background:#fff;color:#a03325;border:1.5px solid #d9a79f;}
+.folder-btn.tapped,.add-folder-btn.tapped{background:#0d7a4f;color:#fff;border-color:#0d7a4f;}
+.folder-btn.tapped b{color:#fff;}
+.nav-arrow{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.35);color:#fff;font-size:24px;line-height:1;width:34px;height:46px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0;}
+#prevArrow{left:6px;}
+#nextArrow{right:6px;}
 #undoBtn{background:#fff;color:#1a3a5c;border:1.5px solid #b9c4cf;}
 #skipBtn{background:#fff;color:#1a3a5c;border:1.5px solid #b9c4cf;}
 .search-wrap{padding:8px 10px;flex-shrink:0;}
@@ -92,11 +99,14 @@ button{font-family:inherit;border:none;cursor:pointer;}
     <img id="curPhoto" alt="">
     <div class="badge" id="photoBadge"></div>
     <div class="assigned-tag" id="assignedTag"></div>
+    <button class="nav-arrow" id="prevArrow">&#8249;</button>
+    <button class="nav-arrow" id="nextArrow">&#8250;</button>
   </div>
   <div class="quick-row">
-    <button id="undoBtn">&#8617; Undo</button>
-    <button id="sameBtn" disabled>Same as previous</button>
-    <button id="skipBtn">Skip &#8250;</button>
+    <button id="undoBtn">&#8617;</button>
+    <button id="sameBtn" disabled>Same</button>
+    <button id="skipBtn">Skip</button>
+    <button id="removeBtn">Remove</button>
   </div>
   <div class="search-wrap">
     <input type="text" id="search" placeholder="Search folders (type first letters)..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -281,7 +291,12 @@ function undo(){
   photos[i].folder = u.prevFolder; savePhoto(photos[i]);
   curIdx = i; renderAll();
 }
-function skip(){ gotoNextUnassigned(); renderAll(); }
+function skip(){
+  for(let i=curIdx+1;i<photos.length;i++){
+    if(!photos[i].folder){ curIdx=i; renderAll(); return; }
+  }
+  openReview();
+}
 
 /* ===================== SEARCH + FOLDER LIST ===================== */
 function allFolders(){ return FOLDERS.concat(customFolders); }
@@ -331,32 +346,60 @@ function renderFolderList(){
   });
   box.innerHTML = html;
 }
+let assigning = false;
 $('folderList').addEventListener('click', e=>{
+  if(assigning) return;
   const add = e.target.closest('[data-add]');
-  if(add){
-    const name = add.getAttribute('data-add');
-    if(!allFolders().includes(name)){ customFolders.push(name); saveMeta(); }
-    assign(name); return;
-  }
-  const btn = e.target.closest('[data-f]');
-  if(btn) assign(btn.getAttribute('data-f'));
+  const btn = add || e.target.closest('[data-f]');
+  if(!btn) return;
+  const name = add ? add.getAttribute('data-add') : btn.getAttribute('data-f');
+  assigning = true;
+  btn.classList.add('tapped');
+  setTimeout(()=>{
+    assigning = false;
+    if(add && !allFolders().includes(name)){ customFolders.push(name); saveMeta(); }
+    assign(name);
+  }, 250);
 });
 $('search').addEventListener('input', renderFolderList);
 $('undoBtn').addEventListener('click', undo);
 $('skipBtn').addEventListener('click', skip);
-$('sameBtn').addEventListener('click', ()=>{ if(lastFolder) assign(lastFolder); });
+$('sameBtn').addEventListener('click', function(){
+  if(!lastFolder || assigning) return;
+  assigning = true;
+  this.classList.add('tapped');
+  setTimeout(()=>{
+    assigning = false;
+    this.classList.remove('tapped');
+    assign(lastFolder);
+  }, 250);
+});
+$('removeBtn').addEventListener('click', ()=>{
+  if(curIdx<0 || !photos[curIdx]) return;
+  if(!confirm('Remove this photo?')) return;
+  const p = photos[curIdx];
+  URL.revokeObjectURL(p.url);
+  dbDel('photos', p.id);
+  photos.splice(curIdx,1);
+  undoStack = undoStack.filter(u=>u.photoId!==p.id);
+  if(!photos.length){ showScreen('startScreen'); renderProgress(); return; }
+  if(curIdx>=photos.length) curIdx = photos.length-1;
+  renderAll();
+});
+$('prevArrow').addEventListener('click', ()=>{ if(curIdx>0){ curIdx--; renderAll(); } });
+$('nextArrow').addEventListener('click', ()=>{ if(curIdx<photos.length-1){ curIdx++; renderAll(); } });
 
 /* ===================== RENDERING ===================== */
 function renderSorter(){
   if(curIdx<0 || !photos[curIdx]) return;
   const p = photos[curIdx];
   $('curPhoto').src = p.url;
-  $('photoBadge').textContent = 'Photo '+(p.order+1)+' / '+photos.length;
+  $('photoBadge').textContent = 'Photo '+(curIdx+1)+' / '+photos.length;
   const tag = $('assignedTag');
-  if(p.folder){ tag.style.display='block'; tag.textContent = '✓ '+p.folder+' (tap a new folder to change)'; }
+  if(p.folder){ tag.style.display='block'; tag.textContent = '✓ '+p.folder; }
   else tag.style.display='none';
   $('sameBtn').disabled = !lastFolder;
-  $('sameBtn').textContent = lastFolder ? ('Same as previous: '+lastFolder) : 'Same as previous';
+  $('sameBtn').textContent = lastFolder ? ('Same: '+lastFolder) : 'Same';
   $('undoBtn').disabled = !undoStack.length;
 }
 function renderProgress(){
@@ -418,7 +461,6 @@ $('zipBtn').addEventListener('click', async ()=>{
     order.forEach(f=>{
       g[f].forEach((p,i)=>{
         const name = i===0 ? (f+'.jpg') : (f+'_'+(i+1)+'.jpg');
-        zip.folder(f).file(name, p.blob);
         zip.folder('Combined').file(name, p.blob);
       });
     });
