@@ -16,16 +16,19 @@ button{font-family:inherit;border:none;cursor:pointer;}
 .top .title{font-size:15px;font-weight:700;}
 .top .prog{font-size:13px;background:rgba(255,255,255,.15);padding:4px 10px;border-radius:12px;white-space:nowrap;}
 .top .icon-btn{background:rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;}
+.brand{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.top-btns{display:flex;gap:6px;flex:1;justify-content:flex-end;}
+.logo{display:none;}
 
 /* ---------- screens ---------- */
-.screen{flex:1;display:none;flex-direction:column;overflow:hidden;}
+.screen{flex:1;display:none;flex-direction:column;overflow:hidden;min-height:0;}
 .screen.active{display:flex;}
 
 /* ---------- start ---------- */
 #startScreen{justify-content:center;align-items:center;padding:24px;gap:14px;text-align:center;}
 #startScreen h1{font-size:20px;color:#1a3a5c;}
 #startScreen p{font-size:14px;color:#5a6b7d;max-width:320px;line-height:1.5;}
-.big-btn{background:#1a3a5c;color:#fff;font-size:16px;font-weight:700;padding:16px 28px;border-radius:12px;width:100%;max-width:340px;}
+.big-btn{background:#1a3a5c;color:#fff;font-size:15px;font-weight:700;padding:12px 20px;border-radius:10px;width:100%;max-width:300px;}
 .big-btn.secondary{background:#fff;color:#1a3a5c;border:2px solid #1a3a5c;}
 .big-btn:disabled{opacity:.5;}
 #ingestStatus{font-size:13px;color:#5a6b7d;}
@@ -49,7 +52,7 @@ button{font-family:inherit;border:none;cursor:pointer;}
 #undoBtn{background:#fff;color:#1a3a5c;border:1.5px solid #b9c4cf;}
 #skipBtn{background:#fff;color:#1a3a5c;border:1.5px solid #b9c4cf;}
 .search-wrap{padding:8px 10px;flex-shrink:0;}
-#search{width:100%;font-size:16px;padding:12px 14px;border:2px solid #1a3a5c;border-radius:12px;background:#fff;outline:none;}
+#search{width:100%;font-size:16px;padding:9px 12px;border:2px solid #1a3a5c;border-radius:10px;background:#fff;outline:none;}
 #folderList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 10px 14px 10px;display:flex;flex-direction:column;gap:6px;}
 .folder-btn{background:#fff;border:1px solid #d5dde5;border-radius:10px;padding:12px 14px;font-size:15px;text-align:left;color:#1c2733;flex-shrink:0;}
 .folder-btn b{color:#0d7a4f;}
@@ -59,9 +62,9 @@ button{font-family:inherit;border:none;cursor:pointer;}
 .list-label{font-size:12px;font-weight:700;color:#8394a5;text-transform:uppercase;letter-spacing:.5px;padding:6px 2px 0 2px;flex-shrink:0;}
 
 /* ---------- review ---------- */
-#reviewList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-content:start;}
+#reviewList{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-content:start;grid-auto-rows:max-content;}
 .rev-item{background:#fff;border-radius:10px;overflow:hidden;border:1px solid #d5dde5;position:relative;}
-.rev-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block;}
+.rev-item img{width:100%;height:110px;object-fit:cover;display:block;}
 .rev-item .lbl{font-size:10px;padding:4px 5px;line-height:1.25;color:#1c2733;min-height:30px;word-break:break-word;}
 .rev-item.unassigned .lbl{color:#c0392b;font-weight:700;}
 .rev-bar{padding:10px;flex-shrink:0;display:flex;gap:8px;}
@@ -73,7 +76,10 @@ button{font-family:inherit;border:none;cursor:pointer;}
 
 /* ---------- desktop ---------- */
 @media(min-width:700px){
-  #photoBox{height:48vh;}
+  .top{padding:5px 12px;}
+  .logo{display:inline-block;font-size:10px;letter-spacing:1.6px;font-weight:800;color:#cfe3f7;border:1px solid rgba(255,255,255,.4);padding:3px 8px;border-radius:6px;white-space:nowrap;}
+  #photoBox{height:56vh;}
+  #search{font-size:14px;padding:7px 10px;}
   .quick-row,.search-wrap{width:100%;max-width:780px;margin-left:auto;margin-right:auto;}
   #folderList{width:100%;max-width:780px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:6px;align-content:start;}
   .folder-btn{padding:6px 10px;font-size:13px;border-radius:8px;}
@@ -90,10 +96,12 @@ button{font-family:inherit;border:none;cursor:pointer;}
 <body>
 
 <div class="top">
-  <div class="title">Photo Sorter</div>
+  <div class="brand"><span class="title">Photo Sorter</span><span class="logo">BULUT PROJECT</span></div>
   <div class="prog" id="progress">–</div>
-  <button class="icon-btn" id="reviewBtn" style="display:none;">List</button>
-  <button class="icon-btn" id="clearBtn" style="display:none;background:#a03325;">&#10005; Clear</button>
+  <div class="top-btns">
+    <button class="icon-btn" id="reviewBtn" style="display:none;">List</button>
+    <button class="icon-btn" id="clearBtn" style="display:none;background:#a03325;">&#10005; Clear</button>
+  </div>
 </div>
 
 <!-- START -->
@@ -122,7 +130,7 @@ button{font-family:inherit;border:none;cursor:pointer;}
     <button id="removeBtn">Remove</button>
   </div>
   <div class="search-wrap">
-    <input type="text" id="search" placeholder="Search folders (type first letters)..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <input type="text" id="search" placeholder="Search labels..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   </div>
   <div id="folderList"></div>
 </div>
@@ -512,6 +520,9 @@ document.addEventListener('touchend', function(e){
 document.addEventListener('dblclick', e=>e.preventDefault());
 
 (async function init(){
+  if(typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width:700px)').matches){
+    $('pickBtn').textContent = 'Select photos from files';
+  }
   await openDB();
   const saved = await dbAll('photos');
   const meta = await dbAll('meta');
