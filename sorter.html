@@ -34,7 +34,7 @@ button{font-family:inherit;border:none;cursor:pointer;}
 #photoBox{flex-shrink:0;height:34vh;background:#0d1620;display:flex;align-items:center;justify-content:center;position:relative;}
 #photoBox img{max-width:100%;max-height:100%;object-fit:contain;}
 #photoBox .badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:3px 9px;border-radius:10px;}
-#photoBox .assigned-tag{position:absolute;bottom:8px;left:8px;right:8px;background:rgba(26,58,92,.9);color:#fff;font-size:13px;font-weight:600;padding:5px 10px;border-radius:8px;text-align:center;display:none;}
+#photoBox .assigned-tag{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);max-width:88%;background:rgba(0,0,0,.55);color:#fff;font-size:13px;font-weight:600;padding:5px 12px;border-radius:8px;text-align:center;display:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .quick-row{display:flex;gap:6px;padding:8px 10px 0 10px;flex-shrink:0;}
 .quick-row button{flex:1;padding:10px 4px;border-radius:10px;font-size:12px;font-weight:700;}
 #sameBtn{background:#fff;color:#1a3a5c;border:1.5px solid #b9c4cf;flex:1.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -375,15 +375,10 @@ $('sameBtn').addEventListener('click', function(){
   }, 250);
 });
 $('removeBtn').addEventListener('click', ()=>{
-  if(curIdx<0 || !photos[curIdx]) return;
-  if(!confirm('Remove this photo?')) return;
+  if(curIdx<0 || !photos[curIdx] || !photos[curIdx].folder) return;
   const p = photos[curIdx];
-  URL.revokeObjectURL(p.url);
-  dbDel('photos', p.id);
-  photos.splice(curIdx,1);
-  undoStack = undoStack.filter(u=>u.photoId!==p.id);
-  if(!photos.length){ showScreen('startScreen'); renderProgress(); return; }
-  if(curIdx>=photos.length) curIdx = photos.length-1;
+  undoStack.push({photoId:p.id, prevFolder:p.folder});
+  p.folder = null; savePhoto(p);
   renderAll();
 });
 $('prevArrow').addEventListener('click', ()=>{ if(curIdx>0){ curIdx--; renderAll(); } });
